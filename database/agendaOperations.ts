@@ -1,0 +1,277 @@
+import { ensureDatabaseReady } from './init';
+import { AjandaType, OgrenciType } from '../types';
+
+export type AjandaWithOgrenciType = AjandaType & {
+    ogrenciAd?: string;
+    ogrenciSoyad?: string;
+    ogrenciTel?: string;
+    aktifmi?: number;
+};
+
+export async function ajandaKayitEkle(kayit: AjandaType) {
+    try {
+        const db = await ensureDatabaseReady();
+
+        const result = await db.runAsync(
+            `INSERT INTO ajanda (ogrenciId, ogrAdsoyad, tarih, saat, tekrarsayisi, kalanTekrarSayisi, olusmaAni, tamamlanma, sutun1, sutun2) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                kayit.ogrenciId,
+                kayit.ogrAdsoyad,
+                kayit.tarih,
+                kayit.saat,
+                kayit.tekrarsayisi,
+                kayit.kalanTekrarSayisi,
+                kayit.olusmaAni,
+                '', // tamamlanma durumu başlangıçta boş
+                kayit.sutun1 || '',
+                kayit.sutun2 || ''
+            ]
+        );
+
+        console.log("Ajanda kaydı eklendi:", result.lastInsertRowId);
+        return { success: true, insertId: result.lastInsertRowId };
+    } catch (error: any) {
+        console.error("ajandaDatabase_Ajanda kaydı eklenemedi:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function tumAjandaKayitlariniGetir() {
+    try {
+        const db = await ensureDatabaseReady();
+        const rows = await db.getAllAsync<AjandaWithOgrenciType>(
+            `SELECT 
+                a.*,
+                o.ogrenciAd,
+                o.ogrenciSoyad,
+                o.ogrenciTel,
+                o.aktifmi
+             FROM ajanda a 
+             LEFT JOIN ogrenciler o ON a.ogrenciId = o.ogrenciId 
+             ORDER BY a.tarih, a.saat`
+        );
+        return { success: true, data: rows };
+    } catch (error: any) {
+        console.error("Ajanda kayıtları getirilemedi:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function gunlukAjandaGetir(tarih: string) {
+    try {
+        const db = await ensureDatabaseReady();
+        const rows = await db.getAllAsync<AjandaWithOgrenciType>(
+            `SELECT 
+                a.*,
+                o.ogrenciAd,
+                o.ogrenciSoyad,
+                o.ogrenciTel,
+                o.aktifmi
+             FROM ajanda a 
+             LEFT JOIN ogrenciler o ON a.ogrenciId = o.ogrenciId 
+             WHERE a.tarih = ? 
+             ORDER BY a.saat`,
+            [tarih]
+        );
+        return { success: true, data: rows };
+    } catch (error: any) {
+        console.error("Günlük ajanda getirilemedi:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function ajandaGuncelle(ajandaId: number, kayit: AjandaType) {
+    try {
+        const db = await ensureDatabaseReady();
+        const result = await db.runAsync(
+            `UPDATE ajanda 
+             SET ogrenciId = ?, ogrAdsoyad = ?, tarih = ?, saat = ?, 
+                 tekrarsayisi = ?, kalanTekrarSayisi = ?, tamamlanma = ?
+             WHERE ajandaId = ?`,
+            [
+                kayit.ogrenciId,
+                kayit.ogrAdsoyad,
+                kayit.tarih,
+                kayit.saat,
+                kayit.tekrarsayisi,
+                kayit.kalanTekrarSayisi,
+                kayit.tamamlanma || '',
+                ajandaId
+            ]
+        );
+        return { success: result.changes > 0 };
+    } catch (error: any) {
+        console.error("Ajanda güncellenemedi:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function ajandaSil(ajandaId: number) {
+    try {
+        const db = await ensureDatabaseReady();
+        const result = await db.runAsync(
+            `DELETE FROM ajanda WHERE ajandaId = ?`,
+            [ajandaId]
+        );
+        return { success: result.changes > 0 };
+    } catch (error: any) {
+        console.error("Ajanda kaydı silinemedi:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function ajandaGrupSil(olusmaAni: string) {
+    try {
+        const db = await ensureDatabaseReady();
+        const result = await db.runAsync(
+            `DELETE FROM ajanda WHERE olusmaAni = ?`,
+            [olusmaAni]
+        );
+        return { success: true, deletedCount: result.changes };
+    } catch (error: any) {
+        console.error("Ajanda grubu silinemedi:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function ogrenciAjandaGetir(ogrenciId: number) {
+    try {
+        const db = await ensureDatabaseReady();
+        const rows = await db.getAllAsync<AjandaWithOgrenciType>(
+            `SELECT 
+                a.*,
+                o.ogrenciAd,
+                o.ogrenciSoyad,
+                o.ogrenciTel,
+                o.aktifmi
+             FROM ajanda a 
+             LEFT JOIN ogrenciler o ON a.ogrenciId = o.ogrenciId 
+             WHERE a.ogrenciId = ? 
+             ORDER BY a.tarih, a.saat`,
+            [ogrenciId]
+        );
+        return { success: true, data: rows };
+    } catch (error: any) {
+        console.error("Öğrenci ajandası getirilemedi:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function ajandaGrupGetir(olusmaAni: string) {
+    try {
+        const db = await ensureDatabaseReady();
+        const rows = await db.getAllAsync<AjandaWithOgrenciType>(
+            `SELECT 
+                a.*,
+                o.ogrenciAd,
+                o.ogrenciSoyad,
+                o.ogrenciTel,
+                o.aktifmi
+             FROM ajanda a 
+             LEFT JOIN ogrenciler o ON a.ogrenciId = o.ogrenciId 
+             WHERE a.olusmaAni = ? 
+             ORDER BY a.tarih, a.saat`,
+            [olusmaAni]
+        );
+        return { success: true, data: rows };
+    } catch (error: any) {
+        console.error("Ajanda grubu getirilemedi:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function ajandaGrupGuncelle(olusmaAni: string, seciliTarih: string, yeniTekrarSayisi: number, yeniSaat: string, yeniPeriyot: number = 7) {
+    try {
+        const db = await ensureDatabaseReady();
+
+        await db.runAsync(
+            `DELETE FROM ajanda WHERE olusmaAni = ? AND tarih > ?`,
+            [olusmaAni, seciliTarih]
+        );
+
+        const mevcutKayit = await db.getFirstAsync<AjandaType>(
+            `SELECT * FROM ajanda WHERE olusmaAni = ? AND tarih = ?`,
+            [olusmaAni, seciliTarih]
+        );
+
+        if (!mevcutKayit) {
+            throw new Error('Güncellenecek kayıt bulunamadı');
+        }
+
+        await db.runAsync(
+            `UPDATE ajanda 
+             SET saat = ?, tekrarsayisi = ?, kalanTekrarSayisi = ?
+             WHERE olusmaAni = ? AND tarih = ?`,
+            [yeniSaat, yeniTekrarSayisi.toString(), yeniTekrarSayisi.toString(), olusmaAni, seciliTarih]
+        );
+
+        const baslangicTarihi = new Date(seciliTarih);
+
+        for (let i = 1; i < yeniTekrarSayisi; i++) {
+            const yeniTarih = new Date(baslangicTarihi);
+            yeniTarih.setDate(baslangicTarihi.getDate() + (i * yeniPeriyot));
+
+            const kalanTekrar = yeniTekrarSayisi - i;
+
+            await db.runAsync(
+                `INSERT INTO ajanda (ogrenciId, ogrAdsoyad, tarih, saat, tekrarsayisi, kalanTekrarSayisi, olusmaAni, tamamlanma, sutun1, sutun2) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    mevcutKayit.ogrenciId,
+                    mevcutKayit.ogrAdsoyad,
+                    yeniTarih.toISOString().split('T')[0],
+                    yeniSaat,
+                    yeniTekrarSayisi.toString(),
+                    kalanTekrar.toString(),
+                    olusmaAni,
+                    '',
+                    '',
+                    ''
+                ]
+            );
+        }
+
+        return { success: true };
+    } catch (error: any) {
+        console.error("Ajanda grup güncellemesi başarısız:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function ajandaTamamlanmaDurumuGuncelle(ajandaId: number, durum: string) {
+    try {
+        const db = await ensureDatabaseReady();
+        const result = await db.runAsync(
+            `UPDATE ajanda SET tamamlanma = ? WHERE ajandaId = ?`,
+            [durum, ajandaId]
+        );
+        return { success: result.changes > 0 };
+    } catch (error: any) {
+        console.error("Tamamlanma durumu güncellenemedi:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function tarihAraligiAjandaGetir(baslangicTarihi: string, bitisTarihi: string) {
+    try {
+        const db = await ensureDatabaseReady();
+        const rows = await db.getAllAsync<AjandaWithOgrenciType>(
+            `SELECT 
+                a.*,
+                o.ogrenciAd,
+                o.ogrenciSoyad,
+                o.ogrenciTel,
+                o.aktifmi
+             FROM ajanda a 
+             LEFT JOIN ogrenciler o ON a.ogrenciId = o.ogrenciId 
+             WHERE a.tarih BETWEEN ? AND ?
+             ORDER BY a.tarih, a.saat`,
+            [baslangicTarihi, bitisTarihi]
+        );
+        return { success: true, data: rows };
+    } catch (error: any) {
+        console.error("Tarih aralığı ajandası getirilemedi:", error);
+        return { success: false, error: error.message };
+    }
+}
