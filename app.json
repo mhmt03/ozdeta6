@@ -25,6 +25,11 @@
       },
       "predictiveBackGestureEnabled": false
     },
+    "apk": {
+  "android": {
+    "buildType": "apk"
+  }
+},
     "web": {
       "favicon": "./assets/favicon.png"
     },
