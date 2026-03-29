@@ -1,23 +1,39 @@
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from "react-native";
 import { FAB } from 'react-native-paper'
-import { useEffect, useState } from "react";
+import { useEffect, useState, useLayoutEffect } from "react";
+import { useNavigation } from "@react-navigation/native";
 import { ogrencileriListele, ogrenciSil } from "../utils/database";
 import OgrenciListItem from "../components/OgrenciListItem";
-import { StackScreenProps } from '@react-navigation/stack';
+import { StackScreenProps, StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../App';
 import { OgrenciType } from '../types';
 import { MaterialIcons } from '@expo/vector-icons';
 
 type Props = StackScreenProps<RootStackParamList, 'ogrenciListesi'>;
 
-export default function OgrenciListesi({ navigation }: Props) {
+export default function OgrenciListesi({ navigation: propNavigation }: Props) {
     const [ogrenciler, setOgrenciler] = useState<OgrenciType[]>([]);
     const [pasifGor, setPasifGor] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(true);
     const [refreshing, setRefreshing] = useState<boolean>(false);
 
+    const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+
+    useLayoutEffect(() => {
+        navigation.setOptions({
+            headerRight: () => (
+                <TouchableOpacity
+                    onPress={() => navigation.navigate('GlobalKaynakYonetimi')}
+                    style={{ marginRight: 15 }}
+                >
+                    <MaterialIcons name="library-books" size={24} color="white" />
+                </TouchableOpacity>
+            ),
+        });
+    }, [navigation]);
+
     useEffect(() => {
-        const unsubscribe = navigation.addListener('focus', () => {
+        const unsubscribe = propNavigation.addListener('focus', () => {
             verileriYenile();
         });
 

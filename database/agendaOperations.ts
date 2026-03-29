@@ -107,6 +107,21 @@ export async function ajandaGuncelle(ajandaId: number, kayit: AjandaType) {
     }
 }
 
+// Randevu iptal et
+export async function randevuIptal(ajandaId: number) {
+    try {
+        const db = await ensureDatabaseReady();
+        const result = await db.runAsync(
+            `UPDATE ajanda SET iptal=1 WHERE ajandaId=?`,
+            [ajandaId]
+        );
+        return { success: result.changes > 0 };
+    } catch (error: any) {
+        console.error("Randevu iptal edilemedi:", error);
+        return { success: false, error: error.message };
+    }
+}
+
 export async function ajandaSil(ajandaId: number) {
     try {
         const db = await ensureDatabaseReady();

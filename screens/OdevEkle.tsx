@@ -221,7 +221,11 @@ export default function OdevEkle() {
                             {/* Kaynak Yönetimi Butonu */}
                             <TouchableOpacity
                                 style={styles.kaynakEkleButon}
-                                onPress={() => navigation.navigate('KaynakYonetimi', { ogrenci })}
+                                onPress={() => navigation.navigate('KaynakYonetimi', { 
+                                    ogrenciId: ogrenci?.ogrenciId, 
+                                    ogrenciAd: ogrenci?.ogrenciAd, 
+                                    ogrenciSoyad: ogrenci?.ogrenciSoyad 
+                                })}
                             >
                                 <MaterialIcons name="add" size={20} color="white" />
                                 <Text style={styles.kaynakEkleText}>Kaynak Yönet</Text>

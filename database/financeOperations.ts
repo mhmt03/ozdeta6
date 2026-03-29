@@ -142,3 +142,79 @@ export async function odemeSil(odemeId: number) {
         return { success: false, error: error.message };
     }
 }
+
+// Ders güncelle
+export async function dersGuncelle(dersId: number, dersVerisi: DersType) {
+    try {
+        const db = await ensureDatabaseReady();
+        const result = await db.runAsync(
+            `UPDATE dersler SET tarih=?, saat=?, ucret=?, konu=?, dersturu=?, ogrenciAdSoyad=? WHERE dersId=?`,
+            [
+                dersVerisi.tarih,
+                dersVerisi.saat,
+                dersVerisi.ucret,
+                dersVerisi.konu,
+                dersVerisi.dersturu,
+                dersVerisi.ogrenciAdSoyad,
+                dersId
+            ]
+        );
+        return { success: result.changes > 0 };
+    } catch (error: any) {
+        console.error("Ders güncellenemedi:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+// Ödeme güncelle
+export async function odemeGuncelle(odemeId: number, odemeVerisi: OdemeType) {
+    try {
+        const db = await ensureDatabaseReady();
+        const result = await db.runAsync(
+            `UPDATE odemeler SET alinanucret=?, odemetarih=?, odemesaati=?, odemeturu=?, aciklama=? WHERE odemeId=?`,
+            [
+                odemeVerisi.alinanucret,
+                odemeVerisi.odemetarih,
+                odemeVerisi.odemesaati ?? '',
+                odemeVerisi.odemeturu,
+                odemeVerisi.aciklama ?? '',
+                odemeId
+            ]
+        );
+        return { success: result.changes > 0 };
+    } catch (error: any) {
+        console.error("Ödeme güncellenemedi:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+// Bir öğrencinin son dersini getir
+export async function getSonDers(ogrenciId: number): Promise<DersType | null> {
+    try {
+        const db = await ensureDatabaseReady();
+        const result = await db.getFirstAsync<DersType>(
+            `SELECT * FROM dersler WHERE ogrenciId=? ORDER BY tarih DESC, saat DESC LIMIT 1`,
+            [ogrenciId]
+        );
+        return result || null;
+    } catch (error: any) {
+        console.error("Son ders alınamadı:", error);
+        return null;
+    }
+}
+
+// Tüm ödemeleri öğrenci adı ile birlikte getir
+export async function tumOdemeleriGetir() {
+    try {
+        const db = await ensureDatabaseReady();
+        const result = await db.getAllAsync<OdemeType>(
+            `SELECT o.*, (og.ogrenciAd || ' ' || og.ogrenciSoyad) as ogrenciAdSoyad 
+             FROM odemeler o 
+             LEFT JOIN ogrenciler og ON o.ogrenciId = og.ogrenciId`
+        );
+        return { success: true, odemeler: result || [] };
+    } catch (error: any) {
+        console.error("Tüm ödemeler alınamadı:", error);
+        return { success: false, odemeler: [], error: error.message };
+    }
+}

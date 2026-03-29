@@ -28,6 +28,7 @@ import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 // Database util'leri (projede mevcut olan fonksiyonlar)
 import { ogrencileriListele, initDatabase } from '../utils/database';
 import { gunlukAjandaGetir } from '../utils/ajandaDatabase';
+import { getSetting, saveSetting } from '../database/settingsOperations';
 import { AjandaWithOgrenciType, OgrenciType } from '../types';
 
 interface CalendarDayType {
@@ -100,6 +101,14 @@ export default function Ajanda() {
 
     /* useEffect: component mount / dependency değişimi */
     useEffect(() => {
+        const loadSettings = async () => {
+            const savedView = await getSetting('calendar_view', 'month');
+            setIsWeekView(savedView === 'week');
+        };
+        loadSettings();
+    }, []);
+
+    useEffect(() => {
         // DB init sadece bir kere yapılmalı; burada çalıştırıyoruz
         initDatabase();
 
@@ -109,8 +118,7 @@ export default function Ajanda() {
         } else {
             generateCalendarDaysMonth();
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentMonth, currentWeek, isWeekView]);
+    }, [currentMonth, currentWeek, isWeekView, selectedDate]);
 
     // Focus olduğunda verileri güncelle
     useEffect(() => {
@@ -252,8 +260,9 @@ export default function Ajanda() {
     };
 
     // Görünüm toggle'ı: hafta/ay
-    const toggleView = (value: boolean) => {
+    const toggleView = async (value: boolean) => {
         setIsWeekView(value);
+        await saveSetting('calendar_view', value ? 'week' : 'month');
         if (value) {
             setCurrentWeek(getMonday(selectedDate));
         } else {
@@ -273,19 +282,36 @@ export default function Ajanda() {
 
     // Randevu item render'ı (FlatList için)
     const renderRandevuItem = ({ item }: { item: AjandaWithOgrenciType }) => {
-        const isCompleted = item.sutun1 === 'tamamlandı';
+        const isCompleted = item.tamamlanma === '1' || item.sutun1 === 'tamamlandı';
+        const isCancelled = item.iptal === 1;
+
         return (
             <TouchableOpacity onPress={() => navigation.navigate('AjandaRandevuDuzenle', { randevu: item })}>
-                <View style={[styles.randevuItem, isCompleted && styles.tamamlandiItem]}>
-                    <View style={styles.randevuSaat}>
-                        <Text style={styles.randevuSaatText}>{item.saat}</Text>
-                    </View>
-                    <View style={styles.randevuBilgi}>
-                        <Text style={styles.randevuOgrenci}>{item.ogrAdsoyad}</Text>
+                <View style={[
+                    styles.eventCard,
+                    isCompleted && styles.completedEvent,
+                    isCancelled && styles.cancelledEvent
+                ]}>
+                    <View style={styles.eventInfo}>
+                        <View style={styles.nameRow}>
+                            <Text style={[
+                                styles.eventTitle,
+                                isCompleted && styles.completedText,
+                                isCancelled && styles.cancelledText
+                            ]}>
+                                {item.ogrAdsoyad} {isCancelled && <Text style={styles.iptalBadge}>(İPTAL)</Text>}
+                            </Text>
+                            {item.kalanTekrarSayisi && <Text style={styles.remainingText}>(Kalan: {item.kalanTekrarSayisi})</Text>}
+                        </View>
+                        <Text style={styles.eventTime}>{item.saat}</Text>
                         {item.konu ? <Text style={styles.randevuKonu}>{item.konu}</Text> : null}
                     </View>
                     <View style={styles.randevuDurum}>
-                        {isCompleted ? <MaterialIcons name="check-circle" size={20} color="#27ae60" /> : <MaterialIcons name="schedule" size={20} color="#f39c12" />}
+                        {isCompleted ? (
+                            <MaterialIcons name="check-circle" size={20} color="#27ae60" />
+                        ) : (
+                            <MaterialIcons name="schedule" size={20} color="#f39c12" />
+                        )}
                     </View>
                 </View>
             </TouchableOpacity>
@@ -382,9 +408,17 @@ export default function Ajanda() {
                 </View>
 
                 <View style={styles.selectedDateContainer}>
+                    <TouchableOpacity onPress={() => selectDay({ date: new Date(selectedDate.getTime() - 86400000), isCurrentMonth: true, isToday: false, hasEvent: false })}>
+                        <MaterialIcons name="chevron-left" size={24} color="#3498db" />
+                    </TouchableOpacity>
+
                     <Text style={styles.selectedDateText}>
                         {selectedDate.toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                     </Text>
+
+                    <TouchableOpacity onPress={() => selectDay({ date: new Date(selectedDate.getTime() + 86400000), isCurrentMonth: true, isToday: false, hasEvent: false })}>
+                        <MaterialIcons name="chevron-right" size={24} color="#3498db" />
+                    </TouchableOpacity>
                 </View>
             </View>
 
@@ -590,16 +624,20 @@ const styles = StyleSheet.create({
     },
 
     selectedDateContainer: {
+        flexDirection: 'row',
         alignItems: 'center',
-        padding: 6, // azaltıldı
-        marginTop: 4, // azaltıldı
+        justifyContent: 'space-between',
+        padding: 6,
+        marginTop: 4,
         backgroundColor: '#ecf0f1',
         borderRadius: 8,
     },
     selectedDateText: {
         fontSize: 12,
-        fontWeight: '600',
+        fontWeight: '700',
         color: '#2c3e50',
+        flex: 1,
+        textAlign: 'center',
     },
 
     butonlarContainer: {
@@ -684,6 +722,15 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: '#2c3e50',
     },
+    randevuBaslikSatir: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    kalanTekrarText: {
+        fontSize: 11,
+        color: '#e67e22',
+        fontWeight: '600',
+    },
     randevuKonu: {
         fontSize: 12,
         color: '#7f8c8d',
@@ -743,5 +790,66 @@ const styles = StyleSheet.create({
         fontStyle: 'italic',
         padding: 16,
     },
+    eventCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'white',
+        padding: 10,
+        borderRadius: 8,
+        marginBottom: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 2,
+        elevation: 1,
+        borderLeftWidth: 4,
+        borderLeftColor: '#3498db', // Default color
+    },
+    completedEvent: {
+        backgroundColor: '#f8f9fa',
+        borderLeftColor: '#27ae60',
+    },
+    cancelledEvent: {
+        backgroundColor: '#ffebee',
+        borderLeftColor: '#e74c3c',
+    },
+    eventInfo: {
+        flex: 1,
+        marginLeft: 5,
+    },
+    nameRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+    },
+    eventTitle: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: '#2c3e50',
+    },
+    completedText: {
+        textDecorationLine: 'line-through',
+        color: '#888',
+    },
+    cancelledText: {
+        color: '#c0392b',
+        fontStyle: 'italic',
+    },
+    iptalBadge: {
+        fontSize: 10,
+        fontWeight: 'bold',
+        color: '#e74c3c',
+        marginLeft: 4,
+    },
+    remainingText: {
+        fontSize: 11,
+        color: '#e67e22',
+        fontWeight: '600',
+        marginLeft: 4,
+    },
+    eventTime: {
+        fontSize: 12,
+        color: '#7f8c8d',
+        marginTop: 2,
+    },
 });
-

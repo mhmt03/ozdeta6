@@ -17,6 +17,7 @@ import DersRapor from './screens/DersRapor';
 import NotEkle from './screens/NotEkle';
 import OdevEkle from './screens/OdevEkle';
 import KaynakYonetimi from './screens/KaynakYonetimi';
+import GlobalKaynakYonetimi from './screens/GlobalKaynakYonetimi';
 import Ayarlar from './screens/Ayarlar';
 
 export type RootStackParamList = {
@@ -24,14 +25,15 @@ export type RootStackParamList = {
   yeniKayit: { ogrenci?: any };
   ogrenciDetay: { ogrenci: any };
   AnaSayfa: undefined;
-  Ayarlar: undefined;
   NotEkle: { ogrenciId: number };
   OdevEkle: { ogrenciId: number };
   Ajanda: undefined;
   AjandaKayitEkle: undefined;
   AjandaRandevuDuzenle: { randevu: any };
   DersRapor: undefined;
-  KaynakYonetimi: undefined;
+  KaynakYonetimi: { ogrenciId: number; ogrenciAd?: string; ogrenciSoyad?: string };
+  GlobalKaynakYonetimi: undefined;
+  Ayarlar: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -180,6 +182,11 @@ export default function App() {
         <Stack.Screen
           name='KaynakYonetimi'
           component={KaynakYonetimi}
+        />
+        <Stack.Screen
+          name='GlobalKaynakYonetimi'
+          options={{ title: 'Global Kaynak Yönetimi' }}
+          component={GlobalKaynakYonetimi}
         />
         <Stack.Screen
           name='Ayarlar'

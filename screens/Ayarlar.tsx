@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as DocumentPicker from 'expo-document-picker';
 import { useNavigation } from '@react-navigation/native';
 import * as Sharing from 'expo-sharing';
@@ -25,7 +25,8 @@ import * as XLSX from 'xlsx';
 import {
     ogrencileriListele,
     ogrencininOdemeleri,
-    tumYapilanDersler
+    tumYapilanDersler,
+    tumOdemeleriGetir
 } from '../utils/database';
 
 export default function Ayarlar() {
@@ -243,7 +244,7 @@ export default function Ayarlar() {
                         onPress: async () => {
                             try {
                                 // SQLite veritabanı dosya yolu
-                                const dbName = 'ogretmenTakip.db';
+                                const dbName = 'ozdeta.db';
                                 // @ts-ignore - expo-file-system documentDirectory
                                 const sourceDbPath = FileSystem.documentDirectory + 'SQLite/' + dbName;
 
@@ -343,7 +344,7 @@ export default function Ayarlar() {
                                 const fileUri = result.assets?.[0]?.uri;
 
                                 // Hedef veritabanı yolunu belirle
-                                const dbName = 'ogretmenTakip.db';
+                                const dbName = 'ozdeta.db';
                                 // @ts-ignore - expo-file-system documentDirectory
                                 const targetDbPath = FileSystem.documentDirectory + 'SQLite/' + dbName;
 
@@ -401,14 +402,16 @@ export default function Ayarlar() {
 
             const derslerResult = await tumYapilanDersler();
             const ogrencilerResult = await ogrencileriListele(true);
+            const odemelerResult = await tumOdemeleriGetir();
 
-            if (!derslerResult.success || !ogrencilerResult.success) {
+            if (!derslerResult.success || !ogrencilerResult.success || !odemelerResult.success) {
                 Alert.alert('Hata', 'Veriler alınamadı');
                 return;
             }
 
             const tumDersler = derslerResult.yapilanDersler || [];
             const tumOgrenciler = ogrencilerResult.data || [];
+            const tumOdemeler = odemelerResult.odemeler || [];
 
             // Tarih aralığına göre dersleri filtrele
             const filtreliDersler = tumDersler.filter(ders => {
@@ -416,6 +419,14 @@ export default function Ayarlar() {
                 const baslangic = new Date(baslangicStr);
                 const bitis = new Date(bitisStr);
                 return dersTarihi >= baslangic && dersTarihi <= bitis;
+            });
+
+            // Tarih aralığına göre ödemeleri filtrele
+            const filtreliOdemeler = tumOdemeler.filter(odeme => {
+                const odemeTarihi = new Date(odeme.odemetarih);
+                const baslangic = new Date(baslangicStr);
+                const bitis = new Date(bitisStr);
+                return odemeTarihi >= baslangic && odemeTarihi <= bitis;
             });
 
             // Excel Workbook oluştur
@@ -490,6 +501,33 @@ export default function Ayarlar() {
                 const borcluWorksheet = XLSX.utils.aoa_to_sheet(borcluOgrencilerData);
                 XLSX.utils.book_append_sheet(workbook, borcluWorksheet, 'Borçlu Öğrenciler');
             }
+
+            // ÖDEMELER sayfası
+            const odemelerData: any[][] = [
+                ['ÖDEME RAPORU'],
+                [`Tarih Aralığı: ${baslangicStr} - ${bitisStr}`],
+                [`Oluşturulma Tarihi: ${new Date().toLocaleString('tr-TR')}`],
+                [''],
+                ['Tarih', 'Saat', 'Öğrenci', 'Tür', 'Açıklama', 'Miktar (TL)']
+            ];
+
+            let toplamGelenOdeme = 0;
+            filtreliOdemeler.forEach(odeme => {
+                odemelerData.push([
+                    odeme.odemetarih,
+                    odeme.odemesaati || '-',
+                    odeme.ogrenciAdSoyad || 'Belirtilmemiş',
+                    odeme.odemeturu || '-',
+                    odeme.aciklama || '-',
+                    parseInt(String(odeme.alinanucret)) || 0
+                ]);
+                toplamGelenOdeme += parseInt(String(odeme.alinanucret)) || 0;
+            });
+
+            odemelerData.push(['', '', '', '', 'TOPLAM GELEN ÖDEME:', toplamGelenOdeme + ' TL']);
+
+            const odemelerWorksheet = XLSX.utils.aoa_to_sheet(odemelerData);
+            XLSX.utils.book_append_sheet(workbook, odemelerWorksheet, 'Ödemeler');
 
             // Excel dosyasını base64 formatında oluştur
             const excelBuffer = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
@@ -741,7 +779,7 @@ export default function Ayarlar() {
                             </View>
 
                             <Text style={styles.raporBilgi}>
-                                • Excel raporu 3 sayfadan oluşur: Dersler, Öğrenciler, Borçlu Öğrenciler
+                                • Excel raporu sayfaları: Dersler, Ödemeler, Öğrenciler, Borçlu Öğrenciler
                             </Text>
                         </View>
 
@@ -822,6 +860,15 @@ export default function Ayarlar() {
                                 <MaterialIcons name="account-balance-wallet" size={48} color="#ddd" />
                                 <Text style={styles.borcBosText}>
                                     Harika! Hiçbir öğrencinin borcu bulunmuyor.
+                                </Text>
+                            </View>
+                        )}
+
+                        {borcluOgrenciler.length > 0 && (
+                            <View style={styles.borcToplamFooter}>
+                                <Text style={styles.borcToplamLabel}>Toplam Alacak:</Text>
+                                <Text style={styles.borcToplamMiktar}>
+                                    {borcluOgrenciler.reduce((toplam, item) => toplam + (parseFloat(item.kalanBorc) || 0), 0)} TL
                                 </Text>
                             </View>
                         )}
@@ -1081,6 +1128,27 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginTop: 10,
         fontWeight: '500',
+    },
+    borcToplamFooter: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 15,
+        borderTopWidth: 2,
+        borderTopColor: '#f0f0f0',
+        backgroundColor: '#fff9f9',
+        borderBottomLeftRadius: 15,
+        borderBottomRightRadius: 15,
+    },
+    borcToplamLabel: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    borcToplamMiktar: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#F44336',
     },
 });
 

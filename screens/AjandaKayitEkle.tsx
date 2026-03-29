@@ -211,14 +211,14 @@ export default function AjandaKayitEkle() {
             // Saat formatını hazırla
             const saatStr = `${selectedTime.getHours().toString().padStart(2, '0')}:${selectedTime.getMinutes().toString().padStart(2, '0')}`;
 
-            selectedDate.setDate(selectedDate.getDate() + 1); //seçili tarihe indis yüzünden 1 ekledim
+            // selectedDate.setDate(selectedDate.getDate() + 1); // Bu satır kaldırıldı çünkü getDate() 1'den başlar, tarihin kaymasına neden oluyordu.
             // Periyodik kayıtları oluşturma döngüsü
             for (let i = 0; i < tekrarSayisi; i++) {
 
                 // Her kayıt için tarih hesaplama
                 const kayitTarihi = new Date(selectedDate);
 
-                kayitTarihi.setDate(selectedDate.getDate() + (i * (periyot - 1)));
+                kayitTarihi.setDate(selectedDate.getDate() + (i * periyot));
 
                 // Bu kayıt için kalan tekrar sayısını hesapla
                 const kalanTekrar = tekrarSayisi - i;
@@ -227,7 +227,7 @@ export default function AjandaKayitEkle() {
                 const record: AjandaType = {
                     ogrenciId: ogrenciId || 0,
                     ogrAdsoyad: ogrAdsoyad,
-                    tarih: kayitTarihi.toISOString().split('T')[0], // YYYY-MM-DD formatı
+                    tarih: `${kayitTarihi.getFullYear()}-${(kayitTarihi.getMonth() + 1).toString().padStart(2, '0')}-${kayitTarihi.getDate().toString().padStart(2, '0')}`, // Yerel tarih formatı (YYYY-MM-DD)
                     saat: saatStr,
                     tekrarsayisi: tekrarSayisi.toString(),
                     kalanTekrarSayisi: kalanTekrar.toString(),

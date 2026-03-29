@@ -11,13 +11,15 @@ import {
     Platform,
     Keyboard,
     TouchableWithoutFeedback,
+    Linking, // Added Linking for SMS/WhatsApp
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { MaterialIcons, FontAwesome5, Entypo } from '@expo/vector-icons';
 import RNPickerSelect from 'react-native-picker-select';
 import { sendSMS, sendWhatsApp } from '../utils/messaging';
-import { ogrencileriListele, ajandaGuncelle } from '../utils/database';
+import { ogrencileriListele, ajandaGuncelle, randevuIptal } from '../utils/database'; // Added randevuIptal
 import { OgrenciType, AjandaType } from '../types';
+import { tekOgrenci } from '../utils/database'; // Assuming tekOgrenci is also in utils/database or similar
 
 export default function AjandaRandevuDuzenle({ route, navigation }: any) {
     const { randevu } = route.params;
@@ -32,17 +34,28 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
     const [ogrenciList, setOgrenciList] = useState<OgrenciType[]>([]);
     const [selectedOgrenci, setSelectedOgrenci] = useState(randevu.ogrenciId || null);
     const [kayıtsızInput, setKayitsizInput] = useState(randevu.ogrAdsoyad || '');
+    const [ogrenci, setOgrenci] = useState<OgrenciType | null>(null); // Added ogrenci state
 
     const [degisiklikTipi, setDegisiklikTipi] = useState('sadeceBu'); // sadeceBu / tumKayitlar
 
     useEffect(() => {
         fetchOgrenciler();
+        if (randevu.ogrenciId) {
+            fetchOgrenciDetay(randevu.ogrenciId);
+        }
     }, []);
 
     const fetchOgrenciler = async () => {
         const result = await ogrencileriListele(false);
         if (result?.success) {
             setOgrenciList(result.data ?? []);
+        }
+    };
+
+    const fetchOgrenciDetay = async (ogrenciId: number) => {
+        const result = await tekOgrenci(ogrenciId);
+        if (result?.success) {
+            setOgrenci(result.data ?? null);
         }
     };
 
@@ -68,33 +81,78 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
         }
     };
 
-    const handleSMSSend = () => {
-        if (!randevu.ogrenciTel) {
-            Alert.alert('Hata', 'Öğrencinin telefonu sistemde kayıtlı değil!');
+    // SMS gönder
+    const gonderSms = () => {
+        if (!ogrenci) return;
+        const telefon = ogrenci.veliTel || ogrenci.ogrenciTel;
+        if (!telefon || telefon === '-') {
+            Alert.alert('Hata', 'Telefon numarası bulunamadı');
             return;
         }
-        const mesaj = `Randevunuz: ${date.toLocaleDateString()} ${date.toTimeString().slice(0, 5)}`;
-        sendSMS(randevu.ogrenciTel, mesaj);
+
+        let mesaj = '';
+        if (randevu.iptal === 1) { // Assuming randevu.iptal exists and 1 means cancelled
+            mesaj = `${randevu.ogrAdsoyad} adlı öğrencinin ${randevu.tarih} tarihindeki dersi öğrenci talebi üzerine iptal edilmiştir. Bilginize...`;
+        } else {
+            mesaj = `Sayın Veli, ${randevu.ogrAdsoyad} adlı öğrencinin yeni ders randevusu: ${date.toLocaleDateString()} saat ${date.toTimeString().slice(0, 5)} olarak güncellenmiştir.`;
+        }
+
+        const url = `sms:${telefon}?body=${encodeURIComponent(mesaj)}`;
+        Linking.openURL(url);
     };
 
-    const handleWhatsAppSend = () => {
-        if (!randevu.ogrenciTel) {
-            Alert.alert('Hata', 'Öğrencinin telefonu sistemde kayıtlı değil!');
+    // WhatsApp gönder
+    const gonderWhatsApp = () => {
+        if (!ogrenci) return;
+        const telefon = ogrenci.veliTel || ogrenci.ogrenciTel;
+        if (!telefon || telefon === '-') {
+            Alert.alert('Hata', 'Telefon numarası bulunamadı');
             return;
         }
-        const mesaj = `Randevunuz: ${date.toLocaleDateString()} ${date.toTimeString().slice(0, 5)}`;
-        sendWhatsApp(randevu.ogrenciTel, mesaj);
+
+        let mesaj = '';
+        if (randevu.iptal === 1) { // Assuming randevu.iptal exists and 1 means cancelled
+            mesaj = `${randevu.ogrAdsoyad} adlı öğrencinin ${randevu.tarih} tarihindeki dersi öğrenci talebi üzerine iptal edilmiştir. Bilginize...`;
+        } else {
+            mesaj = `Sayın Veli, ${randevu.ogrAdsoyad} adlı öğrencinin yeni ders randevusu: ${date.toLocaleDateString()} saat ${date.toTimeString().slice(0, 5)} olarak güncellenmiştir.`;
+        }
+
+        const temizTel = telefon.replace(/\D/g, '');
+        const tamTel = temizTel.startsWith('90') ? temizTel : `90${temizTel}`;
+        const url = `whatsapp://send?phone=${tamTel}&text=${encodeURIComponent(mesaj)}`;
+        Linking.openURL(url).catch(() => Alert.alert('Hata', 'WhatsApp açılamadı'));
     };
+
+    // Randevu İptal Et
+    const randevuIptalEt = () => {
+        Alert.alert(
+            'Randevu İptal',
+            'Bu randevuyu iptal etmek istediğinizden emin misiniz? (Kayıt silinmeyecek, sadece iptal olarak işaretlenecek)',
+            [
+                { text: 'Vazgeç', style: 'cancel' },
+                {
+                    text: 'İptal Et',
+                    style: 'destructive',
+                    onPress: async () => {
+                        const result = await randevuIptal(randevu.ajandaId);
+                        if (result.success) {
+                            Alert.alert('Başarılı', 'Randevu iptal edildi');
+                            navigation.goBack();
+                        } else {
+                            Alert.alert('Hata', 'Randevu iptal edilirken bir hata oluştu.');
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
     const formatDateWithDay = (date: Date) => {
         const days = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
         const dayName = days[date.getDay()];
         return `${date.toLocaleDateString()} ${dayName}`;
     };
 
-    // Kullanımı:
-    <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.dateTimeButton}>
-        <Text>{formatDateWithDay(date)}</Text>
-    </TouchableOpacity>
     return (
         <KeyboardAvoidingView
             style={{ flex: 1 }}
@@ -138,12 +196,32 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
                 <View style={styles.row}>
                     <View style={styles.column}>
                         <Text style={styles.label}>Kalan Tekrar</Text>
-                        <TextInput
-                            style={styles.inputSmall}
-                            keyboardType="numeric"
-                            value={kalanTekrar.toString()}
-                            onChangeText={(t) => setKalanTekrar(parseInt(t))}
-                        />
+                        <View style={styles.stepInputContainer}>
+                            <TouchableOpacity
+                                style={styles.stepButton}
+                                onPress={() => {
+                                    setKalanTekrar((prev: number) => Math.max(1, prev - 1));
+                                    setDegisiklikTipi('tumKayitlar');
+                                }}
+                            >
+                                <MaterialIcons name="remove" size={20} color="#3498db" />
+                            </TouchableOpacity>
+                            <TextInput
+                                style={styles.inputStep}
+                                keyboardType="numeric"
+                                value={kalanTekrar.toString()}
+                                onChangeText={(t) => setKalanTekrar(parseInt(t) || 0)}
+                            />
+                            <TouchableOpacity
+                                style={styles.stepButton}
+                                onPress={() => {
+                                    setKalanTekrar((prev: number) => prev + 1);
+                                    setDegisiklikTipi('tumKayitlar');
+                                }}
+                            >
+                                <MaterialIcons name="add" size={20} color="#3498db" />
+                            </TouchableOpacity>
+                        </View>
                     </View>
 
                     <View style={styles.column}>
@@ -208,14 +286,22 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
                         <Text style={styles.buttonText}>Vazgeç</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={[styles.buttonSmall, { backgroundColor: '#27ae60' }]} onPress={handleSMSSend}>
+                    <TouchableOpacity style={[styles.buttonSmall, { backgroundColor: '#27ae60' }]} onPress={gonderSms}>
                         <MaterialIcons name="sms" size={18} color="white" />
                         <Text style={styles.buttonText}>SMS</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={[styles.buttonSmall, { backgroundColor: '#075E54' }]} onPress={handleWhatsAppSend}>
+                    <TouchableOpacity style={[styles.buttonSmall, { backgroundColor: '#075E54' }]} onPress={gonderWhatsApp}>
                         <FontAwesome5 name="whatsapp" size={18} color="white" />
                         <Text style={styles.buttonText}>WhatsApp</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.buttonSmall, styles.iptalButon]}
+                        onPress={randevuIptalEt}
+                    >
+                        <MaterialIcons name="cancel" size={18} color="white" />
+                        <Text style={styles.buttonText}>Randevu İptal</Text>
                     </TouchableOpacity>
                 </View>
             </ScrollView>
@@ -245,6 +331,28 @@ const styles = StyleSheet.create({
         width: 100,
         textAlign: 'center'
     },
+    stepInputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 5,
+        backgroundColor: 'white',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#ccc',
+        overflow: 'hidden',
+    },
+    stepButton: {
+        padding: 10,
+        backgroundColor: '#f0f7ff',
+    },
+    inputStep: {
+        flex: 1,
+        height: 40,
+        textAlign: 'center',
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#333',
+    },
     row: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
     column: { flex: 1, marginHorizontal: 5 },
     radioContainer: { flexDirection: 'row', marginTop: 10 },
@@ -264,6 +372,9 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
         justifyContent: 'space-between',
         marginTop: 25,
+    },
+    iptalButon: {
+        backgroundColor: '#f39c12',
     },
     buttonSmall: {
         flexDirection: 'row',

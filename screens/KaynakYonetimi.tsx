@@ -14,12 +14,14 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
 import {
     kaynakKaydet,
     kaynakListesi,
     kaynakSil,
     tekOgrenci
 } from '../utils/database';
+import { getTumKaynaklar } from '../database/homeworkOperations';
 import { KaynakType, OgrenciType } from '../types';
 
 export default function KaynakYonetimi() {
@@ -29,8 +31,10 @@ export default function KaynakYonetimi() {
 
     const [ogrenci, setOgrenci] = useState<OgrenciType | null>(null);
     const [kaynaklar, setKaynaklar] = useState<KaynakType[]>([]);
-    const [yeniKaynak, setYeniKaynak] = useState('');
+    const [tumKaynaklar, setTumKaynaklar] = useState<{ id: number; ad: string }[]>([]);
+    const [secilenKaynak, setSecilenKaynak] = useState('');
     const [loading, setLoading] = useState(true);
+    const [yeniKaynak, setYeniKaynak] = useState(''); // Keep for backward compatibility if needed, but we'll use secilenKaynak
 
     useEffect(() => {
         veriAl();
@@ -48,6 +52,12 @@ export default function KaynakYonetimi() {
 
             // Kaynakları al
             await kaynaklariYenile();
+
+            // Global kaynakları al
+            const globalResult = await getTumKaynaklar();
+            if (globalResult.success) {
+                setTumKaynaklar(globalResult.data);
+            }
 
         } catch (error) {
             console.error('Veri alma hatası:', error);
@@ -68,42 +78,43 @@ export default function KaynakYonetimi() {
         }
     };
 
-    // Kaynak ekleme
-    const kaynakEkle = async () => {
-        if (!yeniKaynak.trim()) {
-            Alert.alert('Uyarı', 'Lütfen kaynak adını giriniz');
+    // Kaynak ekleme (Seçilen kaynaktan)
+    const handleKaynakEkle = async () => {
+        if (!secilenKaynak || secilenKaynak === '0') {
+            Alert.alert('Uyarı', 'Lütfen bir kaynak seçiniz');
             return;
         }
 
+        const kaynakAdi = tumKaynaklar.find(k => k.id.toString() === secilenKaynak)?.ad;
+        if (!kaynakAdi) return;
+
         // Aynı kaynak var mı kontrol et
         const mevcutKaynak = kaynaklar.find(k =>
-            k.kaynak.toLowerCase() === yeniKaynak.trim().toLowerCase()
+            k.kaynak && k.kaynak.toLowerCase() === kaynakAdi.toLowerCase()
         );
 
         if (mevcutKaynak) {
-            Alert.alert('Uyarı', 'Bu kaynak zaten mevcut');
+            Alert.alert('Uyarı', 'Bu kaynak öğrenciye zaten eklenmiş');
             return;
         }
 
         try {
-            const kaynakVerisi = {
-                ogrenciId: ogrenciId,
-                kaynak: yeniKaynak.trim()
-            };
-
-            const result = await kaynakKaydet(kaynakVerisi);
+            const cleanOgrId = parseInt(ogrenciId.toString());
+            const result = await kaynakKaydet({
+                ogrenciId: cleanOgrId,
+                kaynak: kaynakAdi
+            } as any);
 
             if (result.success) {
                 Alert.alert('Başarılı', 'Kaynak başarıyla eklendi');
-                setYeniKaynak('');
+                setSecilenKaynak('0');
                 await kaynaklariYenile();
-                Keyboard.dismiss();
             } else {
                 Alert.alert('Hata', 'Kaynak eklenemedi');
             }
         } catch (error) {
             console.error('Kaynak ekleme hatası:', error);
-            Alert.alert('Hata', 'Kaynak eklenemedi: ' + (error as any).message);
+            Alert.alert('Hata', 'İşlem başarısız');
         }
     };
 
@@ -168,7 +179,7 @@ export default function KaynakYonetimi() {
                     <MaterialIcons name="arrow-back" size={24} color="#333" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>
-                    {ogrenci ? `${ogrenci.ogrenciAd} ${ogrenci.ogrenciSoyad} - Kaynak Yönetimi` : 'Kaynak Yönetimi'}
+                    {route.params?.ogrenciAd ? `${route.params.ogrenciAd} ${route.params.ogrenciSoyad || ''}` : (ogrenci ? `${ogrenci.ogrenciAd} ${ogrenci.ogrenciSoyad}` : 'Kaynak Yönetimi')}
                 </Text>
             </View>
 
@@ -179,25 +190,34 @@ export default function KaynakYonetimi() {
             >
                 <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                     <View style={styles.content}>
-                        {/* Yeni Kaynak Ekleme Formu */}
                         <View style={styles.ekleFormContainer}>
-                            <Text style={styles.sectionTitle}>Yeni Kaynak Ekle</Text>
+                            <Text style={styles.sectionTitle}>Global Listeden Kaynak Seç</Text>
                             <View style={styles.kaynakEkleRow}>
-                                <TextInput
-                                    style={[styles.textInput, styles.kaynakInput]}
-                                    value={yeniKaynak}
-                                    onChangeText={setYeniKaynak}
-                                    placeholder="Kaynak adını giriniz (örn: Matematik Kitabı, TYT Deneme)"
-                                    returnKeyType="done"
-                                    onSubmitEditing={kaynakEkle}
-                                />
+                                <View style={styles.pickerContainer}>
+                                    <Picker
+                                        selectedValue={secilenKaynak}
+                                        onValueChange={(itemValue) => setSecilenKaynak(itemValue)}
+                                        style={styles.picker}
+                                    >
+                                        <Picker.Item label="Kaynak Seçiniz..." value="0" />
+                                        {tumKaynaklar.map((k) => (
+                                            <Picker.Item key={k.id} label={k.ad} value={k.id.toString()} />
+                                        ))}
+                                    </Picker>
+                                </View>
                                 <TouchableOpacity
                                     style={styles.kaynakEkleButon}
-                                    onPress={kaynakEkle}
+                                    onPress={handleKaynakEkle}
                                 >
                                     <MaterialIcons name="add" size={24} color="white" />
                                 </TouchableOpacity>
                             </View>
+                            <TouchableOpacity 
+                                style={styles.manageGlobalBtn}
+                                onPress={() => navigation.navigate('GlobalKaynakYonetimi')}
+                            >
+                                <Text style={styles.manageGlobalText}>+ Yeni Genel Kaynak Ekle</Text>
+                            </TouchableOpacity>
                         </View>
 
                         {/* Mevcut Kaynaklar Listesi */}
@@ -304,6 +324,30 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         minWidth: 48,
+        height: 50,
+    },
+    pickerContainer: {
+        flex: 1,
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 6,
+        marginRight: 10,
+        backgroundColor: '#fff',
+        height: 50,
+        justifyContent: 'center',
+    },
+    picker: {
+        width: '100%',
+    },
+    manageGlobalBtn: {
+        marginTop: 12,
+        alignItems: 'center',
+        padding: 8,
+    },
+    manageGlobalText: {
+        color: '#2980b9',
+        fontSize: 14,
+        fontWeight: 'bold',
     },
     listeContainer: {
         backgroundColor: 'white',

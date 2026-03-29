@@ -185,3 +185,60 @@ export async function ogrenciOdevleri(ogrenciId: number) {
         return { success: false, error: error.message, data: [] };
     }
 }
+
+export async function getBekleyenOdevSayisi(ogrenciId: number): Promise<number> {
+    try {
+        const db = await ensureDatabaseReady();
+        const result = await db.getFirstAsync<{ count: number }>(
+            `SELECT COUNT(*) as count FROM odevler WHERE ogrenciId=? AND yapilmadurumu='Bekliyor'`,
+            [ogrenciId]
+        );
+        return result ? result.count : 0;
+    } catch (error) {
+        console.error("Bekleyen ödev sayısı alınamadı:", error);
+        return 0;
+    }
+}
+
+// ================= GLOBAL RESOURCE OPERATIONS =================
+
+export async function tumKaynakEkle(ad: string) {
+    try {
+        const db = await ensureDatabaseReady();
+        const result = await db.runAsync(
+            `INSERT INTO tum_kaynaklar (ad) VALUES (?)`,
+            [ad]
+        );
+        return { success: true, id: result.lastInsertRowId };
+    } catch (error: any) {
+        console.error("Global kaynak ekleme hatası:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function tumKaynakSil(id: number) {
+    try {
+        const db = await ensureDatabaseReady();
+        const result = await db.runAsync(
+            `DELETE FROM tum_kaynaklar WHERE id=?`,
+            [id]
+        );
+        return { success: result.changes > 0 };
+    } catch (error: any) {
+        console.error("Global kaynak silme hatası:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function getTumKaynaklar() {
+    try {
+        const db = await ensureDatabaseReady();
+        const result = await db.getAllAsync<{ id: number; ad: string }>(
+            `SELECT * FROM tum_kaynaklar ORDER BY ad ASC`
+        );
+        return { success: true, data: result || [] };
+    } catch (error: any) {
+        console.error("Global kaynaklar alınamadı:", error);
+        return { success: false, data: [], error: error.message };
+    }
+}

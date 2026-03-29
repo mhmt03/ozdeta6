@@ -2,8 +2,9 @@ import * as SQLite from 'expo-sqlite';
 
 let db: SQLite.SQLiteDatabase | null = null;
 
+const DATABASE_NAME = 'ozdeta.db';
 // VERİTABANI VERSİYONU - Değişiklik yaptığınızda sadece bunu artırın!
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 4; // V3->V4: tum_kaynaklar tablosu eklendi
 
 export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
     try {
@@ -11,7 +12,7 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
             return db; // Zaten başlatılmışsa, mevcut bağlantıyı döndür
         }
 
-        db = await SQLite.openDatabaseAsync('ozdeta.db');
+        db = await SQLite.openDatabaseAsync(DATABASE_NAME);
 
         // Version kontrolü ve migration işlemi
         await handleDatabaseMigration(db);
@@ -89,6 +90,30 @@ async function applyMigration(database: SQLite.SQLiteDatabase, version: number) 
         case 1:
             // İlk versiyon - tüm tabloları oluştur
             await database.execAsync(tabloOlusturucuV1);
+            break;
+        case 2:
+            // Ayarlar tablosu
+            await database.execAsync(`
+                CREATE TABLE IF NOT EXISTS settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT
+                );
+            `);
+            break;
+        case 3:
+            // Ajanda tablosuna iptal sütunu ekle
+            await database.execAsync(`
+                ALTER TABLE ajanda ADD COLUMN iptal INTEGER DEFAULT 0;
+            `);
+            break;
+        case 4:
+            // Tüm kaynaklar tablosu
+            await database.execAsync(`
+                CREATE TABLE IF NOT EXISTS tum_kaynaklar (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ad TEXT UNIQUE NOT NULL
+                );
+            `);
             break;
         default:
             throw new Error(`Bilinmeyen migration versiyonu: ${version}`);
@@ -233,6 +258,7 @@ CREATE TABLE IF NOT EXISTS ajanda (
     kalanTekrarSayisi TEXT,
     olusmaAni TEXT,
     tamamlanma TEXT,
+    iptal INTEGER DEFAULT 0,
     sutun1 TEXT,
     sutun2 TEXT,
     FOREIGN KEY (ogrenciId) REFERENCES ogrenciler(ogrenciId)

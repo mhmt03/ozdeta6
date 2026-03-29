@@ -7,7 +7,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { ogrenciSil } from '../database/studentOperations';
-import { odemeSil, odemeKaydet, dersiKaydet, getOdemeler, getDersler, dersSil } from '../database/financeOperations';
+import { odemeSil, odemeKaydet, dersiKaydet, getOdemeler, getDersler, dersSil, getSonDers } from '../database/financeOperations';
+import { getBekleyenOdevSayisi } from '../database/homeworkOperations';
 import { OgrenciType, DersType, OdemeType } from '../types';
 
 export default function OgrenciDetay() {
@@ -37,6 +38,9 @@ export default function OgrenciDetay() {
     const [odemeTarihPickerAcik, setOdemeTarihPickerAcik] = useState(false);
     const [odemeSaatPickerAcik, setOdemeSaatPickerAcik] = useState(false);
     const [kalanUcret, setKalanUcret] = useState(0);
+    const [sonDers, setSonDers] = useState<DersType | null>(null);
+    const [bekleyenOdevler, setBekleyenOdevler] = useState(0);
+
 
     // Telefon arama fonksiyonu
     const telefonEt = (numara: string) => {
@@ -129,6 +133,36 @@ export default function OgrenciDetay() {
         }
     };
 
+    // Son ders bilgisini getirme
+    const fetchSonDers = async () => {
+        if (!ogrenci.ogrenciId) return;
+        try {
+            const result = await getSonDers(ogrenci.ogrenciId);
+            setSonDers(result);
+        } catch (error) {
+            console.error('Son ders getirme hatası:', error);
+        }
+    };
+
+    // Bekleyen ödevleri getirme
+    const fetchBekleyenOdevler = async () => {
+        if (!ogrenci.ogrenciId) return;
+        try {
+            const count = await getBekleyenOdevSayisi(ogrenci.ogrenciId);
+            setBekleyenOdevler(count);
+        } catch (error) {
+            console.error('Bekleyen ödevler getirme hatası:', error);
+        }
+    };
+
+    // Sayfa açıldığında verileri yükle
+    React.useEffect(() => {
+        kalanUcretiHesapla();
+        fetchSonDers();
+        fetchBekleyenOdevler();
+    }, [ogrenci.ogrenciId]);
+
+
     // Ders popup kapatma fonksiyonu
     const dersPopupKapat = () => {
         setDersPopupAcik(false);
@@ -215,12 +249,13 @@ export default function OgrenciDetay() {
         { id: 3, text: 'Ana Sayfa', icon: 'home', sayfa: 'AnaSayfa' },
         { id: 4, text: 'Not Yaz', icon: 'note', sayfa: 'NotEkle', parametre: { ogrenciId: ogrenci.ogrenciId } },
         { id: 5, text: 'Ödevler', icon: 'assignment', sayfa: 'OdevEkle', parametre: { ogrenciId: ogrenci.ogrenciId } },
+        { id: 6, text: 'Ders Rapor', icon: 'assessment', sayfa: 'DersRapor', parametre: { ogrenciId: ogrenci.ogrenciId } },
+        { id: 7, text: 'Kaynaklar', icon: 'book', sayfa: 'KaynakYonetimi', parametre: { ogrenciId: ogrenci.ogrenciId, ogrenciAd: ogrenci.ogrenciAd, ogrenciSoyad: ogrenci.ogrenciSoyad } },
     ];
 
     // Sağ üst menü seçenekleri
     const sagUstMenu = [
-        { id: 1, text: 'Ders Rapor', sayfa: 'DersRapor', parametre: { ogrenciId: ogrenci.ogrenciId }, icon: 'assessment' },
-        { id: 2, text: 'Ödeme Rapor', sayfa: 'OdemeRapor', parametre: { ogrenciId: ogrenci.ogrenciId }, icon: 'receipt' },
+        { id: 2, text: 'Ödeme Rapor', sayfa: 'DersRapor', parametre: { ogrenciId: ogrenci.ogrenciId }, icon: 'receipt' },
         { id: 3, text: 'Notlar', sayfa: 'NotListesi', parametre: { ogrenciId: ogrenci.ogrenciId }, icon: 'note' },
     ];
 
@@ -285,17 +320,31 @@ export default function OgrenciDetay() {
                         {ogrenci.ogrenciAd} {ogrenci.ogrenciSoyad}
                     </Text>
                     <Text style={styles.okul}>{ogrenci.okul}</Text>
+                    {sonDers && (
+                        <View style={styles.sonDersBilgi}>
+                            <Text style={styles.sonDersLabel}>Son Ders:</Text>
+                            <Text style={styles.sonDersText}>{sonDers.konu} ({formatTarih(new Date(sonDers.tarih))})</Text>
+                        </View>
+                    )}
+                    {bekleyenOdevler > 0 && (
+                        <View style={styles.bekleyenOdevContainer}>
+                            <MaterialIcons name="assignment-late" size={14} color="#e67e22" />
+                            <Text style={styles.bekleyenOdevText}>{bekleyenOdevler} adet bekleyen ödev</Text>
+                        </View>
+                    )}
                 </View>
 
                 {/* Detay Göster Switch */}
                 <View style={styles.switchContainer}>
-                    <Text style={styles.switchLabel}>Detay Göster</Text>
-                    <Switch
-                        value={detayGoster}
-                        onValueChange={setDetayGoster}
-                        thumbColor={detayGoster ? "#4CAF50" : "#f4f3f4"}
-                        trackColor={{ false: "#767577", true: "#81b0ff" }}
-                    />
+                    <View style={styles.switchRow}>
+                        <Text style={styles.switchLabel}>Detayları Göster</Text>
+                        <Switch
+                            value={detayGoster}
+                            onValueChange={setDetayGoster}
+                            trackColor={{ false: "#d1d1d1", true: "#81b0ff" }}
+                            thumbColor={detayGoster ? "#2196F3" : "#f4f3f4"}
+                        />
+                    </View>
                 </View>
 
                 {/* Detaylı Bilgiler */}
@@ -798,6 +847,43 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#2c3e50',
     },
+    sonDersBilgi: {
+        marginTop: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#e3f2fd',
+        paddingVertical: 5,
+        paddingHorizontal: 10,
+        borderRadius: 15,
+    },
+    sonDersLabel: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: '#1976d2',
+        marginRight: 5,
+    },
+    sonDersText: {
+        fontSize: 12,
+        color: '#333',
+    },
+    bekleyenOdevContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 5,
+        backgroundColor: '#fff3e0',
+        paddingVertical: 3,
+        paddingHorizontal: 10,
+        borderRadius: 10,
+        alignSelf: 'center',
+    },
+    bekleyenOdevText: {
+        fontSize: 11,
+        fontWeight: 'bold',
+        color: '#e67e22',
+        marginLeft: 5,
+    },
     modalBody: {
         maxHeight: 400,
         paddingHorizontal: 20,
@@ -909,13 +995,20 @@ const styles = StyleSheet.create({
         color: '#7f8c8d',
     },
     switchContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
         backgroundColor: 'white',
         padding: 15,
         borderRadius: 10,
         marginBottom: 15,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 3,
+    },
+    switchRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
     },
     switchLabel: {
         fontSize: 16,

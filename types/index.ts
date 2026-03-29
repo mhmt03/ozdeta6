@@ -79,6 +79,7 @@ export interface OdemeType {
     odemeturu: string;
     aciklama: string;
     odemesaati?: string;
+    ogrenciAdSoyad?: string;
     sutun1?: string;
     sutun2?: string;
     sutun3?: string;
@@ -95,6 +96,7 @@ export interface AjandaType {
     kalanTekrarSayisi: string;
     olusmaAni: string;
     tamamlanma: string;
+    iptal?: number;
     konu?: string;
     sutun1?: string;
     sutun2?: string;
