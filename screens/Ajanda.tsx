@@ -20,6 +20,8 @@ import {
     Dimensions,
     ActivityIndicator,
     Switch,
+    useWindowDimensions,
+    ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
@@ -27,7 +29,7 @@ import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 
 // Database util'leri (projede mevcut olan fonksiyonlar)
 import { ogrencileriListele, initDatabase } from '../utils/database';
-import { gunlukAjandaGetir } from '../utils/ajandaDatabase';
+import { gunlukAjandaGetir, tarihAraligiAjandaGetir } from '../utils/ajandaDatabase';
 import { getSetting, saveSetting } from '../database/settingsOperations';
 import { AjandaWithOgrenciType, OgrenciType } from '../types';
 
@@ -41,8 +43,6 @@ interface CalendarDayType {
 /* ---------------------- Sabitler ve yardımcı fonksiyonlar --------------------- */
 
 const { width } = Dimensions.get('window');
-const HORIZONTAL_PADDING = 28; // azaltıldı -> hücreler biraz daha sıkışık
-const CELL_WIDTH = Math.floor((width - HORIZONTAL_PADDING) / 7);
 const CELL_HEIGHT = 30; // küçültüldü: daha kompakt ızgara
 
 const DAY_NAMES = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pz'];
@@ -98,6 +98,12 @@ export default function Ajanda() {
 
     // yükleniyor göstergesi
     const [loading, setLoading] = useState(true);
+    const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+    const isLandscape = windowWidth > windowHeight;
+
+    const [showSevenDayPopup, setShowSevenDayPopup] = useState(false);
+    const [sevenDayData, setSevenDayData] = useState<{ [key: string]: AjandaWithOgrenciType[] }>({});
+    const [sevenDayDates, setSevenDayDates] = useState<string[]>([]);
 
     /* useEffect: component mount / dependency değişimi */
     useEffect(() => {
@@ -164,6 +170,39 @@ export default function Ajanda() {
         } catch (err) {
             console.error('randevular alınamadı:', err);
             setRandevular([]);
+        }
+    };
+
+    const fetchSevenDayData = async () => {
+        try {
+            setLoading(true);
+            const dates: string[] = [];
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(selectedDate);
+                d.setDate(selectedDate.getDate() + i);
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                dates.push(`${year}-${month}-${day}`);
+            }
+
+            const startDate = dates[0];
+            const endDate = dates[6];
+            const res = await tarihAraligiAjandaGetir(startDate, endDate);
+
+            if (res?.success) {
+                const grouped: { [key: string]: AjandaWithOgrenciType[] } = {};
+                dates.forEach(date => {
+                    grouped[date] = (res.data as AjandaWithOgrenciType[]).filter(item => item.tarih === date);
+                });
+                setSevenDayData(grouped);
+                setSevenDayDates(dates);
+                setShowSevenDayPopup(true);
+            }
+        } catch (err) {
+            console.error('7 günlük veri alınamadı:', err);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -379,6 +418,13 @@ export default function Ajanda() {
                     >
                         <Text style={styles.bugunButtonText}>Bugün</Text>
                     </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.bugunButton, { backgroundColor: '#3498db' }]}
+                        onPress={fetchSevenDayData}
+                    >
+                        <Text style={[styles.bugunButtonText, { color: 'white' }]}>7 Günlük</Text>
+                    </TouchableOpacity>
                 </View>
 
                 <View style={styles.ayNavigasyon}>
@@ -474,6 +520,88 @@ export default function Ajanda() {
                         </TouchableWithoutFeedback>
                     </View>
                 </TouchableWithoutFeedback>
+            </Modal>
+            {/* MODAL: 7 Günlük Randevu Listesi */}
+            <Modal visible={showSevenDayPopup} transparent animationType="fade" onRequestClose={() => setShowSevenDayPopup(false)}>
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.sevenDayModalContent, isLandscape && styles.landscapeModal]}>
+                        {/* Header */}
+                        <View style={styles.sevenDayHeader}>
+                            <Text style={styles.sevenDayTitle}>7 Günlük Program</Text>
+                            <TouchableOpacity onPress={() => setShowSevenDayPopup(false)} style={styles.closeButton}>
+                                <MaterialIcons name="close" size={24} color="#2c3e50" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView 
+                            horizontal={isLandscape} 
+                            showsVerticalScrollIndicator={!isLandscape}
+                            showsHorizontalScrollIndicator={isLandscape}
+                        >
+                            <View style={[styles.sevenDayContainer, isLandscape && styles.landscapeContainer]}>
+                                {sevenDayDates.map((dateStr) => {
+                                    const dateObj = new Date(dateStr);
+                                    const dayName = dateObj.toLocaleDateString('tr-TR', { weekday: 'short' });
+                                    const dayNum = dateObj.getDate();
+                                    const appointments = sevenDayData[dateStr] || [];
+
+                                    if (isLandscape) {
+                                        // YATAY (Landscape): Günler yan yana, Randevular alt alta
+                                        return (
+                                            <View key={dateStr} style={styles.landscapeDayColumn}>
+                                                <View style={styles.dayHeaderBox}>
+                                                    <Text style={styles.dayNameText}>{dayName}</Text>
+                                                    <Text style={styles.dayNumText}>{dayNum}</Text>
+                                                </View>
+                                                <View style={styles.appsVerticalList}>
+                                                    {appointments.length > 0 ? (
+                                                        appointments.sort((a, b) => a.saat.localeCompare(b.saat)).map((app, idx) => (
+                                                            <View key={idx} style={styles.appCardVertical}>
+                                                                <Text style={styles.appTimeText}>{app.saat}</Text>
+                                                                <Text style={styles.appStudentTextAbbr} numberOfLines={1}>
+                                                                    {(() => {
+                                                                        const parts = app.ogrAdsoyad?.split(' ') || [];
+                                                                        if (parts.length < 2) return app.ogrAdsoyad;
+                                                                        const firstName = parts.slice(0, -1).join(' ');
+                                                                        const lastName = parts[parts.length - 1];
+                                                                        return `${firstName} ${lastName[0]}.`;
+                                                                    })()}
+                                                                </Text>
+                                                            </View>
+                                                        ))
+                                                    ) : (
+                                                        <Text style={styles.noAppText}>-</Text>
+                                                    )}
+                                                </View>
+                                            </View>
+                                        );
+                                    } else {
+                                        // DIKEY (Portrait): Günler alt alta, Randevular yan yana (scrollable)
+                                        return (
+                                            <View key={dateStr} style={styles.portraitDayRow}>
+                                                <View style={styles.dayInfoLeft}>
+                                                    <Text style={styles.dayNameTextRow}>{dayName}</Text>
+                                                    <Text style={styles.dayNumTextRow}>{dayNum}</Text>
+                                                </View>
+                                                <ScrollView horizontal={true} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.appsHorizontalList}>
+                                                    {appointments.length > 0 ? (
+                                                        appointments.sort((a, b) => a.saat.localeCompare(b.saat)).map((app, idx) => (
+                                                            <View key={idx} style={styles.appCardHorizontal}>
+                                                                <Text style={styles.appTimeText}>{app.saat}</Text>
+                                                            </View>
+                                                        ))
+                                                    ) : (
+                                                        <Text style={styles.noAppTextSmall}>Randevu yok</Text>
+                                                    )}
+                                                </ScrollView>
+                                            </View>
+                                        );
+                                    }
+                                })}
+                            </View>
+                        </ScrollView>
+                    </View>
+                </View>
             </Modal>
         </SafeAreaView>
     );
@@ -575,10 +703,10 @@ const styles = StyleSheet.create({
         paddingBottom: 4,
     },
     weekDayText: {
-        fontSize: 10, // küçültüldü
+        fontSize: 10,
         fontWeight: '600',
         color: '#7f8c8d',
-        width: CELL_WIDTH,
+        width: '14.28%', // Yüzde ile 7 eşit parça
         textAlign: 'center',
     },
 
@@ -589,7 +717,7 @@ const styles = StyleSheet.create({
     },
 
     calendarDay: {
-        width: CELL_WIDTH,
+        width: '14.28%', // Yüzde ile 7 eşit parça
         height: CELL_HEIGHT,
         justifyContent: 'center',
         alignItems: 'center',
@@ -752,12 +880,6 @@ const styles = StyleSheet.create({
         fontSize: 13,
     },
 
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
     modalContent: {
         backgroundColor: 'white',
         borderRadius: 12,
@@ -802,8 +924,6 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.06,
         shadowRadius: 2,
         elevation: 1,
-        borderLeftWidth: 4,
-        borderLeftColor: '#3498db', // Default color
     },
     completedEvent: {
         backgroundColor: '#f8f9fa',
@@ -851,5 +971,169 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#7f8c8d',
         marginTop: 2,
+    },
+
+    // 7 GÜNLÜK POPUP STİLLERİ
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.7)', // Daha koyu yarı saydam arka plan
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    sevenDayModalContent: {
+        backgroundColor: 'white', // Tam opak beyaz arka plan
+        borderRadius: 24,
+        padding: 16,
+        width: '94%',
+        maxHeight: '90%',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.3,
+        shadowRadius: 20,
+        elevation: 15,
+        borderWidth: 1,
+        borderColor: '#f0f0f0',
+    },
+    landscapeModal: {
+        width: '96%',
+        maxHeight: '94%',
+    },
+    sevenDayHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+        borderBottomWidth: 2,
+        borderBottomColor: '#f1f2f6',
+        paddingBottom: 10,
+    },
+    sevenDayTitle: {
+        fontSize: 18,
+        fontWeight: '800',
+        color: '#2c3e50',
+    },
+    closeButton: {
+        padding: 4,
+        backgroundColor: '#f1f2f6',
+        borderRadius: 20,
+    },
+    sevenDayContainer: {
+        paddingBottom: 20,
+    },
+    landscapeContainer: {
+        flexDirection: 'row',
+    },
+    // Portrait (Dikey) - Günler alt alta, Randevular yan yana
+    portraitDayRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#ffffff',
+        marginBottom: 12,
+        borderRadius: 12,
+        padding: 10,
+        borderWidth: 1,
+        borderColor: '#edf2f7',
+        // Gölgelendirme
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    dayInfoLeft: {
+        width: 55,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRightWidth: 1,
+        borderRightColor: '#edf2f7',
+        paddingRight: 10,
+        marginRight: 10,
+    },
+    dayNameTextRow: {
+        fontSize: 11,
+        fontWeight: 'bold',
+        color: '#7f8c8d',
+        textTransform: 'uppercase',
+    },
+    dayNumTextRow: {
+        fontSize: 16,
+        fontWeight: '900',
+        color: '#3498db',
+    },
+    appsHorizontalList: {
+        alignItems: 'center',
+    },
+    appCardHorizontal: {
+        backgroundColor: '#e3f2fd',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 15,
+        marginRight: 8,
+        borderWidth: 1,
+        borderColor: '#bbdefb',
+    },
+    noAppTextSmall: {
+        fontSize: 11,
+        color: '#bdc3c7',
+        fontStyle: 'italic',
+    },
+    // Landscape (Yatay) - Günler yan yana, Randevular alt alta
+    landscapeDayColumn: {
+        width: 100, // Küçültüldü
+        marginRight: 6, // Küçültüldü
+        backgroundColor: '#ffffff',
+        borderRadius: 12,
+        padding: 6, // Küçültüldü
+        borderWidth: 1,
+        borderColor: '#edf2f7',
+        minHeight: 120, // Küçültüldü
+    },
+    dayHeaderBox: {
+        alignItems: 'center',
+        marginBottom: 8, // Küçültüldü
+        borderBottomWidth: 1,
+        borderBottomColor: '#f1f2f6',
+        paddingBottom: 4, // Küçültüldü
+    },
+    dayNameText: {
+        fontSize: 10, // Küçültüldü
+        fontWeight: 'bold',
+        color: '#7f8c8d',
+        textTransform: 'uppercase',
+    },
+    dayNumText: {
+        fontSize: 16, // Küçültüldü
+        fontWeight: '900',
+        color: '#3498db',
+    },
+    appsVerticalList: {
+        width: '100%',
+    },
+    appCardVertical: {
+        backgroundColor: '#f1f8ff', // Hafif mavi tonu
+        padding: 4, // Küçültüldü
+        borderRadius: 6, // Küçültüldü
+        marginBottom: 6, // Küçültüldü
+        borderWidth: 1,
+        borderColor: '#d0e1f9',
+        alignItems: 'center',
+    },
+    appTimeText: {
+        fontSize: 11, // Küçültüldü
+        fontWeight: 'bold',
+        color: '#1976d2',
+    },
+    appStudentTextAbbr: {
+        fontSize: 9, // Küçültüldü
+        color: '#546e7a',
+        marginTop: 1, // Küçültüldü
+        textAlign: 'center',
+        fontWeight: '600',
+    },
+    noAppText: {
+        fontSize: 12,
+        color: '#bdc3c7',
+        textAlign: 'center',
+        fontStyle: 'italic',
     },
 });

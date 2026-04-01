@@ -199,19 +199,33 @@ export default function OgrenciDetay() {
             Alert.alert('Hata', 'Ödeme kaydedilemedi: ' + error.message);
         }
     };
-    //ders kaydetme
-    const dersKaydet = async () => {
-
-        if (!dersKonu.trim()) {
-            setDersKonu("Konu Girilmemiş");
+    // Ders kaydetme işlemi
+    const finalizeDersKayit = async (dersVerisi: DersType) => {
+        try {
+            await dersiKaydet(dersVerisi);
+            Alert.alert('Başarılı', 'Ders başarıyla kaydedildi', [
+                {
+                    text: 'Tamam', onPress: () => {
+                        dersPopupKapat();
+                        kalanUcretiHesapla();
+                        fetchSonDers();
+                    }
+                }
+            ]);
+        } catch (error: any) {
+            Alert.alert('Hata', 'Ders kaydedilemedi: ' + error.message);
         }
+    };
+
+    // Ders kaydetme butonu
+    const dersKaydet = async () => {
+        const konu = dersKonu.trim() || 'Konu Girilmemiş';
 
         try {
-
             const dersVerisi: DersType = {
                 ogrenciId: ogrenci.ogrenciId!,
                 dersturu: 'Ders',
-                konu: dersKonu || 'Konu Girilmemiş',
+                konu: konu,
                 tarih: dersTarih.toISOString().split('T')[0],
                 saat: dersSaat.toTimeString().split(' ')[0],
                 ucret: dersUcret,
@@ -219,17 +233,27 @@ export default function OgrenciDetay() {
                 ogrenciAdSoyad: ogrenci.ogrenciAd + " " + ogrenci.ogrenciSoyad
             };
 
-            console.log('Kaydedilecek ders verisi:', dersVerisi);
+            console.log('Ders kaydı başlatılıyor:', dersVerisi.tarih);
 
-            // TODO: Database'e kaydetme işlemi burada yapılacak
-            const result = await dersiKaydet(dersVerisi);
+            // Mükerrer ders kontrolü
+            const mevcutDersler = await getDersler(ogrenci.ogrenciId!);
+            const ayniGunDers = mevcutDersler.find(d => d.tarih === dersVerisi.tarih);
 
-            Alert.alert('Başarılı', 'Ders başarıyla kaydedildi', [
-                { text: 'Tamam', onPress: dersPopupKapat }
-            ]);
+            if (ayniGunDers) {
+                Alert.alert(
+                    'Mükerrer Ders Uyarısı',
+                    `Bu öğrenci için ${formatTarih(dersTarih)} tarihinde zaten bir ders kaydı (Konu: ${ayniGunDers.konu}) mevcut. Yeni bir ders daha eklemek istediğinize emin misiniz?`,
+                    [
+                        { text: 'Vazgeç', style: 'cancel' },
+                        { text: 'Evet, eklemek istiyorum', onPress: () => finalizeDersKayit(dersVerisi) }
+                    ]
+                );
+            } else {
+                await finalizeDersKayit(dersVerisi);
+            }
         } catch (error: any) {
-            console.log("ders kaydedilmedi");
-            Alert.alert('Hata', 'Ders kaydedilemedi: ' + error.message);
+            console.log("Ders kaydı hatası:", error);
+            Alert.alert('Hata', 'Bir sorun oluştu: ' + error.message);
         }
     };
     // Tarih formatını güzelleştirme
@@ -283,13 +307,14 @@ export default function OgrenciDetay() {
                     </TouchableOpacity>
                 ))}
 
-                {/* Sağ Üst Menü */}
-                <View style={styles.sagUstMenuContainer}>
+                {/* Sağ Üst Menü (Üç nokta) */}
+                <View style={styles.menuButon}>
                     <TouchableOpacity
                         style={styles.ucNoktaButon}
                         onPress={() => setSagMenuAcik(!sagMenuAcik)}
                     >
                         <MaterialIcons name="more-vert" size={24} color="#333" />
+                        <Text style={styles.menuButonText}>Diğer</Text>
                     </TouchableOpacity>
 
                     {/* Dropdown Menü */}
@@ -754,31 +779,27 @@ const styles = StyleSheet.create({
     },
     ustMenu: {
         flexDirection: 'row',
-        justifyContent: 'space-around',
-        alignItems: 'center',
-        padding: 10,
+        flexWrap: 'wrap', // İki sıra olmasını sağlar
+        justifyContent: 'flex-start',
+        padding: 5,
         backgroundColor: 'white',
         borderBottomWidth: 1,
         borderBottomColor: '#ddd',
-        position: 'relative',
     },
     menuButon: {
+        width: '25%', // 4 buton yan yana (2 sıra)
         alignItems: 'center',
-        padding: 8,
+        paddingVertical: 8,
     },
     menuButonText: {
-        fontSize: 12,
-        marginTop: 4,
+        fontSize: 10,
+        marginTop: 2,
         color: '#333',
-    },
-    sagUstMenuContainer: {
-        position: 'absolute',
-        right: 10,
-        top: 10,
-        zIndex: 1000,
+        textAlign: 'center',
     },
     ucNoktaButon: {
-        padding: 5,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     // Dropdown Menü Stilleri
     dropdownMenu: {

@@ -87,7 +87,7 @@ export default function AnaSayfa() {
             try {
                 const yapilanDersler = await tumYapilanDersler();
 
-                setSonDersler(yapilanDersler.yapilanDersler);
+                setSonDersler([...yapilanDersler.yapilanDersler].reverse());
             } catch (error) {
                 console.error("Ders verileri alınamadı:", error);
             }

@@ -4,7 +4,7 @@ let db: SQLite.SQLiteDatabase | null = null;
 
 const DATABASE_NAME = 'ozdeta.db';
 // VERİTABANI VERSİYONU - Değişiklik yaptığınızda sadece bunu artırın!
-const DATABASE_VERSION = 4; // V3->V4: tum_kaynaklar tablosu eklendi
+const DATABASE_VERSION = 5; // V4->V5: ajanda tablosuna konu eklendi, iptal çakışması düzeltildi
 
 export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
     try {
@@ -102,9 +102,13 @@ async function applyMigration(database: SQLite.SQLiteDatabase, version: number) 
             break;
         case 3:
             // Ajanda tablosuna iptal sütunu ekle
-            await database.execAsync(`
-                ALTER TABLE ajanda ADD COLUMN iptal INTEGER DEFAULT 0;
-            `);
+            try {
+                await database.execAsync(`
+                    ALTER TABLE ajanda ADD COLUMN iptal INTEGER DEFAULT 0;
+                `);
+            } catch (error) {
+                console.log('iptal sütunu zaten mevcut, atlanıyor...');
+            }
             break;
         case 4:
             // Tüm kaynaklar tablosu
@@ -114,6 +118,16 @@ async function applyMigration(database: SQLite.SQLiteDatabase, version: number) 
                     ad TEXT UNIQUE NOT NULL
                 );
             `);
+            break;
+        case 5:
+            // Ajanda tablosuna konu sütunu ekle
+            try {
+                await database.execAsync(`
+                    ALTER TABLE ajanda ADD COLUMN konu TEXT;
+                `);
+            } catch (error) {
+                console.log('konu sütunu zaten mevcut, atlanıyor...');
+            }
             break;
         default:
             throw new Error(`Bilinmeyen migration versiyonu: ${version}`);
@@ -258,7 +272,6 @@ CREATE TABLE IF NOT EXISTS ajanda (
     kalanTekrarSayisi TEXT,
     olusmaAni TEXT,
     tamamlanma TEXT,
-    iptal INTEGER DEFAULT 0,
     sutun1 TEXT,
     sutun2 TEXT,
     FOREIGN KEY (ogrenciId) REFERENCES ogrenciler(ogrenciId)
