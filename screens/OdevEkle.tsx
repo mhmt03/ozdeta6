@@ -32,6 +32,9 @@ import {
     tekOgrenci
 } from '../utils/database';
 import { KaynakType, OdevType, OgrenciType } from '../types';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+import { Modal, ActivityIndicator } from 'react-native';
 
 
 export default function OdevEkle() {
@@ -53,6 +56,15 @@ export default function OdevEkle() {
     const [teslimTarihi, setTeslimTarihi] = useState(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
     const [verilmeTarihPickerAcik, setVerilmeTarihPickerAcik] = useState(false);
     const [teslimTarihPickerAcik, setTeslimTarihPickerAcik] = useState(false);
+
+    // Yeni Özellikler State'leri
+    const [odevVermeGorunur, setOdevVermeGorunur] = useState(false);
+    const [raporModaliGorunur, setRaporModaliGorunur] = useState(false);
+    const [raporBaslangic, setRaporBaslangic] = useState(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
+    const [raporBitis, setRaporBitis] = useState(new Date());
+    const [showRaporBaslangicPicker, setShowRaporBaslangicPicker] = useState(false);
+    const [showRaporBitisPicker, setShowRaporBitisPicker] = useState(false);
+    const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
     useEffect(() => {
         veriAl();
@@ -185,6 +197,113 @@ export default function OdevEkle() {
         setTeslimTarihi(yeniTeslimTarihi);
     };
 
+    // PDF Raporu Oluştur ve Paylaş/İndir
+    const odevRaporuOlustur = async (hedef: 'indir' | 'ogrenci' | 'veli') => {
+        if (!ogrenci) return;
+
+        try {
+            setIsGeneratingPDF(true);
+            
+            // Tarih aralığındaki ödevleri filtrele
+            const filtrelenmişOdevler = odevler.filter(o => {
+                const oDate = new Date(o.verilmetarihi);
+                return oDate >= raporBaslangic && oDate <= raporBitis;
+            });
+
+            if (filtrelenmişOdevler.length === 0) {
+                Alert.alert('Uyarı', 'Seçilen tarih aralığında ödev bulunamadı.');
+                setIsGeneratingPDF(false);
+                return;
+            }
+
+            const studentName = `${ogrenci.ogrenciAd} ${ogrenci.ogrenciSoyad}`;
+            const rangeText = `${formatTarih(raporBaslangic)} - ${formatTarih(raporBitis)}`;
+
+            const htmlContent = `
+                <html>
+                <head>
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
+                    <style>
+                        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; color: #333; }
+                        h1 { color: #2c3e50; text-align: center; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-bottom: 20px; }
+                        .info { margin-bottom: 20px; font-size: 14px; background-color: #f8f9fa; padding: 15px; border-radius: 8px; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                        th { background-color: #3498db; color: white; padding: 12px 8px; text-align: left; font-size: 12px; }
+                        td { border-bottom: 1px solid #eee; padding: 10px 8px; font-size: 11px; }
+                        .status-Bekliyor { color: #f39c12; font-weight: bold; }
+                        .status-Yapıldı { color: #27ae60; font-weight: bold; }
+                        .status-Yapılmadı { color: #e74c3c; font-weight: bold; }
+                        .footer { margin-top: 50px; text-align: center; font-size: 10px; color: #95a5a6; border-top: 1px solid #eee; padding-top: 10px; }
+                    </style>
+                </head>
+                <body>
+                    <h1>Ödev Takip Raporu</h1>
+                    <div class="info">
+                        <p><strong>Öğrenci:</strong> ${studentName}</p>
+                        <p><strong>Tarih Aralığı:</strong> ${rangeText}</p>
+                        <p><strong>Rapor Tarihi:</strong> ${new Date().toLocaleDateString('tr-TR')}</p>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Verilme</th>
+                                <th>Ödev Konusu</th>
+                                <th>Kaynak</th>
+                                <th>Durum</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${filtrelenmişOdevler.map(o => `
+                                <tr>
+                                    <td>${formatTarih(o.verilmetarihi)}</td>
+                                    <td>${o.odev}</td>
+                                    <td>${o.kaynak || '-'}</td>
+                                    <td class="status-${o.yapilmadurumu}">${o.yapilmadurumu}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    <div class="footer">
+                        Özdeta Öğretmen Takip Sistemi tarafından oluşturulmuştur.
+                    </div>
+                </body>
+                </html>
+            `;
+
+            const { uri } = await Print.printToFileAsync({ html: htmlContent });
+            
+            const fileName = `${ogrenci.ogrenciAd}_${ogrenci.ogrenciSoyad}_Odev_Raporu.pdf`;
+            // Temporary rename logic if possible? expo-print generates a random name.
+            // sharing logic:
+            
+            if (await Sharing.isAvailableAsync()) {
+                let shareOptions: Sharing.SharingOptions = {
+                    mimeType: 'application/pdf',
+                    dialogTitle: `${studentName} Ödev Raporu`,
+                    UTI: 'com.adobe.pdf'
+                };
+
+                // WhatsApp için metin hazırla
+                if (hedef === 'ogrenci' || hedef === 'veli') {
+                    const mesaj = `${studentName} e ait ödev raporu ektedir.`;
+                    // Bazı sistemlerde dialogTitle WhatsApp caption olarak gidebilir.
+                    // Tam otomasyon için bazen 'message' alanı kullanılır (bazı versiyonlarda).
+                    (shareOptions as any).message = mesaj;
+                }
+
+                await Sharing.shareAsync(uri, shareOptions);
+            } else {
+                Alert.alert('Hata', 'Paylaşım özelliği bu cihazda kullanılamıyor.');
+            }
+
+        } catch (error) {
+            console.error('PDF Hatası:', error);
+            Alert.alert('Hata', 'Rapor oluşturulurken bir sorun oluştu.');
+        } finally {
+            setIsGeneratingPDF(false);
+        }
+    };
+
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
@@ -216,8 +335,29 @@ export default function OdevEkle() {
                         keyboardShouldPersistTaps="handled"
                         showsVerticalScrollIndicator={false}
                     >
-                        {/* Ödev Verme Formu */}
-                        <View style={styles.formContainer}>
+                        {/* Üst Kontrol Paneli */}
+                        <View style={styles.topControlPanel}>
+                            <View style={styles.switchControl}>
+                                <Text style={styles.switchControlLabel}>Ödev Verme Formu</Text>
+                                <Switch
+                                    value={odevVermeGorunur}
+                                    onValueChange={setOdevVermeGorunur}
+                                    thumbColor={odevVermeGorunur ? "#4CAF50" : "#f4f3f4"}
+                                    trackColor={{ false: "#767577", true: "#81b0ff" }}
+                                />
+                            </View>
+                            <TouchableOpacity 
+                                style={styles.raporButon}
+                                onPress={() => setRaporModaliGorunur(true)}
+                            >
+                                <MaterialIcons name="assessment" size={20} color="white" />
+                                <Text style={styles.raporButonText}>Rapor Al</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Ödev Verme Formu - Koşullu Gösterim */}
+                        {odevVermeGorunur && (
+                            <View style={styles.formContainer}>
                             {/* Kaynak Yönetimi Butonu */}
                             <TouchableOpacity
                                 style={styles.kaynakEkleButon}
@@ -321,6 +461,7 @@ export default function OdevEkle() {
                                 <Text style={styles.odevVerText}>Ödev Ver</Text>
                             </TouchableOpacity>
                         </View>
+                        )}
 
                         {/* Ödevler Listesi */}
                         <View style={styles.odevlerContainer}>
@@ -379,6 +520,107 @@ export default function OdevEkle() {
                     }}
                 />
             )}
+
+            {/* Rapor Modalı */}
+            <Modal
+                visible={raporModaliGorunur}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setRaporModaliGorunur(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.reportModalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Ödev Raporu Oluştur</Text>
+                            <TouchableOpacity onPress={() => setRaporModaliGorunur(false)}>
+                                <MaterialIcons name="close" size={24} color="#666" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text style={styles.modalSubtitle}>Tarih aralığı seçiniz:</Text>
+
+                        <View style={styles.dateRangeContainer}>
+                            <TouchableOpacity 
+                                style={styles.reportDateButton}
+                                onPress={() => setShowRaporBaslangicPicker(true)}
+                            >
+                                <Text style={styles.dateLabel}>Başlangıç</Text>
+                                <Text style={styles.dateValue}>{formatTarih(raporBaslangic)}</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity 
+                                style={styles.reportDateButton}
+                                onPress={() => setShowRaporBitisPicker(true)}
+                            >
+                                <Text style={styles.dateLabel}>Bitiş</Text>
+                                <Text style={styles.dateValue}>{formatTarih(raporBitis)}</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.raporAksiyonlar}>
+                            <TouchableOpacity 
+                                style={[styles.raporAksiyonButon, { backgroundColor: '#3498db' }]}
+                                onPress={() => odevRaporuOlustur('indir')}
+                                disabled={isGeneratingPDF}
+                            >
+                                <MaterialIcons name="file-download" size={24} color="white" />
+                                <Text style={styles.raporAksiyonText}>İndir / Paylaş</Text>
+                            </TouchableOpacity>
+
+                            <View style={styles.raporPaylasımGrup}>
+                                <TouchableOpacity 
+                                    style={[styles.paylasimButon, { backgroundColor: '#27ae60' }]}
+                                    onPress={() => odevRaporuOlustur('ogrenci')}
+                                    disabled={isGeneratingPDF}
+                                >
+                                    <MaterialIcons name="person" size={20} color="white" />
+                                    <Text style={styles.paylasimText}>Öğrenciye</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity 
+                                    style={[styles.paylasimButon, { backgroundColor: '#8e44ad' }]}
+                                    onPress={() => odevRaporuOlustur('veli')}
+                                    disabled={isGeneratingPDF}
+                                >
+                                    <MaterialIcons name="people" size={20} color="white" />
+                                    <Text style={styles.paylasimText}>Veliye</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        {isGeneratingPDF && (
+                            <View style={styles.loadingOverlay}>
+                                <ActivityIndicator size="large" color="#3498db" />
+                                <Text style={styles.loadingText}>PDF Oluşturuluyor...</Text>
+                            </View>
+                        )}
+                    </View>
+                </View>
+
+                {showRaporBaslangicPicker && (
+                    <DateTimePicker
+                        value={raporBaslangic}
+                        mode="date"
+                        display="default"
+                        onChange={(event, date) => {
+                            setShowRaporBaslangicPicker(false);
+                            if (date) setRaporBaslangic(date);
+                        }}
+                    />
+                )}
+
+                {showRaporBitisPicker && (
+                    <DateTimePicker
+                        value={raporBitis}
+                        mode="date"
+                        display="default"
+                        onChange={(event, date) => {
+                            setShowRaporBitisPicker(false);
+                            if (date) setRaporBitis(date);
+                        }}
+                    />
+                )}
+            </Modal>
         </View>
     );
 }
@@ -460,12 +702,20 @@ const styles = StyleSheet.create({
     },
     pickerContainer: {
         borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 6,
+        borderColor: '#ced4da',
+        borderRadius: 8,
         backgroundColor: '#fff',
+        overflow: 'hidden',
+        justifyContent: 'center',
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
     },
     picker: {
         height: 50,
+        color: '#2c3e50',
     },
     switchContainer: {
         flexDirection: 'row',
@@ -529,4 +779,140 @@ const styles = StyleSheet.create({
         fontStyle: 'italic',
         marginTop: 8,
     },
+    topControlPanel: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        backgroundColor: 'white',
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 16,
+        elevation: 2,
+    },
+    switchControl: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    switchControlLabel: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#333',
+        marginRight: 8,
+    },
+    raporButon: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#e67e22',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 20,
+    },
+    raporButonText: {
+        color: 'white',
+        fontWeight: 'bold',
+        marginLeft: 6,
+        fontSize: 13,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    reportModalContent: {
+        width: '85%',
+        backgroundColor: 'white',
+        borderRadius: 12,
+        padding: 20,
+        elevation: 5,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+        paddingBottom: 10,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#2c3e50',
+    },
+    modalSubtitle: {
+        fontSize: 14,
+        color: '#666',
+        marginBottom: 12,
+    },
+    dateRangeContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 25,
+    },
+    reportDateButton: {
+        flex: 0.48,
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 8,
+        padding: 10,
+        alignItems: 'center',
+    },
+    dateLabel: {
+        fontSize: 11,
+        color: '#7f8c8d',
+        marginBottom: 4,
+    },
+    dateValue: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#2c3e50',
+    },
+    raporAksiyonlar: {
+        gap: 12,
+    },
+    raporAksiyonButon: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 15,
+        borderRadius: 8,
+    },
+    raporAksiyonText: {
+        color: 'white',
+        fontWeight: 'bold',
+        marginLeft: 10,
+        fontSize: 16,
+    },
+    raporPaylasımGrup: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 5,
+    },
+    paylasimButon: {
+        flex: 0.48,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 12,
+        borderRadius: 8,
+    },
+    paylasimText: {
+        color: 'white',
+        fontWeight: 'bold',
+        marginLeft: 6,
+        fontSize: 13,
+    },
+    loadingOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(255,255,255,0.8)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 12,
+    },
+    loadingText: {
+        marginTop: 10,
+        color: '#3498db',
+        fontWeight: 'bold',
+    }
 });

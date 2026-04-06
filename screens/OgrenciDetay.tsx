@@ -18,7 +18,6 @@ export default function OgrenciDetay() {
     console.log("ogrenciDetay_ogrenci:", ogrenci);
 
     const [detayGoster, setDetayGoster] = useState(false);
-    const [sagMenuAcik, setSagMenuAcik] = useState(false);
     const [dersPopupAcik, setDersPopupAcik] = useState(false);
     const [odemePopupAcik, setOdemePopupAcik] = useState(false);
 
@@ -277,11 +276,6 @@ export default function OgrenciDetay() {
         { id: 7, text: 'Kaynaklar', icon: 'book', sayfa: 'KaynakYonetimi', parametre: { ogrenciId: ogrenci.ogrenciId, ogrenciAd: ogrenci.ogrenciAd, ogrenciSoyad: ogrenci.ogrenciSoyad } },
     ];
 
-    // Sağ üst menü seçenekleri
-    const sagUstMenu = [
-        { id: 2, text: 'Ödeme Rapor', sayfa: 'DersRapor', parametre: { ogrenciId: ogrenci.ogrenciId }, icon: 'receipt' },
-        { id: 3, text: 'Notlar', sayfa: 'NotListesi', parametre: { ogrenciId: ogrenci.ogrenciId }, icon: 'note' },
-    ];
 
 
 
@@ -307,35 +301,6 @@ export default function OgrenciDetay() {
                     </TouchableOpacity>
                 ))}
 
-                {/* Sağ Üst Menü (Üç nokta) */}
-                <View style={styles.menuButon}>
-                    <TouchableOpacity
-                        style={styles.ucNoktaButon}
-                        onPress={() => setSagMenuAcik(!sagMenuAcik)}
-                    >
-                        <MaterialIcons name="more-vert" size={24} color="#333" />
-                        <Text style={styles.menuButonText}>Diğer</Text>
-                    </TouchableOpacity>
-
-                    {/* Dropdown Menü */}
-                    {sagMenuAcik && (
-                        <View style={styles.dropdownMenu}>
-                            {sagUstMenu.map((menu) => (
-                                <TouchableOpacity
-                                    key={menu.id}
-                                    style={styles.dropdownItem}
-                                    onPress={() => {
-                                        setSagMenuAcik(false);
-                                        navigation.navigate(menu.sayfa, menu.parametre || {});
-                                    }}
-                                >
-                                    <MaterialIcons name={menu.icon as any} size={20} color="#555" />
-                                    <Text style={styles.dropdownItemText}>{menu.text}</Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-                    )}
-                </View>
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -754,13 +719,6 @@ export default function OgrenciDetay() {
                 )}
             </Modal>
 
-            {/* Sağ menü açıkken overlay */}
-            {sagMenuAcik && (
-                <TouchableOpacity
-                    style={styles.menuOverlay}
-                    onPress={() => setSagMenuAcik(false)}
-                />
-            )}
         </View>
     );
     //!

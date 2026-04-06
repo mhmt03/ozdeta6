@@ -319,7 +319,13 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         marginTop: 5,
         borderWidth: 1,
-        borderColor: '#ccc'
+        borderColor: '#ced4da',
+        color: '#2c3e50',
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
     },
     inputSmall: {
         backgroundColor: 'white',

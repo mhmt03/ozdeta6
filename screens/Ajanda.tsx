@@ -325,7 +325,7 @@ export default function Ajanda() {
         const isCancelled = item.iptal === 1;
 
         return (
-            <TouchableOpacity onPress={() => navigation.navigate('AjandaRandevuDuzenle', { randevu: item })}>
+            <TouchableOpacity onPress={() => navigation.navigate('Ajanda Randevu Duzenle', { randevu: item })}>
                 <View style={[
                     styles.eventCard,
                     isCompleted && styles.completedEvent,
@@ -528,13 +528,14 @@ export default function Ajanda() {
                         {/* Header */}
                         <View style={styles.sevenDayHeader}>
                             <Text style={styles.sevenDayTitle}>7 Günlük Program</Text>
-                            <TouchableOpacity onPress={() => setShowSevenDayPopup(false)} style={styles.closeButton}>
+                            <TouchableOpacity onPress={() => setShowSevenDayPopup(false)} style={[styles.closeButton, { marginRight: isLandscape ? 40 : 15, backgroundColor: isLandscape ? '#98fa94ff' : '#29b6f7ff' }]}>
                                 <MaterialIcons name="close" size={24} color="#2c3e50" />
                             </TouchableOpacity>
+
                         </View>
 
-                        <ScrollView 
-                            horizontal={isLandscape} 
+                        <ScrollView
+                            horizontal={isLandscape}
                             showsVerticalScrollIndicator={!isLandscape}
                             showsHorizontalScrollIndicator={isLandscape}
                         >
@@ -600,6 +601,7 @@ export default function Ajanda() {
                                 })}
                             </View>
                         </ScrollView>
+                        <Text style={{ textAlign: 'center', color: '#7f8c8d', fontSize: 10 }}> {isLandscape ? "Dar görünüm için dik çevir..." : "Geniş görünüm için yan çevir..."}</Text>
                     </View>
                 </View>
             </Modal>
@@ -983,7 +985,7 @@ const styles = StyleSheet.create({
     sevenDayModalContent: {
         backgroundColor: 'white', // Tam opak beyaz arka plan
         borderRadius: 24,
-        padding: 16,
+        padding: 10,
         width: '94%',
         maxHeight: '90%',
         shadowColor: '#000',
@@ -1004,18 +1006,21 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 16,
         borderBottomWidth: 2,
-        borderBottomColor: '#f1f2f6',
+        borderBottomColor: '#8b878bff',
         paddingBottom: 10,
     },
     sevenDayTitle: {
         fontSize: 18,
         fontWeight: '800',
         color: '#2c3e50',
+        justifyContent: 'space-between',
+        alignItems: 'center',
     },
     closeButton: {
         padding: 4,
-        backgroundColor: '#f1f2f6',
+        backgroundColor: '#4c6ff8ff',
         borderRadius: 20,
+        marginRight: 40,
     },
     sevenDayContainer: {
         paddingBottom: 20,
@@ -1030,7 +1035,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#ffffff',
         marginBottom: 12,
         borderRadius: 12,
-        padding: 10,
+        padding: 5,
         borderWidth: 1,
         borderColor: '#edf2f7',
         // Gölgelendirme
@@ -1041,7 +1046,7 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
     dayInfoLeft: {
-        width: 55,
+        width: 35,
         alignItems: 'center',
         justifyContent: 'center',
         borderRightWidth: 1,
@@ -1050,13 +1055,13 @@ const styles = StyleSheet.create({
         marginRight: 10,
     },
     dayNameTextRow: {
-        fontSize: 11,
+        fontSize: 10,
         fontWeight: 'bold',
         color: '#7f8c8d',
         textTransform: 'uppercase',
     },
     dayNumTextRow: {
-        fontSize: 16,
+        fontSize: 9,
         fontWeight: '900',
         color: '#3498db',
     },
@@ -1079,13 +1084,13 @@ const styles = StyleSheet.create({
     },
     // Landscape (Yatay) - Günler yan yana, Randevular alt alta
     landscapeDayColumn: {
-        width: 100, // Küçültüldü
-        marginRight: 6, // Küçültüldü
+        width: 80, // Küçültüldü
+        marginRight: 3, // Küçültüldü
         backgroundColor: '#ffffff',
         borderRadius: 12,
-        padding: 6, // Küçültüldü
+        padding: 2, // Küçültüldü
         borderWidth: 1,
-        borderColor: '#edf2f7',
+        borderColor: '#e2e5e9ff',
         minHeight: 120, // Küçültüldü
     },
     dayHeaderBox: {
@@ -1102,7 +1107,7 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase',
     },
     dayNumText: {
-        fontSize: 16, // Küçültüldü
+        fontSize: 9, // Küçültüldü
         fontWeight: '900',
         color: '#3498db',
     },
@@ -1111,9 +1116,9 @@ const styles = StyleSheet.create({
     },
     appCardVertical: {
         backgroundColor: '#f1f8ff', // Hafif mavi tonu
-        padding: 4, // Küçültüldü
+        padding: 2, // Küçültüldü
         borderRadius: 6, // Küçültüldü
-        marginBottom: 6, // Küçültüldü
+        marginBottom: 4, // Küçültüldü
         borderWidth: 1,
         borderColor: '#d0e1f9',
         alignItems: 'center',
@@ -1124,7 +1129,7 @@ const styles = StyleSheet.create({
         color: '#1976d2',
     },
     appStudentTextAbbr: {
-        fontSize: 9, // Küçültüldü
+        fontSize: 8, // Küçültüldü
         color: '#546e7a',
         marginTop: 1, // Küçültüldü
         textAlign: 'center',

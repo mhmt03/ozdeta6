@@ -127,12 +127,19 @@ export default function App() {
         initialRouteName='AnaSayfa'
         screenOptions={{
           headerStyle: {
-            backgroundColor: '#2196F3',
+            backgroundColor: '#2c3e50', // Premium Lacivert
+            elevation: 4, // Android gölge
+            shadowColor: '#000', // iOS gölge
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.2,
+            shadowRadius: 3,
           },
           headerTintColor: '#fff',
           headerTitleStyle: {
             fontWeight: 'bold',
+            fontSize: 18,
           },
+          headerTitleAlign: 'center', // Başlıkları ortala
         }}
       >
         <Stack.Screen
@@ -152,35 +159,46 @@ export default function App() {
         />
         <Stack.Screen
           name='ogrenciDetay'
-          options={{ title: 'Öğrenci Detayları' }}
+          options={({ route }) => ({ 
+            title: route.params?.ogrenci ? `${route.params.ogrenci.ogrenciAd} ${route.params.ogrenci.ogrenciSoyad}` : 'Öğrenci Detayı' 
+          })}
           component={OgrenciDetay}
         />
         <Stack.Screen
           name='Ajanda'
+          options={{ title: 'Ajanda / Takvim' }}
           component={Ajanda}
         />
         <Stack.Screen
           name='AjandaKayitEkle'
+          options={{ title: 'Yeni Randevu' }}
           component={AjandaKayitEkle}
         />
         <Stack.Screen
           name='AjandaRandevuDuzenle'
+          options={{ title: "Randevu Düzenle" }}
           component={AjandaRandevuDuzenle}
         />
         <Stack.Screen
           name='DersRapor'
+          options={{ title: 'Ders ve Ödeme Raporları' }}
           component={DersRapor}
         />
         <Stack.Screen
           name='NotEkle'
+          options={{ title: 'Not Ekle / Düzenle' }}
           component={NotEkle}
         />
         <Stack.Screen
           name='OdevEkle'
+          options={{ title: 'Ödev Takip Sistemi' }}
           component={OdevEkle}
         />
         <Stack.Screen
           name='KaynakYonetimi'
+          options={({ route }) => ({ 
+            title: route.params?.ogrenciAd ? `${route.params.ogrenciAd} ${route.params.ogrenciSoyad} - Kaynaklar` : 'Kaynak Yönetimi' 
+          })}
           component={KaynakYonetimi}
         />
         <Stack.Screen
@@ -190,6 +208,7 @@ export default function App() {
         />
         <Stack.Screen
           name='Ayarlar'
+          options={{ title: 'Uygulama Ayarları' }}
           component={Ayarlar}
         />
       </Stack.Navigator>

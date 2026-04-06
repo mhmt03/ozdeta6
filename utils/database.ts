@@ -5,3 +5,4 @@ export * from '../database/studentOperations';
 export * from '../database/financeOperations';
 export * from '../database/homeworkOperations';
 export * from '../database/agendaOperations';
+export * from '../database/maintenanceOperations';

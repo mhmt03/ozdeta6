@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -25,7 +25,17 @@ const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle }) => {
         return tarih.toLocaleDateString('tr-TR');
     };
 
-    const teslimGecmis = new Date(item.teslimttarihi) < new Date();
+    const teslimGecmis = new Date(item.teslimttarihi) < new Date() && yapilmaDurumu !== 'Yapıldı';
+
+    const getDurumRenk = (durum: string) => {
+        switch (durum) {
+            case 'Bekliyor': return '#f39c12'; // Turuncu
+            case 'Yapıldı': return '#2ecc71';  // Yeşil
+            case 'Yapılmadı': return '#e74c3c'; // Kırmızı
+            case 'Eksik': return '#34495e';    // Koyu Gri/Mavi
+            default: return '#95a5a6';
+        }
+    };
 
     return (
         <View style={[styles.odevItem, teslimGecmis && { borderColor: 'red', borderWidth: 2 }]}>
@@ -51,17 +61,18 @@ const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle }) => {
             </View>
 
             {/* Durum */}
-            <View style={styles.durumContainer}>
+            <View style={[styles.durumContainer, { backgroundColor: getDurumRenk(yapilmaDurumu) }]}>
                 <Text style={styles.durumLabel}>Durum:</Text>
                 <Picker
                     selectedValue={yapilmaDurumu}
                     onValueChange={(val: string) => setYapilmaDurumu(val)}
                     style={styles.durumPicker}
+                    dropdownIconColor="white"
                 >
-                    <Picker.Item label="Bekliyor" value="Bekliyor" />
-                    <Picker.Item label="Yapıldı" value="Yapıldı" />
-                    <Picker.Item label="Yapılmadı" value="Yapılmadı" />
-                    <Picker.Item label="Eksik" value="Eksik" />
+                    <Picker.Item label="Bekliyor" value="Bekliyor" color={Platform.OS === 'ios' ? 'white' : '#333'} />
+                    <Picker.Item label="Yapıldı" value="Yapıldı" color={Platform.OS === 'ios' ? 'white' : '#333'} />
+                    <Picker.Item label="Yapılmadı" value="Yapılmadı" color={Platform.OS === 'ios' ? 'white' : '#333'} />
+                    <Picker.Item label="Eksik" value="Eksik" color={Platform.OS === 'ios' ? 'white' : '#333'} />
                 </Picker>
             </View>
 
@@ -136,10 +147,19 @@ const styles = StyleSheet.create({
     durumContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        margin: 10, backgroundColor: 'gray'
+        marginTop: 10,
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        height: 50,
+        overflow: 'hidden',
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.2,
+        shadowRadius: 2,
     },
-    durumLabel: { marginRight: 8, fontWeight: 'bold' },
-    durumPicker: { flex: 1, height: 50 },
+    durumLabel: { color: 'white', fontWeight: 'bold', fontSize: 14, marginRight: 5 },
+    durumPicker: { flex: 1, color: 'white', fontWeight: 'bold' },
     guncelleButon: {
         flexDirection: 'row',
         justifyContent: 'center',

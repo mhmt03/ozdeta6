@@ -26,7 +26,8 @@ import {
     ogrencileriListele,
     ogrencininOdemeleri,
     tumYapilanDersler,
-    tumOdemeleriGetir
+    tumOdemeleriGetir,
+    veritabaniTemizle
 } from '../utils/database';
 
 export default function Ayarlar() {
@@ -42,6 +43,19 @@ export default function Ayarlar() {
     const [bitisTarihi, setBitisTarihi] = useState(new Date());
     const [baslangicPickerAcik, setBaslangicPickerAcik] = useState(false);
     const [bitisPickerAcik, setBitisPickerAcik] = useState(false);
+
+    // Veritabanı temizleme state'leri
+    const [temizlikModalAcik, setTemizlikModalAcik] = useState(false);
+    const [temizlikTarihi, setTemizlikTarihi] = useState(new Date());
+    const [temizlikPickerAcik, setTemizlikPickerAcik] = useState(false);
+    const [seciliTablolar, setSeciliTablolar] = useState<any>({
+        ogrenciler: false,
+        dersler: true,
+        odemeler: true,
+        odevler: true,
+        notlarim: true,
+        ajanda: true
+    });
 
     useEffect(() => {
         borcluOgrencileriHesapla();
@@ -587,6 +601,63 @@ export default function Ayarlar() {
     };
 
     /**
+     * Veritabanı temizleme işlemi
+     */
+    const veritabaniniTemizleIslemi = async () => {
+        try {
+            const secilenler = Object.entries(seciliTablolar)
+                .filter(([_, value]) => value)
+                .map(([key, _]) => key);
+
+            if (secilenler.length === 0) {
+                Alert.alert('Uyarı', 'Lütfen temizlenecek en az bir tablo seçin.');
+                return;
+            }
+
+            Alert.alert(
+                'DİKKAT: Veritabanı Temizleme',
+                `${formatTarih(temizlikTarihi)} tarihinden önceki seçili veriler KALICI OLARAK silinecektir. Bu işlem geri alınamaz. Devam etmek istediğinize emin misiniz?`,
+                [
+                    { text: 'İptal', style: 'cancel' },
+                    {
+                        text: 'Evet, Sil',
+                        style: 'destructive',
+                        onPress: async () => {
+                            try {
+                                setLoading(true);
+                                const tarihStr = temizlikTarihi.toISOString().split('T')[0];
+                                const result = await veritabaniTemizle(tarihStr, secilenler);
+
+                                if (result.success) {
+                                    Alert.alert('Başarılı', 'Seçilen veriler başarıyla temizlendi ve veritabanı optimize edildi.');
+                                    setTemizlikModalAcik(false);
+                                    borcluOgrencileriHesapla();
+                                } else {
+                                    Alert.alert('Hata', 'Temizleme işlemi sırasında bir hata oluştu: ' + result.error);
+                                }
+                            } catch (error) {
+                                console.error('Temizleme hatası:', error);
+                                Alert.alert('Hata', 'Bir hata oluştu.');
+                            } finally {
+                                setLoading(false);
+                            }
+                        }
+                    }
+                ]
+            );
+        } catch (error) {
+            console.error('Temizleme hazırlık hatası:', error);
+        }
+    };
+
+    const tabloSecimiDegistir = (tablo: string) => {
+        setSeciliTablolar((prev: any) => ({
+            ...prev,
+            [tablo]: !prev[tablo]
+        }));
+    };
+
+    /**
      * Tarih formatı düzenleme fonksiyonu
      */
     const formatTarih = (tarih: Date) => {
@@ -670,6 +741,19 @@ export default function Ayarlar() {
                             </Text>
                         </View>
                     </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.ayarItem}
+                        onPress={() => setTemizlikModalAcik(true)}
+                    >
+                        <MaterialIcons name="delete-sweep" size={24} color="#F44336" />
+                        <View style={styles.ayarText}>
+                            <Text style={styles.ayarBaslik}>Veritabanını Temizle (Hafiflet)</Text>
+                            <Text style={styles.ayarAciklama}>
+                                Seçilen bir tarihten önceki verileri silerek dosya boyutunu küçült
+                            </Text>
+                        </View>
+                    </TouchableOpacity>
                 </View>
 
                 <View style={styles.section}>
@@ -712,9 +796,10 @@ export default function Ayarlar() {
                     <View style={styles.bilgiItem}>
                         <MaterialIcons name="info" size={24} color="#9E9E9E" />
                         <View style={styles.ayarText}>
-                            <Text style={styles.ayarBaslik}>Dosya Konumu</Text>
+                            {/* <Text style={styles.ayarBaslik}>Dosya Konumu</Text> */}
                             <Text style={styles.ayarAciklama}>
-                                Yedekler ve raporlar uygulama içi ozdeta klasörüne kaydedilir
+                                created By  Mehmet Gündöner {'\n'}
+                                gundoner@yahoo.com
                             </Text>
                         </View>
                     </View>
@@ -828,6 +913,134 @@ export default function Ayarlar() {
                         }}
                     />
                 )}
+            </Modal>
+
+            {/* Veritabanı Temizleme Modalı */}
+            <Modal
+                visible={temizlikModalAcik}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={() => setTemizlikModalAcik(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Veritabanını Temizle</Text>
+                            <TouchableOpacity onPress={() => setTemizlikModalAcik(false)}>
+                                <MaterialIcons name="close" size={24} color="#666" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView style={styles.modalBodyScroll}>
+                            <Text style={[styles.modalAciklama, { textAlign: 'left', marginBottom: 10 }]}>
+                                Temizlenecek tarih sınırını seçin:
+                            </Text>
+
+                            <View style={styles.tarihContainer}>
+                                <TouchableOpacity
+                                    style={styles.tarihButton}
+                                    onPress={() => setTemizlikPickerAcik(true)}
+                                >
+                                    <MaterialIcons name="date-range" size={20} color="#666" />
+                                    <Text style={styles.tarihText}>
+                                        {formatTarih(temizlikTarihi)}'den Öncekiler
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            <Text style={[styles.modalAciklama, { textAlign: 'left', marginBottom: 10, marginTop: 10 }]}>
+                                Silinecek tabloları seçin:
+                            </Text>
+
+                            <View style={styles.checkboxList}>
+                                <TouchableOpacity style={styles.checkboxContainer} onPress={() => tabloSecimiDegistir('ogrenciler')}>
+                                    <MaterialIcons
+                                        name={seciliTablolar.ogrenciler ? "check-box" : "check-box-outline-blank"}
+                                        size={24} color={seciliTablolar.ogrenciler ? "#F44336" : "#666"}
+                                    />
+                                    <Text style={styles.checkboxText}>Öğrenciler (Kayıt Tarihi)</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity style={styles.checkboxContainer} onPress={() => tabloSecimiDegistir('dersler')}>
+                                    <MaterialIcons
+                                        name={seciliTablolar.dersler ? "check-box" : "check-box-outline-blank"}
+                                        size={24} color={seciliTablolar.dersler ? "#2196F3" : "#666"}
+                                    />
+                                    <Text style={styles.checkboxText}>Dersler</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity style={styles.checkboxContainer} onPress={() => tabloSecimiDegistir('odemeler')}>
+                                    <MaterialIcons
+                                        name={seciliTablolar.odemeler ? "check-box" : "check-box-outline-blank"}
+                                        size={24} color={seciliTablolar.odemeler ? "#4CAF50" : "#666"}
+                                    />
+                                    <Text style={styles.checkboxText}>Ödemeler</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity style={styles.checkboxContainer} onPress={() => tabloSecimiDegistir('odevler')}>
+                                    <MaterialIcons
+                                        name={seciliTablolar.odevler ? "check-box" : "check-box-outline-blank"}
+                                        size={24} color={seciliTablolar.odevler ? "#FF9800" : "#666"}
+                                    />
+                                    <Text style={styles.checkboxText}>Ödevler</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity style={styles.checkboxContainer} onPress={() => tabloSecimiDegistir('notlarim')}>
+                                    <MaterialIcons
+                                        name={seciliTablolar.notlarim ? "check-box" : "check-box-outline-blank"}
+                                        size={24} color={seciliTablolar.notlarim ? "#9C27B0" : "#666"}
+                                    />
+                                    <Text style={styles.checkboxText}>Notlarım</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity style={styles.checkboxContainer} onPress={() => tabloSecimiDegistir('ajanda')}>
+                                    <MaterialIcons
+                                        name={seciliTablolar.ajanda ? "check-box" : "check-box-outline-blank"}
+                                        size={24} color={seciliTablolar.ajanda ? "#795548" : "#666"}
+                                    />
+                                    <Text style={styles.checkboxText}>Ajanda Kayıtları</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            <View style={styles.uyariBox}>
+                                <MaterialIcons name="warning" size={20} color="#F44336" />
+                                <Text style={styles.uyariText}>
+                                    NOT: Öğrenciler seçilirse, silinen öğrencilere ait tüm veriler (tarihinden bağımsız olarak) temizlenir.
+                                </Text>
+                            </View>
+                        </ScrollView>
+
+                        <View style={styles.modalFooter}>
+                            <TouchableOpacity
+                                style={[styles.modalButton, styles.cancelButton]}
+                                onPress={() => setTemizlikModalAcik(false)}
+                            >
+                                <Text style={styles.cancelButtonText}>İptal</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.modalButton, { backgroundColor: '#F44336' }]}
+                                onPress={veritabaniniTemizleIslemi}
+                            >
+                                <Text style={styles.createButtonText}>Temizle</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
+                    {temizlikPickerAcik && (
+                        <DateTimePicker
+                            value={temizlikTarihi}
+                            mode="date"
+                            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                            onChange={(event, selectedDate) => {
+                                setTemizlikPickerAcik(Platform.OS === 'ios');
+                                if (selectedDate) {
+                                    setTemizlikTarihi(selectedDate);
+                                }
+                            }}
+                        />
+                    )}
+                </View>
             </Modal>
 
             <Modal
@@ -1149,6 +1362,38 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: 'bold',
         color: '#F44336',
+    },
+    modalBodyScroll: {
+        maxHeight: 400,
+        paddingHorizontal: 20,
+        paddingBottom: 20,
+    },
+    checkboxList: {
+        marginBottom: 15,
+    },
+    checkboxContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 8,
+    },
+    checkboxText: {
+        marginLeft: 10,
+        fontSize: 16,
+        color: '#333',
+    },
+    uyariBox: {
+        flexDirection: 'row',
+        backgroundColor: '#FFF3E0',
+        padding: 10,
+        borderRadius: 8,
+        marginTop: 10,
+        alignItems: 'flex-start',
+    },
+    uyariText: {
+        fontSize: 12,
+        color: '#E65100',
+        marginLeft: 8,
+        flex: 1,
     },
 });
 

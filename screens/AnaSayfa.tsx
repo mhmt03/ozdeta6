@@ -1,7 +1,7 @@
 
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Image, BackHandler, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { ogrencininOdemeleri, tekOgrenci, tumYapilanDersler } from '../utils/database';
@@ -142,11 +142,24 @@ export default function AnaSayfa() {
         </View>
     );
 
+    const handleExit = () => {
+        Alert.alert(
+            "Uygulamayı Kapat",
+            "Uygulamadan çıkmak istediğinize emin misiniz?",
+            [
+                { text: "Vazgeç", style: "cancel" },
+                { text: "Evet, Kapat", onPress: () => BackHandler.exitApp() }
+            ]
+        );
+    };
+
     return (
         <View style={styles.container}>
             {/* Başlık */}
             <View style={styles.header}>
-
+                <TouchableOpacity style={styles.headerExitButton} onPress={handleExit}>
+                    <MaterialIcons name="power-settings-new" size={24} color="white" />
+                </TouchableOpacity>
                 <Text style={styles.headerDate}>{getTodayDate()}</Text>
             </View>
 
@@ -264,13 +277,15 @@ const styles = StyleSheet.create({
         borderBottomLeftRadius: 20,
         borderBottomRightRadius: 20,
         marginBottom: 20,
+        position: 'relative',
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
-    headerTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: 'white',
-        textAlign: 'center',
-        marginBottom: 5,
+    headerExitButton: {
+        position: 'absolute',
+        right: 20,
+        top: 40,
     },
     headerDate: {
         fontSize: 16,
