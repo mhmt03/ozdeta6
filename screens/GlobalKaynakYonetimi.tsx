@@ -158,7 +158,12 @@ export default function GlobalKaynakYonetimi() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f8f9fa' },
+    container: { 
+        flex: 1, 
+        backgroundColor: '#f8f9fa',
+        paddingTop: 16,
+        paddingBottom: 80,
+    },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -167,6 +172,7 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
         elevation: 2,
+        marginBottom: 30,
     },
     headerTitle: { fontSize: 18, fontWeight: 'bold', marginLeft: 16, color: '#333' },
     keyboardView: { flex: 1 },

@@ -159,7 +159,7 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
             behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
 
-            <ScrollView style={styles.container} contentContainerStyle={{ padding: 20 }}>
+            <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingBottom: 80 }}>
                 <Text style={styles.label}>Tarih</Text>
                 <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.dateTimeButton}>
                     {/* <Text>{date.toLocaleDateString()}</Text> */}
@@ -311,7 +311,11 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f7f7f7' },
+    container: { 
+        flex: 1, 
+        backgroundColor: '#f7f7f7',
+        paddingTop: 16,
+    },
     label: { fontWeight: 'bold', marginTop: 15 },
     input: {
         backgroundColor: 'white',

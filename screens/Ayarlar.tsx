@@ -1097,6 +1097,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f8f9fa',
+        paddingTop: 16,
     },
     loadingOverlay: {
         position: 'absolute',
@@ -1116,6 +1117,7 @@ const styles = StyleSheet.create({
     },
     scrollView: {
         flex: 1,
+        paddingBottom: 80,
     },
     header: {
         flexDirection: 'row',

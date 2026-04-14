@@ -27,6 +27,7 @@ export default function OgrenciListesi({ navigation: propNavigation }: Props) {
                     style={{ marginRight: 15 }}
                 >
                     <MaterialIcons name="library-books" size={24} color="white" />
+                    <Text style={{ color: 'white', fontSize: 10, textAlign: 'center' }}>Kaynaklar</Text>
                 </TouchableOpacity>
             ),
         });
@@ -156,12 +157,16 @@ export default function OgrenciListesi({ navigation: propNavigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f5f5f5' },
+    container: { 
+        flex: 1, 
+        backgroundColor: '#f5f5f5',
+        paddingTop: 16,
+    },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#ddd' },
     toggleButton: { padding: 10, backgroundColor: '#e0e0e0', borderRadius: 20 },
     toggleButtonActive: { backgroundColor: '#4CAF50' },
     toggleButtonText: { color: '#333', fontSize: 12, fontWeight: 'bold' },
-    listContent: { padding: 8, paddingBottom: 20 },
+    listContent: { padding: 8, paddingBottom: 80 },
     centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
     emptyText: { fontSize: 18, color: '#666', marginBottom: 10, textAlign: 'center', fontWeight: 'bold' },
     emptySubText: { fontSize: 14, color: '#888', marginBottom: 20, textAlign: 'center' },

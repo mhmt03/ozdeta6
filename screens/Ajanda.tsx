@@ -325,7 +325,7 @@ export default function Ajanda() {
         const isCancelled = item.iptal === 1;
 
         return (
-            <TouchableOpacity onPress={() => navigation.navigate('Ajanda Randevu Duzenle', { randevu: item })}>
+            <TouchableOpacity onPress={() => navigation.navigate('AjandaRandevuDuzenle', { randevu: item })}>
                 <View style={[
                     styles.eventCard,
                     isCompleted && styles.completedEvent,
@@ -622,6 +622,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#bed9f3ff',
         justifyContent: 'flex-start',
         padding: 1,
+        paddingTop: 16,
     },
     centerContainer: {
         flex: 1,
@@ -811,7 +812,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     listeContent: {
-        paddingBottom: 24,
+        paddingBottom: 80,
     },
 
     randevuItem: {

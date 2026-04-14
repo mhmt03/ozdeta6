@@ -38,9 +38,7 @@ export default function AnaSayfa() {
         // Örnek randevu verileri - gerçekte veritabanından gelecek
         const tumRandevular = [
             { id: 1, ogrenciAdi: 'Ahmet Yılmaz', ogrenciId: 101, saat: '14:00', ders: 'Matematik', tarih: new Date() },
-            { id: 2, ogrenciAdi: 'Ayşe Demir', ogrenciId: 102, saat: '16:30', ders: 'Fizik', tarih: new Date() },
-            { id: 3, ogrenciAdi: 'Mehmet Öz', ogrenciId: 103, saat: '10:00', ders: 'Kimya', tarih: new Date(Date.now() + 24 * 60 * 60 * 1000) }, // yarın
-            { id: 4, ogrenciAdi: 'Fatma Kaya', ogrenciId: 104, saat: '15:00', ders: 'Biyoloji', tarih: new Date(Date.now() - 24 * 60 * 60 * 1000) }, // dün
+
         ];
 
         // Seçili tarihe ait randevuları filtrele
@@ -123,7 +121,7 @@ export default function AnaSayfa() {
             </View>
             <View style={styles.randevuBilgi}>
                 <Text style={styles.randevuOgrenci}>{item.ogrAdsoyad}</Text>
-            <Text style={styles.randevuDers}>{item.saat}</Text>
+                <Text style={styles.randevuDers}>{item.saat}</Text>
             </View>
             <MaterialIcons name="arrow-forward-ios" size={16} color="#666" />
         </TouchableOpacity>
@@ -264,11 +262,11 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f8f9fa',
-        paddingBottom: 50,
+        paddingTop: 16,
     },
     scrollContent: {
         padding: 16,
-        paddingBottom: 30,
+        paddingBottom: 80,
     },
     header: {
         backgroundColor: '#2c3e50',

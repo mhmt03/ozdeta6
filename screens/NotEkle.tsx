@@ -290,6 +290,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f8f9fa',
+        paddingTop: 16,
     },
     loadingContainer: {
         flex: 1,
@@ -315,6 +316,7 @@ const styles = StyleSheet.create({
     content: {
         flex: 1,
         padding: 16,
+        paddingBottom: 80,
     },
     notGirisContainer: {
         backgroundColor: 'white',

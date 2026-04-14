@@ -80,8 +80,12 @@ export default function YeniKayit({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f5f5f5' },
-    scrollContent: { padding: 16, paddingBottom: 30 },
+    container: { 
+        flex: 1, 
+        backgroundColor: '#f5f5f5',
+        paddingTop: 16,
+    },
+    scrollContent: { padding: 16, paddingBottom: 80 },
     buttonContainer: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 20, marginBottom: 10 },
     button: { borderRadius: 8, paddingVertical: 14, paddingHorizontal: 25, minWidth: '45%', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 3, elevation: 3 },
     cancelButton: { backgroundColor: '#e74c3c' },

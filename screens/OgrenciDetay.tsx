@@ -730,10 +730,11 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f5f5f5',
+        paddingTop: 16,
     },
     scrollContent: {
         padding: 16,
-        paddingBottom: 30,
+        paddingBottom: 80,
     },
     ustMenu: {
         flexDirection: 'row',
