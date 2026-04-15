@@ -85,13 +85,13 @@ export default function AnaSayfa() {
             try {
                 const yapilanDersler = await tumYapilanDersler();
 
-                setSonDersler([...yapilanDersler.yapilanDersler].reverse());
+                setSonDersler([...yapilanDersler.yapilanDersler].reverse().slice(0, 10));
             } catch (error) {
                 console.error("Ders verileri alınamadı:", error);
             }
         }
         asyncFonksion();
-    }, []);
+    }, [];
 
     // Tarih fonksiyonu
     const getTodayDate = () => {
@@ -133,7 +133,7 @@ export default function AnaSayfa() {
                 <Ionicons name="school" size={20} color="#3498db" />
             </View>
             <View style={styles.dersBilgi}>
-                <Text style={styles.dersOgrenci}>{item.ogrenciId} {item.ogrenciAdSoyad}</Text>
+                <Text style={styles.dersOgrenci}>{item.ogrenciAdSoyad}</Text>
                 <Text style={styles.dersDetay}>{item.tarih} </Text>
                 <Text style={styles.dersTarih}>{item.saat}</Text>
             </View>

@@ -251,14 +251,20 @@ export default function AjandaKayitEkle() {
                 });
             }
 
-            // Başarılı kayıt sonrası işlemler
+            // Başarılı kayıt sonrası işlemler - Toast göster ve geri dön
+            // Kısa bir gecikmeden sonra geri dön
+            setTimeout(() => {
+                navigation.goBack();
+            }, 500);
+            
+            // Toast benzeri mesaj göster (Alert yerine)
             Alert.alert(
                 'Başarılı',
-                `${tekrarSayisi} adet randevu kaydedildi\n\nİlk randevu: ${selectedDate.toLocaleDateString('tr-TR')}\nSon randevu: ${new Date(selectedDate.getTime() + ((tekrarSayisi - 1) * periyot * 24 * 60 * 60 * 1000)).toLocaleDateString('tr-TR')}`,
+                `${tekrarSayisi} adet randevu kaydedildi`,
                 [
                     {
                         text: 'Tamam',
-                        onPress: () => navigation.goBack(),
+                        onPress: () => {},
                     }
                 ]
             );

@@ -1,7 +1,7 @@
 //ogrencidetay.js
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Modal, TextInput, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Modal, TextInput, Platform, ToastAndroid } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
@@ -191,9 +191,11 @@ export default function OgrenciDetay() {
 
             const result = await odemeKaydet(odemeVerisi);
 
-            Alert.alert('Başarılı', 'Ödeme başarıyla kaydedildi', [
-                { text: 'Tamam', onPress: odemePopupKapat }
-            ]);
+            // Alert.alert('Başarılı', 'Ödeme başarıyla kaydedildi', [
+            //     { text: 'Tamam', onPress: odemePopupKapat }
+            // ]);  bu kodlar olunca tamam a basınca popup kapanıyor ama ben popup un kendi butonuyla kapatılmasını istediğim için bu kodları kaldırdım ve onun yerine ToastAndroid ekledim 
+ToastAndroid.show('Ödeme başarıyla kaydedildi', ToastAndroid.SHORT);
+
         } catch (error: any) {
             Alert.alert('Hata', 'Ödeme kaydedilemedi: ' + error.message);
         }
@@ -202,15 +204,10 @@ export default function OgrenciDetay() {
     const finalizeDersKayit = async (dersVerisi: DersType) => {
         try {
             await dersiKaydet(dersVerisi);
-            Alert.alert('Başarılı', 'Ders başarıyla kaydedildi', [
-                {
-                    text: 'Tamam', onPress: () => {
-                        dersPopupKapat();
-                        kalanUcretiHesapla();
-                        fetchSonDers();
-                    }
-                }
-            ]);
+            ToastAndroid.show('Ders başarıyla kaydedildi', ToastAndroid.SHORT);
+            dersPopupKapat();
+            kalanUcretiHesapla();
+            fetchSonDers();
         } catch (error: any) {
             Alert.alert('Hata', 'Ders kaydedilemedi: ' + error.message);
         }

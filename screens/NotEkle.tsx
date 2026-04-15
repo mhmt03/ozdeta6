@@ -84,7 +84,7 @@ export default function NotEkle() {
                 const result = await notGuncelle(seciliNot.notlarimId!, guncellenecekNot);
 
                 if (result.success) {
-                    Alert.alert('Başarılı', 'Not başarıyla güncellendi');
+                    Alert.alert('Başarılı', 'Not güncellendi');
                     formuTemizle();
                     await notlariYenile();
                 } else {
@@ -101,7 +101,7 @@ export default function NotEkle() {
                 const result = await notKaydet(yeniNot);
 
                 if (result.success) {
-                    Alert.alert('Başarılı', 'Not başarıyla kaydedildi');
+                    Alert.alert('Başarılı', 'Not kaydedildi');
                     formuTemizle();
                     await notlariYenile();
                 } else {
@@ -139,7 +139,7 @@ export default function NotEkle() {
                         try {
                             const result = await notSil(not.notlarimId!);
                             if (result.success) {
-                                Alert.alert('Başarılı', 'Not başarıyla silindi');
+                                Alert.alert('Başarılı', 'Not silindi');
                                 formuTemizle();
                                 await notlariYenile();
                             } else {

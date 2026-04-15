@@ -13,6 +13,7 @@ import {
     TouchableWithoutFeedback,
     Linking, // Added Linking for SMS/WhatsApp
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { MaterialIcons, FontAwesome5, Entypo } from '@expo/vector-icons';
 import RNPickerSelect from 'react-native-picker-select';
@@ -23,12 +24,13 @@ import { tekOgrenci } from '../utils/database'; // Assuming tekOgrenci is also i
 
 export default function AjandaRandevuDuzenle({ route, navigation }: any) {
     const { randevu } = route.params;
+    const insets = useSafeAreaInsets();
 
     const [date, setDate] = useState(new Date(randevu.tarih + ' ' + randevu.saat));
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showTimePicker, setShowTimePicker] = useState(false);
-    const [kalanTekrar, setKalanTekrar] = useState(randevu.kalanTekrarSayisi || 1);
-    const [periyot, setPeriyot] = useState(randevu.periyot || 1);
+    const [kalanTekrar, setKalanTekrar] = useState(parseInt(randevu.kalanTekrarSayisi) || 1);
+    const [periyot, setPeriyot] = useState(parseInt(randevu.periyot) || 1);
 
     const [ogrenciTip, setOgrenciTip] = useState(randevu.ogrenciId ? 'kayitli' : 'kayıtsız');
     const [ogrenciList, setOgrenciList] = useState<OgrenciType[]>([]);
@@ -39,7 +41,7 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
     const [degisiklikTipi, setDegisiklikTipi] = useState('sadeceBu'); // sadeceBu / tumKayitlar
 
     useEffect(() => {
-        fetchOgrenciler();
+        fetchOgrenciler(); // Fetch the list of students for the dropdown
         if (randevu.ogrenciId) {
             fetchOgrenciDetay(randevu.ogrenciId);
         }
@@ -73,7 +75,7 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
             };
 
             await ajandaGuncelle(randevu.ajandaId!, updatedRandevu);
-            Alert.alert('Başarılı', 'Randevu güncellendi');
+            Alert.alert('Başarılı', 'Randevu kaydedildi');
             navigation.goBack();
         } catch (error) {
             console.error(error);
@@ -159,7 +161,7 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
             behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
 
-            <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingBottom: 80 }}>
+            <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingBottom: Math.max(insets.bottom + 20, 100) }}>
                 <Text style={styles.label}>Tarih</Text>
                 <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.dateTimeButton}>
                     {/* <Text>{date.toLocaleDateString()}</Text> */}

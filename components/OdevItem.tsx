@@ -130,9 +130,10 @@ const styles = StyleSheet.create({
     },
     odevKonu: { fontSize: 16, fontWeight: 'bold', marginBottom: 8 },
     odevTarihler: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+        flexDirection: 'column',
+        justifyContent: 'flex-start',
         marginBottom: 12,
+        gap: 8,
     },
     dateButton: {
         flexDirection: 'row',
@@ -142,8 +143,9 @@ const styles = StyleSheet.create({
         borderRadius: 6,
         padding: 8,
         backgroundColor: '#fff',
+        flex: 1,
     },
-    dateText: { marginLeft: 8 },
+    dateText: { marginLeft: 8, flex: 1, flexWrap: 'wrap' },
     durumContainer: {
         flexDirection: 'row',
         alignItems: 'center',
