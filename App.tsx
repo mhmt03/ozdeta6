@@ -134,11 +134,13 @@ export default function App() {
             shadowOpacity: 0.2,
             shadowRadius: 3,
           },
-          headerTintColor: '#fff',
+          headerTintColor: '#aef013ff',
           headerTitleStyle: {
             fontWeight: 'bold',
             fontSize: 18,
           },
+
+          headerShadowVisible: true,
           headerTitleAlign: 'center', // Başlıkları ortala
         }}
       >
@@ -159,8 +161,8 @@ export default function App() {
         />
         <Stack.Screen
           name='ogrenciDetay'
-          options={({ route }) => ({ 
-            title: route.params?.ogrenci ? `${route.params.ogrenci.ogrenciAd} ${route.params.ogrenci.ogrenciSoyad}` : 'Öğrenci Detayı' 
+          options={({ route }) => ({
+            title: route.params?.ogrenci ? `${route.params.ogrenci.ogrenciAd} ${route.params.ogrenci.ogrenciSoyad}` : 'Öğrenci Detayı'
           })}
           component={OgrenciDetay}
         />
@@ -196,8 +198,8 @@ export default function App() {
         />
         <Stack.Screen
           name='KaynakYonetimi'
-          options={({ route }) => ({ 
-            title: route.params?.ogrenciAd ? `${route.params.ogrenciAd} ${route.params.ogrenciSoyad} - Kaynaklar` : 'Kaynak Yönetimi' 
+          options={({ route }) => ({
+            title: route.params?.ogrenciAd ? `${route.params.ogrenciAd} ${route.params.ogrenciSoyad} - Kaynaklar` : 'Kaynak Yönetimi'
           })}
           component={KaynakYonetimi}
         />
@@ -221,7 +223,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#a5f70eff',
     padding: 20,
   },
   loadingText: {
