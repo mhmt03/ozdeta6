@@ -53,10 +53,16 @@ export default function AjandaKayitEkle() {
 
     // 🏪 Component State Tanımlamaları
     // useState Hook: [değer, değiştirFonksiyon] = useState(başlangıçDeğer)
+    const baslangicSaati = () => {
+        const date = new Date();
+        date.setHours(0, 0, 0, 0);
+        return date;
+    }
 
     // 📅 Tarih ve saat state'leri
     const [selectedDate, setSelectedDate] = useState(initialDate);
-    const [selectedTime, setSelectedTime] = useState(new Date());
+    //const [selectedTime, setSelectedTime] = useState(new Date()); bu hali ile olursa şu anki saati verir
+    const [selectedTime, setSelectedTime] = useState(baslangicSaati());
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showTimePicker, setShowTimePicker] = useState(false);
 
@@ -256,7 +262,7 @@ export default function AjandaKayitEkle() {
             setTimeout(() => {
                 navigation.goBack();
             }, 500);
-            
+
             // Toast benzeri mesaj göster (Alert yerine)
             Alert.alert(
                 'Başarılı',
@@ -264,7 +270,7 @@ export default function AjandaKayitEkle() {
                 [
                     {
                         text: 'Tamam',
-                        onPress: () => {},
+                        onPress: () => { },
                     }
                 ]
             );
@@ -592,6 +598,7 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#f8f9fa',
         paddingTop: 16,
+        paddingBottom: 16,
     },
     scrollView: {
         flex: 1,

@@ -313,10 +313,11 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-    container: { 
-        flex: 1, 
+    container: {
+        flex: 1,
         backgroundColor: '#f7f7f7',
         paddingTop: 16,
+        paddingBottom: 16,
     },
     label: { fontWeight: 'bold', marginTop: 15 },
     input: {

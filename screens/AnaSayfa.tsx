@@ -91,7 +91,7 @@ export default function AnaSayfa() {
             }
         }
         asyncFonksion();
-    }, [];
+    }, []);
 
     // Tarih fonksiyonu
     const getTodayDate = () => {
