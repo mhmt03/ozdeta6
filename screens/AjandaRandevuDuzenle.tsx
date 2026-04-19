@@ -18,7 +18,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { MaterialIcons, FontAwesome5, Entypo } from '@expo/vector-icons';
 import RNPickerSelect from 'react-native-picker-select';
 import { sendSMS, sendWhatsApp } from '../utils/messaging';
-import { ogrencileriListele, ajandaGuncelle, randevuIptal } from '../utils/database'; // Added randevuIptal
+import { ogrencileriListele, ajandaGuncelle, randevuIptal, ajandaGrupGuncelle } from '../utils/database'; // Added randevuIptal
 import { OgrenciType, AjandaType } from '../types';
 import { tekOgrenci } from '../utils/database'; // Assuming tekOgrenci is also in utils/database or similar
 
@@ -30,7 +30,7 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showTimePicker, setShowTimePicker] = useState(false);
     const [kalanTekrar, setKalanTekrar] = useState(parseInt(randevu.kalanTekrarSayisi) || 1);
-    const [periyot, setPeriyot] = useState(parseInt(randevu.periyot) || 1);
+    const [periyot, setPeriyot] = useState(7); // DB'de periyot tutulmadığı için undefined dönüyor ve 1'e düşüyordu. Varsayılan 7 yaptık.
 
     const [ogrenciTip, setOgrenciTip] = useState(randevu.ogrenciId ? 'kayitli' : 'kayıtsız');
     const [ogrenciList, setOgrenciList] = useState<OgrenciType[]>([]);
@@ -63,22 +63,41 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
 
     const handleKaydet = async () => {
         try {
+            const yerelTarihString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+            const saatStr = date.toTimeString().slice(0, 5);
+
+            console.log(`[AjandaRandevuDuzenle.tsx] handleKaydet called. degisiklikTipi: ${degisiklikTipi}`);
+
+            // 1. Her durumda mevcut kaydı güncelliyoruz
             const updatedRandevu: AjandaType = {
                 ...randevu,
-                tarih: date.toISOString().split('T')[0],
-                saat: date.toTimeString().slice(0, 5),
+                tarih: yerelTarihString,
+                saat: saatStr,
                 ogrenciId: ogrenciTip === 'kayitli' ? selectedOgrenci : null,
                 ogrAdsoyad: ogrenciTip === 'kayıtsız' ? kayıtsızInput : randevu.ogrAdsoyad,
-                kalanTekrarSayisi: kalanTekrar.toString(),
-                tekrarsayisi: randevu.tekrarsayisi || '1',
+                kalanTekrarSayisi: degisiklikTipi === 'tumKayitlar' ? kalanTekrar.toString() : randevu.kalanTekrarSayisi,
+                tekrarsayisi: degisiklikTipi === 'tumKayitlar' ? kalanTekrar.toString() : (randevu.tekrarsayisi || '1'),
                 tamamlanma: randevu.tamamlanma || '0'
             };
 
+            console.log(`[AjandaRandevuDuzenle.tsx] Calling ajandaGuncelle with:`, updatedRandevu);
             await ajandaGuncelle(randevu.ajandaId!, updatedRandevu);
+
+            // 2. Eğer tüm kayıtları etkileyecekse grubu güncelliyoruz
+            if (degisiklikTipi === 'tumKayitlar' && randevu.olusmaAni) {
+                console.log(`[AjandaRandevuDuzenle.tsx] Calling ajandaGrupGuncelle... olusmaAni: ${randevu.olusmaAni}, yerelTarihString: ${yerelTarihString}, kalanTekrar: ${kalanTekrar}`);
+                
+                // yerelTarihString, grup güncellemesinin "seciliTarih" parametresi olur
+                const guncelleResult = await ajandaGrupGuncelle(randevu.olusmaAni, yerelTarihString, kalanTekrar, saatStr, periyot);
+                if (!guncelleResult.success) {
+                    throw new Error(guncelleResult.error);
+                }
+            }
+
             Alert.alert('Başarılı', 'Randevu kaydedildi');
             navigation.goBack();
         } catch (error) {
-            console.error(error);
+            console.error('[AjandaRandevuDuzenle.tsx] handleKaydet error:', error);
             Alert.alert('Hata', 'Güncelleme sırasında bir hata oluştu');
         }
     };
@@ -231,8 +250,8 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
                         <TextInput
                             style={styles.inputSmall}
                             keyboardType="numeric"
-                            value={"7"}
-                            onChangeText={(t) => setPeriyot(parseInt(t))}
+                            value={periyot.toString()}
+                            onChangeText={(t) => setPeriyot(parseInt(t) || 0)}
                         />
                     </View>
                 </View>

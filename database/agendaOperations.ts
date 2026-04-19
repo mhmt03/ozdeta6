@@ -82,6 +82,7 @@ export async function gunlukAjandaGetir(tarih: string) {
 }
 
 export async function ajandaGuncelle(ajandaId: number, kayit: AjandaType) {
+    console.log(`[agendaOperations.ts] ajandaGuncelle starting. ajandaId: ${ajandaId}, kayit:`, kayit);
     try {
         const db = await ensureDatabaseReady();
         const result = await db.runAsync(
@@ -100,9 +101,10 @@ export async function ajandaGuncelle(ajandaId: number, kayit: AjandaType) {
                 ajandaId
             ]
         );
+        console.log(`[agendaOperations.ts] ajandaGuncelle finished. Success: ${result.changes > 0}`);
         return { success: result.changes > 0 };
     } catch (error: any) {
-        console.error("Ajanda güncellenemedi:", error);
+        console.error("[agendaOperations.ts] ajandaGuncelle error:", error);
         return { success: false, error: error.message };
     }
 }
@@ -197,23 +199,28 @@ export async function ajandaGrupGetir(olusmaAni: string) {
 }
 
 export async function ajandaGrupGuncelle(olusmaAni: string, seciliTarih: string, yeniTekrarSayisi: number, yeniSaat: string, yeniPeriyot: number = 7) {
+    console.log(`[agendaOperations.ts] ajandaGrupGuncelle called. args:`, { olusmaAni, seciliTarih, yeniTekrarSayisi, yeniSaat, yeniPeriyot });
     try {
         const db = await ensureDatabaseReady();
 
+        console.log(`[agendaOperations.ts] Deleting future records: olusmaAni: ${olusmaAni}, tarih > ${seciliTarih}`);
         await db.runAsync(
             `DELETE FROM ajanda WHERE olusmaAni = ? AND tarih > ?`,
             [olusmaAni, seciliTarih]
         );
 
+        console.log(`[agendaOperations.ts] Fetching mevcutKayit for olusmaAni: ${olusmaAni}, tarih: ${seciliTarih}`);
         const mevcutKayit = await db.getFirstAsync<AjandaType>(
             `SELECT * FROM ajanda WHERE olusmaAni = ? AND tarih = ?`,
             [olusmaAni, seciliTarih]
         );
 
         if (!mevcutKayit) {
+            console.error(`[agendaOperations.ts] ajandaGrupGuncelle error: Güncellenecek kayıt bulunamadı.`);
             throw new Error('Güncellenecek kayıt bulunamadı');
         }
 
+        console.log(`[agendaOperations.ts] Updating existing record. setting saat=${yeniSaat}, tekrarsayisi=${yeniTekrarSayisi}`);
         await db.runAsync(
             `UPDATE ajanda 
              SET saat = ?, tekrarsayisi = ?, kalanTekrarSayisi = ?
@@ -223,11 +230,13 @@ export async function ajandaGrupGuncelle(olusmaAni: string, seciliTarih: string,
 
         const baslangicTarihi = new Date(seciliTarih);
 
+        console.log(`[agendaOperations.ts] Inserting ${yeniTekrarSayisi - 1} new dependent records.`);
         for (let i = 1; i < yeniTekrarSayisi; i++) {
             const yeniTarih = new Date(baslangicTarihi);
             yeniTarih.setDate(baslangicTarihi.getDate() + (i * yeniPeriyot));
 
             const kalanTekrar = yeniTekrarSayisi - i;
+            const yerelTarihString = `${yeniTarih.getFullYear()}-${(yeniTarih.getMonth() + 1).toString().padStart(2, '0')}-${yeniTarih.getDate().toString().padStart(2, '0')}`;
 
             await db.runAsync(
                 `INSERT INTO ajanda (ogrenciId, ogrAdsoyad, tarih, saat, tekrarsayisi, kalanTekrarSayisi, olusmaAni, tamamlanma, sutun1, sutun2) 
@@ -235,7 +244,7 @@ export async function ajandaGrupGuncelle(olusmaAni: string, seciliTarih: string,
                 [
                     mevcutKayit.ogrenciId,
                     mevcutKayit.ogrAdsoyad,
-                    yeniTarih.toISOString().split('T')[0],
+                    yerelTarihString,
                     yeniSaat,
                     yeniTekrarSayisi.toString(),
                     kalanTekrar.toString(),
@@ -247,9 +256,10 @@ export async function ajandaGrupGuncelle(olusmaAni: string, seciliTarih: string,
             );
         }
 
+        console.log(`[agendaOperations.ts] ajandaGrupGuncelle successful.`);
         return { success: true };
     } catch (error: any) {
-        console.error("Ajanda grup güncellemesi başarısız:", error);
+        console.error("[agendaOperations.ts] Ajanda grup güncellemesi başarısız:", error);
         return { success: false, error: error.message };
     }
 }

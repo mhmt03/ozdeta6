@@ -100,32 +100,38 @@ export default function AnaSayfa() {
         return today.toLocaleDateString('tr-TR', options);
     };
 
-    const renderRandevuItem = ({ item }: { item: AjandaWithOgrenciType }) => (
-        <TouchableOpacity
-            style={styles.randevuItem}
-            onPress={async () => {
-                try {
-                    const ogrenciResult = await tekOgrenci(item.ogrenciId);
-                    if (ogrenciResult.success && ogrenciResult.data) {
-                        navigation.navigate('ogrenciDetay', { ogrenci: ogrenciResult.data });
-                    } else {
-                        console.error('Öğrenci bulunamadı:', ogrenciResult.error);
+    const renderRandevuItem = ({ item }: { item: AjandaWithOgrenciType }) => {
+        const isCancelled = item.iptal === 1;
+
+        return (
+            <TouchableOpacity
+                style={[styles.randevuItem, isCancelled && { opacity: 0.6 }]}
+                onPress={async () => {
+                    try {
+                        const ogrenciResult = await tekOgrenci(item.ogrenciId);
+                        if (ogrenciResult.success && ogrenciResult.data) {
+                            navigation.navigate('ogrenciDetay', { ogrenci: ogrenciResult.data });
+                        } else {
+                            console.error('Öğrenci bulunamadı:', ogrenciResult.error);
+                        }
+                    } catch (error) {
+                        console.error('Öğrenci bilgisi alınamadı:', error);
                     }
-                } catch (error) {
-                    console.error('Öğrenci bilgisi alınamadı:', error);
-                }
-            }}
-        >
-            <View style={styles.randevuSaat}>
-                <Text style={styles.randevuSaatText}>{item.saat}</Text>
-            </View>
-            <View style={styles.randevuBilgi}>
-                <Text style={styles.randevuOgrenci}>{item.ogrAdsoyad}</Text>
-                <Text style={styles.randevuDers}>{item.saat}</Text>
-            </View>
-            <MaterialIcons name="arrow-forward-ios" size={16} color="#666" />
-        </TouchableOpacity>
-    );
+                }}
+            >
+                <View style={[styles.randevuSaat, isCancelled && { backgroundColor: '#e74c3c' }]}>
+                    <Text style={styles.randevuSaatText}>{item.saat}</Text>
+                </View>
+                <View style={styles.randevuBilgi}>
+                    <Text style={[styles.randevuOgrenci, isCancelled && { textDecorationLine: 'line-through', color: '#95a5a6' }]}>
+                        {item.ogrAdsoyad} {isCancelled && <Text style={{ color: '#e74c3c', fontSize: 12, fontWeight: 'bold' }}>(İPTAL EDİLDİ)</Text>}
+                    </Text>
+                    <Text style={styles.randevuDers}>{item.konu || 'Ders'}</Text>
+                </View>
+                <MaterialIcons name="arrow-forward-ios" size={16} color="#666" />
+            </TouchableOpacity>
+        );
+    };
 
     const renderDersItem = ({ item }: { item: DersType }) => (
         <View style={styles.dersItem}>

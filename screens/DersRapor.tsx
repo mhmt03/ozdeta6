@@ -415,6 +415,11 @@ export default function DersRapor() {
                     </TouchableOpacity>
                 </View>
             </View>
+            {isGeneralReport && item.ogrenciAdSoyad && (
+                <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#2c3e50', marginBottom: 4 }}>
+                    {item.ogrenciAdSoyad}
+                </Text>
+            )}
             <Text style={styles.itemKonu}>{item.konu || 'Konu belirtilmemiş'}</Text>
             <Text style={styles.itemSaat}>Saat: {item.saat}</Text>
         </View>

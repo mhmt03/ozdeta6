@@ -142,6 +142,7 @@ export default function App() {
 
           headerShadowVisible: true,
           headerTitleAlign: 'center', // Başlıkları ortala
+
         }}
       >
         <Stack.Screen

@@ -191,10 +191,8 @@ export default function OgrenciDetay() {
 
             const result = await odemeKaydet(odemeVerisi);
 
-            // Alert.alert('Başarılı', 'Ödeme başarıyla kaydedildi', [
-            //     { text: 'Tamam', onPress: odemePopupKapat }
-            // ]);  bu kodlar olunca tamam a basınca popup kapanıyor ama ben popup un kendi butonuyla kapatılmasını istediğim için bu kodları kaldırdım ve onun yerine ToastAndroid ekledim 
-ToastAndroid.show('Ödeme başarıyla kaydedildi', ToastAndroid.SHORT);
+            ToastAndroid.show('Ödeme başarıyla kaydedildi', ToastAndroid.SHORT);
+            odemePopupKapat(); // Otomatik kapanması için eklendi
 
         } catch (error: any) {
             Alert.alert('Hata', 'Ödeme kaydedilemedi: ' + error.message);
@@ -264,13 +262,13 @@ ToastAndroid.show('Ödeme başarıyla kaydedildi', ToastAndroid.SHORT);
 
     // Üst menü butonları
     const menuButonlari = [
-        { id: 1, text: 'Ders Yap', icon: 'school', action: dersPopupAc },
-        { id: 2, text: 'Ödeme Al', icon: 'payment', action: odemePopupAc },
         { id: 3, text: 'Ana Sayfa', icon: 'home', sayfa: 'AnaSayfa' },
+        { id: 2, text: 'Ödeme Al', icon: 'payment', action: odemePopupAc },
         { id: 4, text: 'Not Yaz', icon: 'note', sayfa: 'NotEkle', parametre: { ogrenciId: ogrenci.ogrenciId } },
         { id: 5, text: 'Ödevler', icon: 'assignment', sayfa: 'OdevEkle', parametre: { ogrenciId: ogrenci.ogrenciId } },
         { id: 6, text: 'Ders Rapor', icon: 'assessment', sayfa: 'DersRapor', parametre: { ogrenciId: ogrenci.ogrenciId } },
         { id: 7, text: 'Kaynaklar', icon: 'book', sayfa: 'KaynakYonetimi', parametre: { ogrenciId: ogrenci.ogrenciId, ogrenciAd: ogrenci.ogrenciAd, ogrenciSoyad: ogrenci.ogrenciSoyad } },
+        { id: 1, text: 'Ders Yap', icon: 'school', action: dersPopupAc },
     ];
 
 
@@ -293,7 +291,7 @@ ToastAndroid.show('Ödeme başarıyla kaydedildi', ToastAndroid.SHORT);
                             }
                         }}
                     >
-                        <MaterialIcons name={buton.icon as any} size={20} color="#333" />
+                        <MaterialIcons name={buton.icon as any} size={20} color="#6354e9ff" />
                         <Text style={styles.menuButonText}>{buton.text}</Text>
                     </TouchableOpacity>
                 ))}
@@ -337,36 +335,6 @@ ToastAndroid.show('Ödeme başarıyla kaydedildi', ToastAndroid.SHORT);
                 {/* Detaylı Bilgiler */}
                 {detayGoster && (
                     <View style={styles.detaylarContainer}>
-                        <View style={styles.bilgiKarti}>
-                            <Text style={styles.kartBaslik}>Öğrenci Bilgileri</Text>
-
-                            <View style={styles.bilgiSatiri}>
-                                <Text style={styles.bilgiEtiket}>Öğrenci No:</Text>
-                                <Text style={styles.bilgiDeger}>{ogrenci.ogrenciId}</Text>
-                            </View>
-
-                            <View style={styles.bilgiSatiri}>
-                                <Text style={styles.bilgiEtiket}>Sınıf:</Text>
-                                <Text style={styles.bilgiDeger}>{ogrenci.sinif || 'Belirtilmemiş'}</Text>
-                            </View>
-
-                            <View style={styles.bilgiSatiri}>
-                                <Text style={styles.bilgiEtiket}>Ücret:</Text>
-                                <Text style={styles.bilgiDeger}>{ogrenci.ucret || 0} TL</Text>
-                            </View>
-
-                            <View style={styles.bilgiSatiri}>
-                                <Text style={styles.bilgiEtiket}>Kayıt Tarihi:</Text>
-                                <Text style={styles.bilgiDeger}>{ogrenci.kayitTarihi || 'Belirtilmemiş'}</Text>
-                            </View>
-
-                            <View style={styles.bilgiSatiri}>
-                                <Text style={styles.bilgiEtiket}>Durum:</Text>
-                                <Text style={[styles.bilgiDeger, ogrenci.aktifmi ? styles.aktif : styles.pasif]}>
-                                    {ogrenci.aktifmi ? 'Aktif' : 'Pasif'}
-                                </Text>
-                            </View>
-                        </View>
 
                         <View style={styles.bilgiKarti}>
                             <Text style={styles.kartBaslik}>İletişim Bilgileri</Text>
@@ -437,6 +405,42 @@ ToastAndroid.show('Ödeme başarıyla kaydedildi', ToastAndroid.SHORT);
                                 )}
                             </View>
                         </View>
+
+                        <View style={styles.bilgiKarti}>
+                            <Text style={styles.kartBaslik}>Öğrenci Bilgileri</Text>
+
+                            <View style={styles.bilgiSatiri}>
+                                <Text style={styles.bilgiEtiket}>Öğrenci No:</Text>
+                                <Text style={styles.bilgiDeger}>{ogrenci.ogrenciId}</Text>
+                            </View>
+
+                            <View style={styles.bilgiSatiri}>
+                                <Text style={styles.bilgiEtiket}>Sınıf:</Text>
+                                <Text style={styles.bilgiDeger}>{ogrenci.sinif || 'Belirtilmemiş'}</Text>
+                            </View>
+
+
+
+                            <View style={styles.bilgiSatiri}>
+                                <Text style={styles.bilgiEtiket}>Kayıt Tarihi:</Text>
+                                <Text style={styles.bilgiDeger}>{ogrenci.kayitTarihi || 'Belirtilmemiş'}</Text>
+                            </View>
+
+                            <View style={styles.bilgiSatiri}>
+                                <Text style={styles.bilgiEtiket}>Durum:</Text>
+                                <Text style={[styles.bilgiDeger, ogrenci.aktifmi ? styles.aktif : styles.pasif]}>
+                                    {ogrenci.aktifmi ? 'Aktif' : 'Pasif'}
+                                </Text>
+                            </View>
+
+                            <View style={styles.bilgiSatiri}>
+                                <Text style={styles.bilgiEtiket}>Ücret:</Text>
+                                <Text style={styles.bilgiDeger}>{ogrenci.ucret || 0} TL</Text>
+                            </View>
+
+                        </View>
+
+
 
                         {/* Açıklamalar */}
                         {(ogrenci.aciklama1 || ogrenci.aciklama2) && (

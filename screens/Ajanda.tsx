@@ -688,6 +688,11 @@ const styles = StyleSheet.create({
     navButton: {
         padding: 6,
         borderRadius: 12,
+        width: 142,
+        height: 32,
+        backgroundColor: '#66e4faff',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     ayText: {
         fontSize: 14, // küçültüldü
@@ -728,7 +733,7 @@ const styles = StyleSheet.create({
         borderRadius: 6,
     },
     nonCurrentMonthDay: {
-        opacity: 0.35,
+        opacity: 0.8,
     },
     selectedDay: {
         backgroundColor: '#3498db',
