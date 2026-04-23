@@ -126,8 +126,11 @@ export default function AnaSayfa() {
                     <Text style={[styles.randevuOgrenci, isCancelled && { textDecorationLine: 'line-through', color: '#95a5a6' }]}>
                         {item.ogrAdsoyad} {isCancelled && <Text style={{ color: '#e74c3c', fontSize: 12, fontWeight: 'bold' }}>(İPTAL EDİLDİ)</Text>}
                     </Text>
-                    <Text style={styles.randevuDers}>{item.konu || 'Ders'}</Text>
+                    {/* <Text style={styles.randevuDers}>{item.konu || 'Ders'}</Text> */}
                 </View>
+                {item.tamamlandiMi === 1 && (
+                    <MaterialIcons name="check-circle" size={20} color="#2ecc71" style={{ marginRight: 10 }} />
+                )}
                 <MaterialIcons name="arrow-forward-ios" size={16} color="#666" />
             </TouchableOpacity>
         );

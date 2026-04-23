@@ -96,6 +96,7 @@ export interface AjandaType {
     kalanTekrarSayisi: string;
     olusmaAni: string;
     tamamlanma: string;
+    tamamlandiMi?: number;
     iptal?: number;
     konu?: string;
     sutun1?: string;

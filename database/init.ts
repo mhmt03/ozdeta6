@@ -4,7 +4,7 @@ let db: SQLite.SQLiteDatabase | null = null;
 
 const DATABASE_NAME = 'ozdeta.db';
 // VERİTABANI VERSİYONU - Değişiklik yaptığınızda sadece bunu artırın!
-const DATABASE_VERSION = 5; // V4->V5: ajanda tablosuna konu eklendi, iptal çakışması düzeltildi
+const DATABASE_VERSION = 6; // V5->V6: ajanda tablosuna tamamlandiMi eklendi
 
 export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
     try {
@@ -127,6 +127,16 @@ async function applyMigration(database: SQLite.SQLiteDatabase, version: number) 
                 `);
             } catch (error) {
                 console.log('konu sütunu zaten mevcut, atlanıyor...');
+            }
+            break;
+        case 6:
+            // Ajanda tablosuna tamamlandiMi sütunu ekle
+            try {
+                await database.execAsync(`
+                    ALTER TABLE ajanda ADD COLUMN tamamlandiMi INTEGER DEFAULT 0;
+                `);
+            } catch (error) {
+                console.log('tamamlandiMi sütunu zaten mevcut, atlanıyor...');
             }
             break;
         default:
@@ -272,6 +282,7 @@ CREATE TABLE IF NOT EXISTS ajanda (
     kalanTekrarSayisi TEXT,
     olusmaAni TEXT,
     tamamlanma TEXT,
+    tamamlandiMi INTEGER DEFAULT 0,
     sutun1 TEXT,
     sutun2 TEXT,
     FOREIGN KEY (ogrenciId) REFERENCES ogrenciler(ogrenciId)

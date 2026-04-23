@@ -39,6 +39,7 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
     const [ogrenci, setOgrenci] = useState<OgrenciType | null>(null); // Added ogrenci state
 
     const [degisiklikTipi, setDegisiklikTipi] = useState('sadeceBu'); // sadeceBu / tumKayitlar
+    const [mesajHedef, setMesajHedef] = useState<'veli' | 'ogrenci'>('ogrenci');
 
     useEffect(() => {
         fetchOgrenciler(); // Fetch the list of students for the dropdown
@@ -77,7 +78,8 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
                 ogrAdsoyad: ogrenciTip === 'kayıtsız' ? kayıtsızInput : randevu.ogrAdsoyad,
                 kalanTekrarSayisi: degisiklikTipi === 'tumKayitlar' ? kalanTekrar.toString() : randevu.kalanTekrarSayisi,
                 tekrarsayisi: degisiklikTipi === 'tumKayitlar' ? kalanTekrar.toString() : (randevu.tekrarsayisi || '1'),
-                tamamlanma: randevu.tamamlanma || '0'
+                tamamlanma: randevu.tamamlanma || '0',
+                tamamlandiMi: randevu.tamamlandiMi || 0
             };
 
             console.log(`[AjandaRandevuDuzenle.tsx] Calling ajandaGuncelle with:`, updatedRandevu);
@@ -86,7 +88,7 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
             // 2. Eğer tüm kayıtları etkileyecekse grubu güncelliyoruz
             if (degisiklikTipi === 'tumKayitlar' && randevu.olusmaAni) {
                 console.log(`[AjandaRandevuDuzenle.tsx] Calling ajandaGrupGuncelle... olusmaAni: ${randevu.olusmaAni}, yerelTarihString: ${yerelTarihString}, kalanTekrar: ${kalanTekrar}`);
-                
+
                 // yerelTarihString, grup güncellemesinin "seciliTarih" parametresi olur
                 const guncelleResult = await ajandaGrupGuncelle(randevu.olusmaAni, yerelTarihString, kalanTekrar, saatStr, periyot);
                 if (!guncelleResult.success) {
@@ -105,17 +107,25 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
     // SMS gönder
     const gonderSms = () => {
         if (!ogrenci) return;
-        const telefon = ogrenci.veliTel || ogrenci.ogrenciTel;
+        const telefon = mesajHedef === 'veli' ? (ogrenci.veliTel || ogrenci.ogrenciTel) : (ogrenci.ogrenciTel || ogrenci.veliTel);
         if (!telefon || telefon === '-') {
             Alert.alert('Hata', 'Telefon numarası bulunamadı');
             return;
         }
 
         let mesaj = '';
-        if (randevu.iptal === 1) { // Assuming randevu.iptal exists and 1 means cancelled
-            mesaj = `${randevu.ogrAdsoyad} adlı öğrencinin ${randevu.tarih} tarihindeki dersi öğrenci talebi üzerine iptal edilmiştir. Bilginize...`;
+        if (mesajHedef === 'veli') {
+            if (randevu.iptal === 1) { // Assuming randevu.iptal exists and 1 means cancelled
+                mesaj = `Sayın Veli, ${randevu.ogrAdsoyad} adlı öğrencinin ${randevu.tarih} tarihindeki dersi öğrenci talebi üzerine iptal edilmiştir. Bilginize...`;
+            } else {
+                mesaj = `Sayın Veli, ${randevu.ogrAdsoyad} adlı öğrencinin yeni ders randevusu: ${date.toLocaleDateString()} saat ${date.toTimeString().slice(0, 5)} olarak güncellenmiştir.`;
+            }
         } else {
-            mesaj = `Sayın Veli, ${randevu.ogrAdsoyad} adlı öğrencinin yeni ders randevusu: ${date.toLocaleDateString()} saat ${date.toTimeString().slice(0, 5)} olarak güncellenmiştir.`;
+            if (randevu.iptal === 1) {
+                mesaj = `${randevu.ogrAdsoyad}, ${randevu.tarih} tarihindeki dersin iptal edilmiştir. Bilginize...`;
+            } else {
+                mesaj = `${randevu.ogrAdsoyad}, yeni ders randevun: ${date.toLocaleDateString()} saat ${date.toTimeString().slice(0, 5)} olarak güncellenmiştir.`;
+            }
         }
 
         const url = `sms:${telefon}?body=${encodeURIComponent(mesaj)}`;
@@ -125,17 +135,25 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
     // WhatsApp gönder
     const gonderWhatsApp = () => {
         if (!ogrenci) return;
-        const telefon = ogrenci.veliTel || ogrenci.ogrenciTel;
+        const telefon = mesajHedef === 'veli' ? (ogrenci.veliTel || ogrenci.ogrenciTel) : (ogrenci.ogrenciTel || ogrenci.veliTel);
         if (!telefon || telefon === '-') {
             Alert.alert('Hata', 'Telefon numarası bulunamadı');
             return;
         }
 
         let mesaj = '';
-        if (randevu.iptal === 1) { // Assuming randevu.iptal exists and 1 means cancelled
-            mesaj = `${randevu.ogrAdsoyad} adlı öğrencinin ${randevu.tarih} tarihindeki dersi öğrenci talebi üzerine iptal edilmiştir. Bilginize...`;
+        if (mesajHedef === 'veli') {
+            if (randevu.iptal === 1) { // Assuming randevu.iptal exists and 1 means cancelled
+                mesaj = `Sayın Veli, ${randevu.ogrAdsoyad} adlı öğrencinin ${randevu.tarih} tarihindeki dersi öğrenci talebi üzerine iptal edilmiştir. Bilginize...`;
+            } else {
+                mesaj = `Sayın Veli, ${randevu.ogrAdsoyad} adlı öğrencinin yeni ders randevusu: ${date.toLocaleDateString()} saat ${date.toTimeString().slice(0, 5)} olarak güncellenmiştir.`;
+            }
         } else {
-            mesaj = `Sayın Veli, ${randevu.ogrAdsoyad} adlı öğrencinin yeni ders randevusu: ${date.toLocaleDateString()} saat ${date.toTimeString().slice(0, 5)} olarak güncellenmiştir.`;
+            if (randevu.iptal === 1) {
+                mesaj = `${randevu.ogrAdsoyad}, ${randevu.tarih} tarihindeki dersin iptal edilmiştir. Bilginize...`;
+            } else {
+                mesaj = `${randevu.ogrAdsoyad}, yeni ders randevun: ${date.toLocaleDateString()} saat ${date.toTimeString().slice(0, 5)} olarak güncellenmiştir.`;
+            }
         }
 
         const temizTel = telefon.replace(/\D/g, '');
@@ -307,6 +325,30 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
                         <Text style={styles.buttonText}>Vazgeç</Text>
                     </TouchableOpacity>
 
+                    <TouchableOpacity
+                        style={[styles.buttonSmall, styles.iptalButon]}
+                        onPress={randevuIptalEt}
+                    >
+                        <MaterialIcons name="cancel" size={18} color="white" />
+                        <Text style={styles.buttonText}>Randevu İptal</Text>
+                    </TouchableOpacity>
+                </View>
+                <Text style={styles.label}>Mesaj Hedefi</Text>
+                <View style={styles.radioContainer}>
+
+                    <TouchableOpacity style={styles.radioButton} onPress={() => setMesajHedef('veli')}>
+                        <View style={[styles.radioCircle, mesajHedef === 'veli' && styles.radioSelected]} />
+                        <Text style={styles.radioLabel}>Veliye</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.radioButton} onPress={() => setMesajHedef('ogrenci')}>
+                        <View style={[styles.radioCircle, mesajHedef === 'ogrenci' && styles.radioSelected]} />
+                        <Text style={styles.radioLabel}>Öğrenciye</Text>
+                    </TouchableOpacity>
+                </View>
+
+                <View style={styles.buttonGrid}>
+
+
                     <TouchableOpacity style={[styles.buttonSmall, { backgroundColor: '#27ae60' }]} onPress={gonderSms}>
                         <MaterialIcons name="sms" size={18} color="white" />
                         <Text style={styles.buttonText}>SMS</Text>
@@ -317,13 +359,7 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
                         <Text style={styles.buttonText}>WhatsApp</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={[styles.buttonSmall, styles.iptalButon]}
-                        onPress={randevuIptalEt}
-                    >
-                        <MaterialIcons name="cancel" size={18} color="white" />
-                        <Text style={styles.buttonText}>Randevu İptal</Text>
-                    </TouchableOpacity>
+
                 </View>
             </ScrollView>
 
@@ -341,13 +377,13 @@ const styles = StyleSheet.create({
     label: { fontWeight: 'bold', marginTop: 15 },
     input: {
         backgroundColor: 'white',
-        padding: 12,
+        padding: 8,
         borderRadius: 8,
         marginTop: 5,
         borderWidth: 1,
         borderColor: '#ced4da',
         color: '#2c3e50',
-        elevation: 2,
+        elevation: 1,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,

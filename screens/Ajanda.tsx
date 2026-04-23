@@ -321,7 +321,7 @@ export default function Ajanda() {
 
     // Randevu item render'ı (FlatList için)
     const renderRandevuItem = ({ item }: { item: AjandaWithOgrenciType }) => {
-        const isCompleted = item.tamamlanma === '1' || item.sutun1 === 'tamamlandı';
+        const isCompleted = item.tamamlanma === '1' || item.sutun1 === 'tamamlandı' || item.tamamlandiMi === 1;
         const isCancelled = item.iptal === 1;
 
         return (
@@ -558,7 +558,12 @@ export default function Ajanda() {
                                                     {appointments.length > 0 ? (
                                                         appointments.sort((a, b) => a.saat.localeCompare(b.saat)).map((app, idx) => (
                                                             <View key={idx} style={styles.appCardVertical}>
-                                                                <Text style={styles.appTimeText}>{app.saat}</Text>
+                                                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                                                    <Text style={styles.appTimeText}>{app.saat}</Text>
+                                                                    {(app.tamamlandiMi === 1 || app.tamamlanma === '1' || app.sutun1 === 'tamamlandı') && (
+                                                                        <MaterialIcons name="check-circle" size={12} color="#27ae60" style={{ marginLeft: 4 }} />
+                                                                    )}
+                                                                </View>
                                                                 <Text style={styles.appStudentTextAbbr} numberOfLines={1}>
                                                                     {(() => {
                                                                         const parts = app.ogrAdsoyad?.split(' ') || [];
@@ -589,6 +594,9 @@ export default function Ajanda() {
                                                         appointments.sort((a, b) => a.saat.localeCompare(b.saat)).map((app, idx) => (
                                                             <View key={idx} style={styles.appCardHorizontal}>
                                                                 <Text style={styles.appTimeText}>{app.saat}</Text>
+                                                                {(app.tamamlandiMi === 1 || app.tamamlanma === '1' || app.sutun1 === 'tamamlandı') && (
+                                                                    <MaterialIcons name="check-circle" size={12} color="#27ae60" style={{ marginLeft: 4 }} />
+                                                                )}
                                                             </View>
                                                         ))
                                                     ) : (

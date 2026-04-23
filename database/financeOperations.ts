@@ -1,4 +1,5 @@
 import { ensureDatabaseReady } from './init';
+import { ajandaTamamla } from './agendaOperations';
 import { OdemeType, DersType } from '../types';
 
 export async function odemeKaydet(odeme: OdemeType) {
@@ -64,6 +65,10 @@ export async function dersiKaydet(dersVerisi: DersType) {
         );
 
         console.log("✅ Ders başarıyla kaydedildi!");
+        
+        // Ajandada bu tarihte bu öğrenci için randevu varsa tamamlandı olarak işaretle
+        await ajandaTamamla(dersVerisi.ogrenciId, dersVerisi.tarih, true);
+        
         return { success: true };
     } catch (error: any) {
         console.error("❌ Ders kaydetme hatası:", error);
@@ -159,6 +164,10 @@ export async function dersGuncelle(dersId: number, dersVerisi: DersType) {
                 dersId
             ]
         );
+        
+        // Ajandada bu tarihte bu öğrenci için randevu varsa tamamlandı olarak işaretle
+        await ajandaTamamla(dersVerisi.ogrenciId, dersVerisi.tarih, true);
+        
         return { success: result.changes > 0 };
     } catch (error: any) {
         console.error("Ders güncellenemedi:", error);

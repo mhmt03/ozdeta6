@@ -13,8 +13,8 @@ export async function ajandaKayitEkle(kayit: AjandaType) {
         const db = await ensureDatabaseReady();
 
         const result = await db.runAsync(
-            `INSERT INTO ajanda (ogrenciId, ogrAdsoyad, tarih, saat, tekrarsayisi, kalanTekrarSayisi, olusmaAni, tamamlanma, sutun1, sutun2) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO ajanda (ogrenciId, ogrAdsoyad, tarih, saat, tekrarsayisi, kalanTekrarSayisi, olusmaAni, tamamlanma, tamamlandiMi, sutun1, sutun2) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 kayit.ogrenciId,
                 kayit.ogrAdsoyad,
@@ -24,6 +24,7 @@ export async function ajandaKayitEkle(kayit: AjandaType) {
                 kayit.kalanTekrarSayisi,
                 kayit.olusmaAni,
                 '', // tamamlanma durumu başlangıçta boş
+                kayit.tamamlandiMi || 0,
                 kayit.sutun1 || '',
                 kayit.sutun2 || ''
             ]
@@ -88,7 +89,7 @@ export async function ajandaGuncelle(ajandaId: number, kayit: AjandaType) {
         const result = await db.runAsync(
             `UPDATE ajanda 
              SET ogrenciId = ?, ogrAdsoyad = ?, tarih = ?, saat = ?, 
-                 tekrarsayisi = ?, kalanTekrarSayisi = ?, tamamlanma = ?
+                 tekrarsayisi = ?, kalanTekrarSayisi = ?, tamamlanma = ?, tamamlandiMi = ?
              WHERE ajandaId = ?`,
             [
                 kayit.ogrenciId,
@@ -98,6 +99,7 @@ export async function ajandaGuncelle(ajandaId: number, kayit: AjandaType) {
                 kayit.tekrarsayisi,
                 kayit.kalanTekrarSayisi,
                 kayit.tamamlanma || '',
+                kayit.tamamlandiMi || 0,
                 ajandaId
             ]
         );
@@ -239,8 +241,8 @@ export async function ajandaGrupGuncelle(olusmaAni: string, seciliTarih: string,
             const yerelTarihString = `${yeniTarih.getFullYear()}-${(yeniTarih.getMonth() + 1).toString().padStart(2, '0')}-${yeniTarih.getDate().toString().padStart(2, '0')}`;
 
             await db.runAsync(
-                `INSERT INTO ajanda (ogrenciId, ogrAdsoyad, tarih, saat, tekrarsayisi, kalanTekrarSayisi, olusmaAni, tamamlanma, sutun1, sutun2) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                `INSERT INTO ajanda (ogrenciId, ogrAdsoyad, tarih, saat, tekrarsayisi, kalanTekrarSayisi, olusmaAni, tamamlanma, tamamlandiMi, sutun1, sutun2) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                     mevcutKayit.ogrenciId,
                     mevcutKayit.ogrAdsoyad,
@@ -250,6 +252,7 @@ export async function ajandaGrupGuncelle(olusmaAni: string, seciliTarih: string,
                     kalanTekrar.toString(),
                     olusmaAni,
                     '',
+                    0,
                     '',
                     ''
                 ]
@@ -274,6 +277,22 @@ export async function ajandaTamamlanmaDurumuGuncelle(ajandaId: number, durum: st
         return { success: result.changes > 0 };
     } catch (error: any) {
         console.error("Tamamlanma durumu güncellenemedi:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function ajandaTamamla(ogrenciId: number, tarih: string, tamamlandi: boolean) {
+    try {
+        const db = await ensureDatabaseReady();
+        const status = tamamlandi ? 1 : 0;
+        const result = await db.runAsync(
+            `UPDATE ajanda SET tamamlandiMi = ? WHERE ogrenciId = ? AND tarih = ?`,
+            [status, ogrenciId, tarih]
+        );
+        console.log(`Ajanda tamamlanma durumu güncellendi. Öğrenci: ${ogrenciId}, Tarih: ${tarih}, Durum: ${status}`);
+        return { success: true, changes: result.changes };
+    } catch (error: any) {
+        console.error("ajandaTamamla hatası:", error);
         return { success: false, error: error.message };
     }
 }
