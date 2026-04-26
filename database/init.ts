@@ -3,6 +3,9 @@ import * as SQLite from 'expo-sqlite';
 let db: SQLite.SQLiteDatabase | null = null;
 
 const DATABASE_NAME = 'ozdeta.db';
+// VERİTABANI ŞİFRESİ - Buradan değiştirebilirsiniz eğer şifreyi silersen şifresiz olur
+const DB_PASSWORD: string = '';
+
 // VERİTABANI VERSİYONU - Değişiklik yaptığınızda sadece bunu artırın!
 const DATABASE_VERSION = 6; // V5->V6: ajanda tablosuna tamamlandiMi eklendi
 
@@ -13,6 +16,14 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
         }
 
         db = await SQLite.openDatabaseAsync(DATABASE_NAME);
+
+        // Veritabanı şifreleme - Eğer şifre boş değilse uygula
+        if (DB_PASSWORD && DB_PASSWORD.trim() !== "") {
+            await db.execAsync(`PRAGMA key = '${DB_PASSWORD}';`);
+            console.log('Veritabanı şifreli modda açıldı.');
+        } else {
+            console.log('Veritabanı şifresiz modda açıldı.');
+        }
 
         // Version kontrolü ve migration işlemi
         await handleDatabaseMigration(db);

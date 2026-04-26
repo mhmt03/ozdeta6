@@ -1,9 +1,23 @@
 import { ensureDatabaseReady } from './init';
 import { OgrenciType } from '../types';
+import { getSetting } from './settingsOperations';
 
 export async function ogrenciKaydet(params: OgrenciType) {
     try {
         const db = await ensureDatabaseReady();
+
+        // Trial kontrolü
+        const isPremium = await getSetting('is_premium', 'false');
+        if (isPremium !== 'true') {
+            const countResult = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM ogrenciler');
+            if (countResult && countResult.count >= 3) {
+                return { 
+                    success: false, 
+                    error: "TRIAL_LIMIT", 
+                    message: "Trial versiyonunda en fazla 3 öğrenci ekleyebilirsiniz. Sınırsız kullanım için lütfen satın alın." 
+                };
+            }
+        }
 
         const result = await db.runAsync(`
             INSERT INTO ogrenciler (ogrenciAd, ogrenciSoyad, ogrenciTel, veliAd, veliTel, ucret, okul, sinif, aciklama1, aciklama2, kayitTarihi, aktifmi) 

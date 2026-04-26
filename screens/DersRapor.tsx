@@ -11,15 +11,15 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { 
-    ogrencininOdemeleri, 
-    tekOgrenci, 
-    dersSil, 
-    odemeSil, 
-    dersGuncelle, 
+import {
+    ogrencininOdemeleri,
+    tekOgrenci,
+    dersSil,
+    odemeSil,
+    dersGuncelle,
     odemeGuncelle,
-    tumYapilanDersler, 
-    tumOdemeleriGetir 
+    tumYapilanDersler,
+    tumOdemeleriGetir
 } from '../utils/database';
 import { DersType, OdemeType, OgrenciType } from '../types';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -70,7 +70,7 @@ export default function DersRapor() {
                 }
 
                 const { odemeler, dersler } = await ogrencininOdemeleri(ogrenciId);
-                
+
                 const siralanmisDersler = dersler
                     .sort((a, b) => new Date(b.tarih).getTime() - new Date(a.tarih).getTime());
 
@@ -106,7 +106,7 @@ export default function DersRapor() {
         try {
             const title = type === 'ders' ? 'Ders Raporu' : 'Ödeme Raporu';
             const studentName = ogrenci ? `${ogrenci.ogrenciAd} ${ogrenci.ogrenciSoyad}` : 'Tüm Öğrenciler';
-            
+
             let htmlContent = `
                 <html>
                 <head>
@@ -131,24 +131,23 @@ export default function DersRapor() {
                     <table>
                         <thead>
                             <tr>
-                                ${type === 'ders' 
-                                    ? '<th>Tarih</th><th>Saat</th>' + (isGeneralReport ? '<th>Öğrenci</th>' : '') + '<th>Konu</th><th>Ücret</th>'
-                                    : '<th>Tarih</th>' + (isGeneralReport ? '<th>Öğrenci</th>' : '') + '<th>Tür</th><th>Açıklama</th><th>Miktar</th>'
-                                }
+                                ${type === 'ders'
+                    ? '<th>Tarih</th>' + (isGeneralReport ? '<th>Öğrenci</th>' : '') + '<th>Konu</th><th>Ücret</th>'
+                    : '<th>Tarih</th>' + (isGeneralReport ? '<th>Öğrenci</th>' : '') + '<th>Tür</th><th>Açıklama</th><th>Miktar</th>'
+                }
                             </tr>
                         </thead>
                         <tbody>
-                            ${type === 'ders' 
-                                ? dersler.map(d => `
+                            ${type === 'ders'
+                    ? dersler.map(d => `
                                     <tr>
                                         <td>${formatTarih(d.tarih)}</td>
-                                        <td>${d.saat}</td>
                                         ${isGeneralReport ? `<td>${d.ogrenciAdSoyad || '-'}</td>` : ''}
                                         <td>${d.konu || '-'}</td>
                                         <td>${d.ucret} TL</td>
                                     </tr>
                                 `).join('')
-                                : odemeler.map(o => `
+                    : odemeler.map(o => `
                                     <tr>
                                         <td>${formatTarih(o.odemetarih)}</td>
                                         ${isGeneralReport ? `<td>${o.ogrenciAdSoyad || '-'}</td>` : ''}
@@ -157,7 +156,7 @@ export default function DersRapor() {
                                         <td>${o.alinanucret} TL</td>
                                     </tr>
                                 `).join('')
-                            }
+                }
                         </tbody>
                     </table>
                     <div class="total">
@@ -171,7 +170,7 @@ export default function DersRapor() {
             `;
 
             const { uri } = await Print.printToFileAsync({ html: htmlContent });
-            
+
             if (await Sharing.isAvailableAsync()) {
                 await Sharing.shareAsync(uri, {
                     mimeType: 'application/pdf',
@@ -197,7 +196,7 @@ export default function DersRapor() {
         const miktar = parseInt(seciliOdeme.alinanucret) || 0;
         const dersUcreti = ogrenci.ucret || 0;
         const dersSayisi = dersUcreti > 0 ? Math.floor(miktar / dersUcreti) : 0;
-        
+
         const mesaj = `Gönderdiğiniz emaneti aldım, teşekkür ederim. (${dersSayisi} ders)`;
         const telefonNo = ogrenci.veliTel || ogrenci.ogrenciTel;
 
@@ -356,7 +355,7 @@ export default function DersRapor() {
     // Ders Güncelle
     const handleDersGuncelle = async () => {
         if (!duzenlenenDers || !duzenlenenDers.dersId) return;
-        
+
         const guncelDers: DersType = {
             ...duzenlenenDers,
             tarih: formTarih.toISOString().split('T')[0],
@@ -478,15 +477,15 @@ export default function DersRapor() {
 
             {/* Rapor PDF Butonları */}
             <View style={styles.pdfButtonsContainer}>
-                <TouchableOpacity 
-                    style={[styles.pdfButton, { backgroundColor: '#e67e22' }]} 
+                <TouchableOpacity
+                    style={[styles.pdfButton, { backgroundColor: '#e67e22' }]}
                     onPress={() => generatePDF('ders')}
                 >
                     <MaterialCommunityIcons name="file-pdf-box" size={20} color="white" />
                     <Text style={styles.pdfButtonText}>Ders PDF</Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
-                    style={[styles.pdfButton, { backgroundColor: '#27ae60' }]} 
+                <TouchableOpacity
+                    style={[styles.pdfButton, { backgroundColor: '#27ae60' }]}
                     onPress={() => generatePDF('odeme')}
                 >
                     <MaterialCommunityIcons name="file-pdf-box" size={20} color="white" />
@@ -602,9 +601,9 @@ export default function DersRapor() {
                     setDuzenleOdemeModal(false);
                 }}
             >
-                <TouchableOpacity 
-                    style={styles.modalOverlay} 
-                    activeOpacity={1} 
+                <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
                     onPress={() => {
                         setDuzenleDersModal(false);
                         setDuzenleOdemeModal(false);
@@ -883,7 +882,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#3498db',
         padding: 12,
         borderRadius: 8,
-        marginBottom: 16,
+        marginBottom: 96,
     },
     odemeRaporButonText: {
         color: 'white',

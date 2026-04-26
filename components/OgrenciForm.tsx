@@ -62,6 +62,16 @@ export default function OgrenciForm({ ogrenci, setOgrenci, onSave, onCancel }: O
                             placeholder="Okul adını girin"
                         />
                     </View>
+                    
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Sınıfı</Text>
+                        <TextInput
+                            value={ogrenci.sinif ?? ''}
+                            onChangeText={text => metinDegisti('sinif', text)}
+                            style={styles.input}
+                            placeholder="Öğrenci sınıfını girin (Örn: 8. Sınıf)"
+                        />
+                    </View>
 
                     <View style={styles.inputGroup}>
                         <Text style={styles.label}>Öğrenci Telefon</Text>

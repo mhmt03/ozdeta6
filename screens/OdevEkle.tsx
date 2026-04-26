@@ -381,12 +381,13 @@ export default function OdevEkle() {
                                             onValueChange={setSeciliKaynak}
                                             style={styles.picker}
                                         >
-                                            <Picker.Item label="Kaynak seçiniz..." value="" />
+                                            <Picker.Item label="Kaynak seçiniz..." value="" color="#333" />
                                             {kaynaklar.map((kaynak) => (
                                                 <Picker.Item
                                                     key={kaynak.kaynakId}
                                                     label={kaynak.kaynak}
                                                     value={kaynak.kaynak}
+                                                    color="#333"
                                                 />
                                             ))}
                                         </Picker>
@@ -628,7 +629,7 @@ export default function OdevEkle() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f8f9fa',
+        backgroundColor: '#ffffff',
         paddingTop: 16,
     },
     loadingContainer: {

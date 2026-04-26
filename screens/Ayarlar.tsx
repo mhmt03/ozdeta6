@@ -29,6 +29,7 @@ import {
     tumOdemeleriGetir,
     veritabaniTemizle
 } from '../utils/database';
+import { getSetting, saveSetting } from '../database/settingsOperations';
 
 export default function Ayarlar() {
     const navigation = useNavigation<any>();
@@ -56,10 +57,37 @@ export default function Ayarlar() {
         notlarim: true,
         ajanda: true
     });
+    const [isPremium, setIsPremium] = useState(false);
 
     useEffect(() => {
         borcluOgrencileriHesapla();
+        premiumDurumuYukle();
     }, []);
+
+    const premiumDurumuYukle = async () => {
+        const status = await getSetting('is_premium', 'false');
+        setIsPremium(status === 'true');
+    };
+
+    const satinAl = async () => {
+        Alert.alert(
+            'Satın Al',
+            'Tam sürümü satın almak istiyor musunuz? (Bu bir simülasyondur)',
+            [
+                { text: 'İptal', style: 'cancel' },
+                {
+                    text: 'Evet, Satın Al',
+                    onPress: async () => {
+                        const success = await saveSetting('is_premium', 'true');
+                        if (success) {
+                            setIsPremium(true);
+                            Alert.alert('Başarılı', 'Uygulama başarıyla tam sürüme yükseltildi!');
+                        }
+                    }
+                }
+            ]
+        );
+    };
 
     /**
      * Detaylı tarih formatı oluşturma
@@ -452,14 +480,13 @@ export default function Ayarlar() {
                 [`Tarih Aralığı: ${baslangicStr} - ${bitisStr}`],
                 [`Oluşturulma Tarihi: ${new Date().toLocaleString('tr-TR')}`],
                 [''],
-                ['Tarih', 'Saat', 'Öğrenci', 'Konu', 'Ücret (TL)']
+                ['Tarih', 'Öğrenci', 'Konu', 'Ücret (TL)']
             ];
 
             let toplamDersUcreti = 0;
             filtreliDersler.forEach(ders => {
                 derslerData.push([
                     ders.tarih,
-                    ders.saat,
                     ders.ogrenciAdSoyad || 'Belirtilmemiş',
                     ders.konu || '-',
                     parseInt(String(ders.ucret)) || 0
@@ -467,7 +494,7 @@ export default function Ayarlar() {
                 toplamDersUcreti += parseInt(ders.ucret) || 0;
             });
 
-            derslerData.push(['', '', '', 'TOPLAM DERS ÜCRETİ:', toplamDersUcreti + ' TL']);
+            derslerData.push(['', '', 'TOPLAM DERS ÜCRETİ:', toplamDersUcreti + ' TL']);
 
             const derslerWorksheet = XLSX.utils.aoa_to_sheet(derslerData);
             XLSX.utils.book_append_sheet(workbook, derslerWorksheet, 'Dersler');
@@ -497,7 +524,7 @@ export default function Ayarlar() {
             // BORÇLU ÖĞRENCİLER sayfası (sadece borçlu öğrenciler varsa)
             if (borcluOgrenciler.length > 0) {
                 const borcluOgrencilerData: any[][] = [
-                    ['BORÇLU ÖĞRENCİLER'],
+                    ['ÖĞRENCİLER'],
                     [`Oluşturulma Tarihi: ${new Date().toLocaleString('tr-TR')}`],
                     [''],
                     ['Ad Soyad', 'Toplam Ders Ücreti', 'Toplam Ödeme', 'Kalan Borç']
@@ -513,7 +540,7 @@ export default function Ayarlar() {
                 });
 
                 const borcluWorksheet = XLSX.utils.aoa_to_sheet(borcluOgrencilerData);
-                XLSX.utils.book_append_sheet(workbook, borcluWorksheet, 'Borçlu Öğrenciler');
+                XLSX.utils.book_append_sheet(workbook, borcluWorksheet, 'Öğrenciler');
             }
 
             // ÖDEMELER sayfası
@@ -522,14 +549,13 @@ export default function Ayarlar() {
                 [`Tarih Aralığı: ${baslangicStr} - ${bitisStr}`],
                 [`Oluşturulma Tarihi: ${new Date().toLocaleString('tr-TR')}`],
                 [''],
-                ['Tarih', 'Saat', 'Öğrenci', 'Tür', 'Açıklama', 'Miktar (TL)']
+                ['Tarih', 'Öğrenci', 'Tür', 'Açıklama', 'Miktar (TL)']
             ];
 
             let toplamGelenOdeme = 0;
             filtreliOdemeler.forEach(odeme => {
                 odemelerData.push([
                     odeme.odemetarih,
-                    odeme.odemesaati || '-',
                     odeme.ogrenciAdSoyad || 'Belirtilmemiş',
                     odeme.odemeturu || '-',
                     odeme.aciklama || '-',
@@ -538,7 +564,7 @@ export default function Ayarlar() {
                 toplamGelenOdeme += parseInt(String(odeme.alinanucret)) || 0;
             });
 
-            odemelerData.push(['', '', '', '', 'TOPLAM GELEN ÖDEME:', toplamGelenOdeme + ' TL']);
+            odemelerData.push(['', '', '', 'TOPLAM GELEN ÖDEME:', toplamGelenOdeme + ' TL']);
 
             const odemelerWorksheet = XLSX.utils.aoa_to_sheet(odemelerData);
             XLSX.utils.book_append_sheet(workbook, odemelerWorksheet, 'Ödemeler');
@@ -677,14 +703,14 @@ export default function Ayarlar() {
                     {item.kalanBorc} TL
                 </Text>
             </View>
-            <View style={styles.borcDetay}>
+            {/* <View style={styles.borcDetay}>
                 <Text style={styles.borcDetayText}>
                     Toplam Ders: {item.toplamDersUcreti} TL
                 </Text>
                 <Text style={styles.borcDetayText}>
                     Ödenen: {item.toplamOdeme} TL
                 </Text>
-            </View>
+            </View> */}
             <TouchableOpacity
                 style={styles.borcOgrenciGitButon}
                 onPress={() => {
@@ -791,14 +817,51 @@ export default function Ayarlar() {
                 </View>
 
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Uygulama</Text>
+                    <Text style={styles.sectionTitle}>Uygulama Versiyonu</Text>
+
+                    <View style={styles.ayarItem}>
+                        <MaterialIcons
+                            name={isPremium ? "verified" : "hourglass-empty"}
+                            size={24}
+                            color={isPremium ? "#4CAF50" : "#FF9800"}
+                        />
+                        <View style={styles.ayarText}>
+                            <Text style={styles.ayarBaslik}>
+                                {isPremium ? "Normal Versiyon (Sınırsız)" : "Trial Versiyon (Limitli)"}
+                            </Text>
+                            <Text style={styles.ayarAciklama}>
+                                {isPremium
+                                    ? "Tüm özellikler açık ve sınırsız öğrenci ekleyebilirsiniz."
+                                    : "Şu an 3 öğrenci limiti bulunmaktadır."}
+                            </Text>
+                        </View>
+                    </View>
+
+                    {!isPremium && (
+                        <TouchableOpacity
+                            style={[styles.ayarItem, { backgroundColor: '#E3F2FD', borderLeftWidth: 4, borderLeftColor: '#2196F3' }]}
+                            onPress={satinAl}
+                        >
+                            <MaterialIcons name="shopping-cart" size={24} color="#2196F3" />
+                            <View style={styles.ayarText}>
+                                <Text style={[styles.ayarBaslik, { color: '#1565C0' }]}>Tam Sürüme Yükselt</Text>
+                                <Text style={styles.ayarAciklama}>
+                                    Öğrenci limitini kaldırın ve tüm özellikleri süresiz kullanın.
+                                </Text>
+                            </View>
+                        </TouchableOpacity>
+                    )}
+                </View>
+
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Hakkında</Text>
 
                     <View style={styles.bilgiItem}>
-                        <MaterialIcons name="info" size={24} color="#9E9E9E" />
+                        <MaterialIcons name="person" size={24} color="#9E9E9E" />
                         <View style={styles.ayarText}>
-                            {/* <Text style={styles.ayarBaslik}>Dosya Konumu</Text> */}
+                            <Text style={styles.ayarBaslik}>Geliştirici</Text>
                             <Text style={styles.ayarAciklama}>
-                                created By  Mehmet Gündöner {'\n'}
+                                created By Mehmet Gündöner {'\n'}
                                 gundoner@yahoo.com
                             </Text>
                         </View>
@@ -809,7 +872,7 @@ export default function Ayarlar() {
                         <View style={styles.ayarText}>
                             <Text style={styles.ayarBaslik}>Sürüm Bilgisi</Text>
                             <Text style={styles.ayarAciklama}>
-                                Özdeta Öğretmen Takip Uygulaması v1.0
+                                Özdeta Öğretmen Takip Uygulaması v1.1
                             </Text>
                         </View>
                     </View>

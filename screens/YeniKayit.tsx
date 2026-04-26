@@ -40,11 +40,24 @@ export default function YeniKayit({ route, navigation }: Props) {
             }
 
             if (existing && existing.ogrenciId) {
-                await ogrenciGuncelle(existing.ogrenciId, ogrenci)
+                const result = await ogrenciGuncelle(existing.ogrenciId, ogrenci);
+                if (result.success) {
+                    navigation.goBack();
+                } else {
+                    Alert.alert("Hata", result.error || "Kayıt güncellenemedi");
+                }
             } else {
-                await ogrenciKaydet(ogrenci);
+                const result = await ogrenciKaydet(ogrenci);
+                if (result.success) {
+                    navigation.goBack();
+                } else {
+                    if (result.error === "TRIAL_LIMIT") {
+                        Alert.alert("Trial Sınırı", result.message);
+                    } else {
+                        Alert.alert("Hata", result.error || "Kayıt eklenemedi");
+                    }
+                }
             }
-            navigation.goBack();
 
         } catch (error) {
             console.error('Kayıt hatası:', error);

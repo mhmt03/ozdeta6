@@ -60,19 +60,20 @@ const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle }) => {
                 </TouchableOpacity>
             </View>
 
-            {/* Durum */}
-            <View style={[styles.durumContainer, { backgroundColor: getDurumRenk(yapilmaDurumu) }]}>
+            <View style={styles.durumContainer}>
+                <View style={[styles.durumRenkSutunu, { backgroundColor: getDurumRenk(yapilmaDurumu) }]} />
                 <Text style={styles.durumLabel}>Durum:</Text>
                 <Picker
                     selectedValue={yapilmaDurumu}
                     onValueChange={(val: string) => setYapilmaDurumu(val)}
                     style={styles.durumPicker}
-                    dropdownIconColor="white"
+                    dropdownIconColor="#333"
+                    mode="dropdown"
                 >
-                    <Picker.Item label="Bekliyor" value="Bekliyor" color={Platform.OS === 'ios' ? 'white' : '#333'} />
-                    <Picker.Item label="Yapıldı" value="Yapıldı" color={Platform.OS === 'ios' ? 'white' : '#333'} />
-                    <Picker.Item label="Yapılmadı" value="Yapılmadı" color={Platform.OS === 'ios' ? 'white' : '#333'} />
-                    <Picker.Item label="Eksik" value="Eksik" color={Platform.OS === 'ios' ? 'white' : '#333'} />
+                    <Picker.Item label="Bekliyor" value="Bekliyor" color="#333" />
+                    <Picker.Item label="Yapıldı" value="Yapıldı" color="#333" />
+                    <Picker.Item label="Yapılmadı" value="Yapılmadı" color="#333" />
+                    <Picker.Item label="Eksik" value="Eksik" color="#333" />
                 </Picker>
             </View>
 
@@ -123,12 +124,12 @@ const styles = StyleSheet.create({
     odevItem: {
         padding: 12,
         marginBottom: 12,
-        backgroundColor: '#f8f9fa',
+        backgroundColor: '#ffffff',
         borderRadius: 6,
         borderWidth: 1,
         borderColor: '#e1e8ed',
     },
-    odevKonu: { fontSize: 16, fontWeight: 'bold', marginBottom: 8 },
+    odevKonu: { fontSize: 16, fontWeight: 'bold', marginBottom: 8, color: '#2c3e50' },
     odevTarihler: {
         flexDirection: 'column',
         justifyContent: 'flex-start',
@@ -145,23 +146,31 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         flex: 1,
     },
-    dateText: { marginLeft: 8, flex: 1, flexWrap: 'wrap' },
+    dateText: { marginLeft: 8, flex: 1, flexWrap: 'wrap', color: '#555' },
     durumContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         marginTop: 10,
         borderRadius: 8,
-        paddingHorizontal: 12,
+        borderWidth: 1,
+        borderColor: '#ddd',
+        backgroundColor: '#fff',
         height: 50,
         overflow: 'hidden',
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.2,
-        shadowRadius: 2,
+        elevation: 1,
     },
-    durumLabel: { color: 'white', fontWeight: 'bold', fontSize: 14, marginRight: 5 },
-    durumPicker: { flex: 1, color: 'white', fontWeight: 'bold' },
+    durumRenkSutunu: {
+        width: 10,
+        height: '100%',
+        marginRight: 10,
+    },
+    durumLabel: { color: '#555', fontWeight: 'bold', fontSize: 14 },
+    durumPicker: { 
+        flex: 1, 
+        color: '#333', 
+        fontWeight: 'bold',
+        backgroundColor: '#fffde7', // Light yellow
+    },
     guncelleButon: {
         flexDirection: 'row',
         justifyContent: 'center',
@@ -171,7 +180,7 @@ const styles = StyleSheet.create({
         borderRadius: 6,
         marginTop: 10,
     },
-    guncelleText: { color: 'white', marginLeft: 6, fontWeight: 'bold' },
+    guncelleText: { color: '#ffffff', marginLeft: 6, fontWeight: 'bold' },
 });
 
 export default OdevItem;
