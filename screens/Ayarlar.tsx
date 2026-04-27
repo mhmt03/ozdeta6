@@ -44,6 +44,8 @@ export default function Ayarlar() {
     const [bitisTarihi, setBitisTarihi] = useState(new Date());
     const [baslangicPickerAcik, setBaslangicPickerAcik] = useState(false);
     const [bitisPickerAcik, setBitisPickerAcik] = useState(false);
+    const [sonOdemelerAcik, setSonOdemelerAcik] = useState(false);
+    const [sonOdemeler, setSonOdemeler] = useState<any[]>([]);
 
     // Veritabanı temizleme state'leri
     const [temizlikModalAcik, setTemizlikModalAcik] = useState(false);
@@ -264,6 +266,39 @@ export default function Ayarlar() {
         } catch (error) {
             console.error('Borç hesaplama hatası:', error);
             Alert.alert('Hata', 'Borç hesaplaması yapılamadı');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const sonOdemeleriYukle = async () => {
+        try {
+            setLoading(true);
+            const res = await tumOdemeleriGetir();
+            if (res.success) {
+                // Tarihe göre azalan sırada sırala (en yeni en üstte)
+                const siraliOdemeler = [...(res.odemeler || [])].sort((a, b) => {
+                    // Tarih formatı YYYY-MM-DD varsayılıyor
+                    const dateA = new Date(a.odemetarih);
+                    const dateB = new Date(b.odemetarih);
+                    
+                    if (dateB.getTime() !== dateA.getTime()) {
+                        return dateB.getTime() - dateA.getTime();
+                    }
+                    
+                    // Tarihler aynıysa saate göre sırala
+                    const timeA = a.odemesaati || '00:00';
+                    const timeB = b.odemesaati || '00:00';
+                    return timeB.localeCompare(timeA);
+                });
+                setSonOdemeler(siraliOdemeler);
+                setSonOdemelerAcik(true);
+            } else {
+                Alert.alert('Hata', 'Ödemeler alınamadı');
+            }
+        } catch (error) {
+            console.error('Ödeme yükleme hatası:', error);
+            Alert.alert('Hata', 'Bir hata oluştu');
         } finally {
             setLoading(false);
         }
@@ -691,6 +726,19 @@ export default function Ayarlar() {
     };
 
     /**
+     * Son ödemeler render fonksiyonu
+     */
+    const renderSonOdeme = ({ item }: { item: any }) => (
+        <View style={styles.odemeListItem}>
+            <View style={styles.odemeListInfo}>
+                <Text style={styles.odemeListOgrenci}>{item.ogrenciAdSoyad}</Text>
+                <Text style={styles.odemeListTarih}>{item.odemetarih} {item.odemesaati}</Text>
+            </View>
+            <Text style={styles.odemeListMiktar}>{item.alinanucret} TL</Text>
+        </View>
+    );
+
+    /**
      * Borçlu öğrenci listesi render fonksiyonu
      */
     const renderBorcluOgrenci = ({ item }: { item: any }) => (
@@ -811,6 +859,19 @@ export default function Ayarlar() {
                             <Text style={styles.ayarBaslik}>Borçlu Öğrenci Listesi</Text>
                             <Text style={styles.ayarAciklama}>
                                 Kalan ücretleri olan öğrencilerin listesi ({borcluOgrenciler.length} öğrenci)
+                            </Text>
+                        </View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.ayarItem}
+                        onPress={sonOdemeleriYukle}
+                    >
+                        <MaterialIcons name="payments" size={24} color="#4CAF50" />
+                        <View style={styles.ayarText}>
+                            <Text style={styles.ayarBaslik}>Son Alınan Ödemeler</Text>
+                            <Text style={styles.ayarAciklama}>
+                                En son alınan ödemelerin dökümü
                             </Text>
                         </View>
                     </TouchableOpacity>
@@ -1151,6 +1212,43 @@ export default function Ayarlar() {
                     </View>
                 </View>
             </Modal>
+
+            <Modal
+                visible={sonOdemelerAcik}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={() => setSonOdemelerAcik(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, styles.borcModalContent]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>
+                                Son Alınan Ödemeler ({sonOdemeler.length})
+                            </Text>
+                            <TouchableOpacity onPress={() => setSonOdemelerAcik(false)}>
+                                <MaterialIcons name="close" size={24} color="#666" />
+                            </TouchableOpacity>
+                        </View>
+
+                        {sonOdemeler.length > 0 ? (
+                            <FlatList
+                                data={sonOdemeler}
+                                renderItem={renderSonOdeme}
+                                keyExtractor={(item, index) => (item.odemeId || index).toString()}
+                                style={styles.borcListe}
+                                showsVerticalScrollIndicator={false}
+                            />
+                        ) : (
+                            <View style={styles.borcBosListe}>
+                                <MaterialIcons name="payments" size={48} color="#ddd" />
+                                <Text style={styles.borcBosText}>
+                                    Henüz kayıtlı bir ödeme bulunmamaktadır.
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -1459,6 +1557,37 @@ const styles = StyleSheet.create({
         color: '#E65100',
         marginLeft: 8,
         flex: 1,
+    },
+    odemeListItem: {
+        backgroundColor: '#fff',
+        borderRadius: 8,
+        padding: 15,
+        marginBottom: 10,
+        borderLeftWidth: 4,
+        borderLeftColor: '#4CAF50',
+        elevation: 1,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    odemeListInfo: {
+        flex: 1,
+    },
+    odemeListOgrenci: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#333',
+        marginBottom: 4,
+    },
+    odemeListTarih: {
+        fontSize: 12,
+        color: '#666',
+    },
+    odemeListMiktar: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#4CAF50',
+        marginLeft: 10,
     },
 });
 

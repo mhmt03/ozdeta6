@@ -53,6 +53,7 @@ export default function AnaSayfa() {
     const oncekiGun = () => {
         const yeniTarih = new Date(aktifTarih);
         yeniTarih.setDate(yeniTarih.getDate() - 1);
+        yeniTarih.setHours(12, 0, 0, 0);
         setAktifTarih(yeniTarih);
     };
 
@@ -60,7 +61,15 @@ export default function AnaSayfa() {
     const sonrakiGun = () => {
         const yeniTarih = new Date(aktifTarih);
         yeniTarih.setDate(yeniTarih.getDate() + 1);
+        yeniTarih.setHours(12, 0, 0, 0);
         setAktifTarih(yeniTarih);
+    };
+
+    // Bugün'e git.
+    const buguneGit = () => {
+        const today = new Date();
+        today.setHours(12, 0, 0, 0);
+        setAktifTarih(today);
     };
 
     useEffect(() => {
@@ -68,7 +77,12 @@ export default function AnaSayfa() {
 
         const asyncFonksion = async () => {
             try {
-                const randevular = await tarihAraligiAjandaGetir(aktifTarih.toISOString().split('T')[0], aktifTarih.toISOString().split('T')[0]);
+                const year = aktifTarih.getFullYear();
+                const month = String(aktifTarih.getMonth() + 1).padStart(2, '0');
+                const day = String(aktifTarih.getDate()).padStart(2, '0');
+                const formattedDate = `${year}-${month}-${day}`;
+
+                const randevular = await tarihAraligiAjandaGetir(formattedDate, formattedDate);
                 setAktifTarihRandevulari(randevular.data || []);
                 console.log("anasayfa_randevular", randevular.data);
             } catch (error) {
@@ -193,6 +207,12 @@ export default function AnaSayfa() {
                             </Text>
                         </View>
 
+                        {!tarihleriKarsilastir(aktifTarih, new Date()) && (
+                            <TouchableOpacity onPress={buguneGit} style={styles.bugunButtonSmall}>
+                                <Text style={styles.bugunButtonTextSmall}>Bugün</Text>
+                            </TouchableOpacity>
+                        )}
+
                         <TouchableOpacity onPress={sonrakiGun} style={styles.tarihOk}>
                             <MaterialIcons name="chevron-right" size={24} color="#3498db" />
                         </TouchableOpacity>
@@ -222,7 +242,7 @@ export default function AnaSayfa() {
                         <View style={[styles.butonIcon, { backgroundColor: '#e74c3c' }]}>
                             <Ionicons name="settings" size={24} color="white" />
                         </View>
-                        <Text style={styles.butonText}>Ayarlar</Text>
+                        <Text style={styles.butonText}>İşlemler</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -345,6 +365,23 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 2,
         elevation: 2,
+    },
+    bugunButtonSmall: {
+        backgroundColor: '#cdc2f5ff',
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 12,
+        marginHorizontal: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    bugunButtonTextSmall: {
+        fontSize: 12,
+        color: '#2c3e50',
+        fontWeight: 'bold',
     },
     tarihContainer: {
         alignItems: 'center',

@@ -165,9 +165,9 @@ const styles = StyleSheet.create({
         marginRight: 10,
     },
     durumLabel: { color: '#555', fontWeight: 'bold', fontSize: 14 },
-    durumPicker: { 
-        flex: 1, 
-        color: '#333', 
+    durumPicker: {
+        flex: 1,
+        color: '#f73131ff',
         fontWeight: 'bold',
         backgroundColor: '#fffde7', // Light yellow
     },

@@ -894,15 +894,16 @@ const styles = StyleSheet.create({
         padding: 16,
         backgroundColor: 'white',
         borderTopWidth: 1,
-        borderTopColor: '#e1e8ed',
+        borderTopColor: '#c7e3f7ff',
     },
     smsButon: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#27ae60',
+        backgroundColor: '#5bf89dff',
         padding: 14,
         borderRadius: 8,
+        marginBottom: 80,
     },
     smsButonText: {
         color: 'white',
