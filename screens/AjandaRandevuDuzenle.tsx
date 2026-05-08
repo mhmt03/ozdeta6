@@ -18,7 +18,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { MaterialIcons, FontAwesome5, Entypo } from '@expo/vector-icons';
 import RNPickerSelect from 'react-native-picker-select';
 import { sendSMS, sendWhatsApp } from '../utils/messaging';
-import { ogrencileriListele, ajandaGuncelle, randevuIptal, ajandaGrupGuncelle } from '../utils/database'; // Added randevuIptal
+import { ogrencileriListele, ajandaGuncelle, randevuIptal, ajandaGrupGuncelle, ajandaSil, ajandaSiradakiKayitlariSil } from '../utils/database'; // Added randevuIptal, ajandaSil, ajandaSiradakiKayitlariSil
 import { OgrenciType, AjandaType } from '../types';
 import { tekOgrenci } from '../utils/database'; // Assuming tekOgrenci is also in utils/database or similar
 
@@ -186,6 +186,54 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
         );
     };
 
+    // Randevu Sil
+    const handleSil = () => {
+        if (degisiklikTipi === 'sadeceBu' || !randevu.olusmaAni) {
+            Alert.alert(
+                'Randevu Sil',
+                'Bu randevuyu tamamen silmek istediğinizden emin misiniz?',
+                [
+                    { text: 'Vazgeç', style: 'cancel' },
+                    {
+                        text: 'Sil',
+                        style: 'destructive',
+                        onPress: async () => {
+                            const result = await ajandaSil(randevu.ajandaId);
+                            if (result.success) {
+                                Alert.alert('Başarılı', 'Randevu silindi');
+                                navigation.goBack();
+                            } else {
+                                Alert.alert('Hata', 'Silme işlemi başarısız oldu');
+                            }
+                        }
+                    }
+                ]
+            );
+        } else {
+            // degisiklikTipi === 'tumKayitlar' ve olusmaAni var
+            Alert.alert(
+                'Randevu Sil',
+                'Seçili randevuyu VE sonraki tüm tekrarlarını silmek istediğinizden emin misiniz?',
+                [
+                    { text: 'Vazgeç', style: 'cancel' },
+                    {
+                        text: 'Hepsini Sil',
+                        style: 'destructive',
+                        onPress: async () => {
+                            const result = await ajandaSiradakiKayitlariSil(randevu.olusmaAni, randevu.tarih);
+                            if (result.success) {
+                                Alert.alert('Başarılı', 'Sıradaki tüm randevular silindi');
+                                navigation.goBack();
+                            } else {
+                                Alert.alert('Hata', 'Silme işlemi başarısız oldu');
+                            }
+                        }
+                    }
+                ]
+            );
+        }
+    };
+
     const formatDateWithDay = (date: Date) => {
         const days = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
         const dayName = days[date.getDay()];
@@ -331,6 +379,14 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
                     >
                         <MaterialIcons name="cancel" size={18} color="white" />
                         <Text style={styles.buttonText}>Randevu İptal</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.buttonSmall, { backgroundColor: '#e74c3c' }]}
+                        onPress={handleSil}
+                    >
+                        <MaterialIcons name="delete" size={18} color="white" />
+                        <Text style={styles.buttonText}>Randevu Sil</Text>
                     </TouchableOpacity>
                 </View>
                 <Text style={styles.label}>Mesaj Hedefi</Text>

@@ -154,6 +154,20 @@ export async function ajandaGrupSil(olusmaAni: string) {
     }
 }
 
+export async function ajandaSiradakiKayitlariSil(olusmaAni: string, tarih: string) {
+    try {
+        const db = await ensureDatabaseReady();
+        const result = await db.runAsync(
+            `DELETE FROM ajanda WHERE olusmaAni = ? AND tarih >= ?`,
+            [olusmaAni, tarih]
+        );
+        return { success: true, deletedCount: result.changes };
+    } catch (error: any) {
+        console.error("Sıradaki ajanda kayıtları silinemedi:", error);
+        return { success: false, error: error.message };
+    }
+}
+
 export async function ogrenciAjandaGetir(ogrenciId: number) {
     try {
         const db = await ensureDatabaseReady();
