@@ -26,6 +26,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Modal, TextInput, Platform, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, ActivityIndicator } from 'react-native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system/legacy';
 
 export default function DersRapor() {
     const navigation = useNavigation<any>();
@@ -102,7 +103,7 @@ export default function DersRapor() {
     };
 
     // PDF Raporu Oluştur
-    const generatePDF = async (type: 'ders' | 'odeme') => {
+    const generatePDF = async (type: 'ders' | 'odeme', showPrice: boolean = true) => {
         try {
             const title = type === 'ders' ? 'Ders Raporu' : 'Ödeme Raporu';
             const studentName = ogrenci ? `${ogrenci.ogrenciAd} ${ogrenci.ogrenciSoyad}` : 'Tüm Öğrenciler';
@@ -132,7 +133,7 @@ export default function DersRapor() {
                         <thead>
                             <tr>
                                 ${type === 'ders'
-                    ? '<th>Tarih</th>' + (isGeneralReport ? '<th>Öğrenci</th>' : '') + '<th>Konu</th><th>Ücret</th>'
+                    ? '<th>Tarih</th>' + (isGeneralReport ? '<th>Öğrenci</th>' : '') + '<th>Konu</th>' + (showPrice ? '<th>Ücret</th>' : '')
                     : '<th>Tarih</th>' + (isGeneralReport ? '<th>Öğrenci</th>' : '') + '<th>Tür</th><th>Açıklama</th><th>Miktar</th>'
                 }
                             </tr>
@@ -144,7 +145,7 @@ export default function DersRapor() {
                                         <td>${formatTarih(d.tarih)}</td>
                                         ${isGeneralReport ? `<td>${d.ogrenciAdSoyad || '-'}</td>` : ''}
                                         <td>${d.konu || '-'}</td>
-                                        <td>${d.ucret} TL</td>
+                                        ${showPrice ? `<td>${d.ucret} TL</td>` : ''}
                                     </tr>
                                 `).join('')
                     : odemeler.map(o => `
@@ -159,9 +160,14 @@ export default function DersRapor() {
                 }
                         </tbody>
                     </table>
+                    ${type === 'ders' && showPrice ? `
                     <div class="total">
-                        Toplam ${type === 'ders' ? 'Ders Ücreti' : 'Tahsilat'}: ${type === 'ders' ? toplamDersUcreti() : toplamOdeme()} TL
-                    </div>
+                        Toplam Ders Ücreti: ${toplamDersUcreti()} TL
+                    </div>` : ''}
+                    ${type === 'odeme' ? `
+                    <div class="total">
+                        Toplam Tahsilat: ${toplamOdeme()} TL
+                    </div>` : ''}
                     <div class="footer">
                         Özdeta Öğretmen Takip Sistemi tarafından oluşturulmuştur.
                     </div>
@@ -171,8 +177,18 @@ export default function DersRapor() {
 
             const { uri } = await Print.printToFileAsync({ html: htmlContent });
 
+            // Özel dosya adı oluştur: "{Ad_Soyad}_{YYYYMMDD_HHmmss}.pdf"
+            const now = new Date();
+            const pad = (n: number) => n.toString().padStart(2, '0');
+            const tarihDamgasi = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+            const temizIsim = studentName.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_çÇğĞıİöÖşŞüÜ]/g, '');
+            const ozelDosyaAdi = `${temizIsim}_${tarihDamgasi}.pdf`;
+            // @ts-ignore
+            const yeniUri = (FileSystem.cacheDirectory ?? '') + ozelDosyaAdi;
+            await FileSystem.copyAsync({ from: uri, to: yeniUri });
+
             if (await Sharing.isAvailableAsync()) {
-                await Sharing.shareAsync(uri, {
+                await Sharing.shareAsync(yeniUri, {
                     mimeType: 'application/pdf',
                     dialogTitle: `${studentName} ${title}`,
                     UTI: 'com.adobe.pdf'
@@ -184,6 +200,24 @@ export default function DersRapor() {
             console.error('PDF Hatası:', error);
             Alert.alert('Hata', 'PDF raporu oluşturulamadı');
         }
+    };
+
+    // Ders PDF butonuna basıldığında ücret gösterilsin mi diye sor
+    const handleDersPdfPress = () => {
+        Alert.alert(
+            'Ders PDF',
+            'Yapılan derslerin ücretleri gösterilsin mi?',
+            [
+                {
+                    text: 'Hayır',
+                    onPress: () => generatePDF('ders', false)
+                },
+                {
+                    text: 'Evet',
+                    onPress: () => generatePDF('ders', true)
+                }
+            ]
+        );
     };
 
     // Teşekkür WhatsApp Mesajı Gönder
@@ -479,7 +513,7 @@ export default function DersRapor() {
             <View style={styles.pdfButtonsContainer}>
                 <TouchableOpacity
                     style={[styles.pdfButton, { backgroundColor: '#e67e22' }]}
-                    onPress={() => generatePDF('ders')}
+                    onPress={handleDersPdfPress}
                 >
                     <MaterialCommunityIcons name="file-pdf-box" size={20} color="white" />
                     <Text style={styles.pdfButtonText}>Ders PDF</Text>

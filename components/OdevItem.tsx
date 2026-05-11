@@ -70,10 +70,10 @@ const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle }) => {
                     dropdownIconColor="#333"
                     mode="dropdown"
                 >
-                    <Picker.Item label="Bekliyor" value="Bekliyor" color="#333" />
-                    <Picker.Item label="Yapıldı" value="Yapıldı" color="#333" />
-                    <Picker.Item label="Yapılmadı" value="Yapılmadı" color="#333" />
-                    <Picker.Item label="Eksik" value="Eksik" color="#333" />
+                    <Picker.Item label="Bekliyor" value="Bekliyor" color="red" />
+                    <Picker.Item label="Yapıldı" value="Yapıldı" color="red" />
+                    <Picker.Item label="Yapılmadı" value="Yapılmadı" color="red" />
+                    <Picker.Item label="Eksik" value="Eksik" color="red" />
                 </Picker>
             </View>
 
