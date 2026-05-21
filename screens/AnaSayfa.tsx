@@ -1,7 +1,7 @@
 
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Image, BackHandler, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Image, BackHandler, Alert, Platform, StatusBar as RNStatusBar } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { ogrencininOdemeleri, tekOgrenci, tumYapilanDersler } from '../utils/database';
@@ -292,7 +292,6 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#dfedfcff',
         paddingTop: 0,
-        marginTop: 20,
     },
     scrollContent: {
         padding: 16,
@@ -301,7 +300,7 @@ const styles = StyleSheet.create({
     header: {
         backgroundColor: '#2c3e50',
         padding: 20,
-        paddingTop: 40,
+        paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight ? RNStatusBar.currentHeight + 15 : 40) : 45,
         borderBottomLeftRadius: 20,
         borderBottomRightRadius: 20,
         marginBottom: 20,
@@ -313,7 +312,7 @@ const styles = StyleSheet.create({
     headerExitButton: {
         position: 'absolute',
         right: 20,
-        top: 40,
+        top: Platform.OS === 'android' ? (RNStatusBar.currentHeight ? RNStatusBar.currentHeight + 15 : 40) : 45,
     },
     headerDate: {
         fontSize: 16,

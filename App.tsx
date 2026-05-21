@@ -119,10 +119,9 @@ export default function App() {
       </View>
     );
   }
-
   return (
     <NavigationContainer>
-      <StatusBar style="auto" />
+      <StatusBar style="light" translucent={true} backgroundColor="transparent" />
       <Stack.Navigator
         initialRouteName='AnaSayfa'
         screenOptions={{
