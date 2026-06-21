@@ -19,6 +19,7 @@ import OdevEkle from './screens/OdevEkle';
 import KaynakYonetimi from './screens/KaynakYonetimi';
 import GlobalKaynakYonetimi from './screens/GlobalKaynakYonetimi';
 import Ayarlar from './screens/Ayarlar';
+import Denemeler from './screens/Denemeler';
 
 export type RootStackParamList = {
   ogrenciListesi: undefined;
@@ -34,6 +35,7 @@ export type RootStackParamList = {
   KaynakYonetimi: { ogrenciId: number; ogrenciAd?: string; ogrenciSoyad?: string };
   GlobalKaynakYonetimi: undefined;
   Ayarlar: undefined;
+  Denemeler: { ogrenciId: number };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -212,6 +214,11 @@ export default function App() {
           name='Ayarlar'
           options={{ title: 'Uygulama Ayarları' }}
           component={Ayarlar}
+        />
+        <Stack.Screen
+          name='Denemeler'
+          options={{ title: 'Denemeler' }}
+          component={Denemeler}
         />
       </Stack.Navigator>
     </NavigationContainer>

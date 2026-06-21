@@ -28,6 +28,7 @@ import {
     kaynakListesi,
     odevKaydet,
     odevGuncelle,
+    odevSil,
     ogrenciOdevleri,
     tekOgrenci
 } from '../utils/database';
@@ -180,6 +181,33 @@ export default function OdevEkle() {
         }
     };
 
+    // Ödev silme fonksiyonu
+    const odevSilmeOnayi = (id: number) => {
+        Alert.alert(
+            "Emin misiniz?",
+            "Bu ödev kaydı tamamen silinecek.",
+            [
+                { text: "Vazgeç", style: "cancel" },
+                {
+                    text: "Sil",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            const result = await odevSil(id);
+                            if (result.success) {
+                                await odevleriYenile();
+                            } else {
+                                Alert.alert('Hata', 'Kayıt silinemedi.');
+                            }
+                        } catch (error) {
+                            Alert.alert('Hata', 'Bir sorun oluştu.');
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
     // Tarih formatı
     const formatTarih = (tarih: string | Date | null | undefined) => {
         if (!tarih) return '-';
@@ -203,7 +231,7 @@ export default function OdevEkle() {
 
         try {
             setIsGeneratingPDF(true);
-            
+
             // Tarih aralığındaki ödevleri filtrele
             const filtrelenmişOdevler = odevler.filter(o => {
                 const oDate = new Date(o.verilmetarihi);
@@ -271,11 +299,11 @@ export default function OdevEkle() {
             `;
 
             const { uri } = await Print.printToFileAsync({ html: htmlContent });
-            
+
             const fileName = `${ogrenci.ogrenciAd}_${ogrenci.ogrenciSoyad}_Odev_Raporu.pdf`;
             // Temporary rename logic if possible? expo-print generates a random name.
             // sharing logic:
-            
+
             if (await Sharing.isAvailableAsync()) {
                 let shareOptions: Sharing.SharingOptions = {
                     mimeType: 'application/pdf',
@@ -346,7 +374,7 @@ export default function OdevEkle() {
                                     trackColor={{ false: "#767577", true: "#81b0ff" }}
                                 />
                             </View>
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 style={styles.raporButon}
                                 onPress={() => setRaporModaliGorunur(true)}
                             >
@@ -358,110 +386,110 @@ export default function OdevEkle() {
                         {/* Ödev Verme Formu - Koşullu Gösterim */}
                         {odevVermeGorunur && (
                             <View style={styles.formContainer}>
-                            {/* Kaynak Yönetimi Butonu */}
-                            <TouchableOpacity
-                                style={styles.kaynakEkleButon}
-                                onPress={() => navigation.navigate('KaynakYonetimi', { 
-                                    ogrenciId: ogrenci?.ogrenciId, 
-                                    ogrenciAd: ogrenci?.ogrenciAd, 
-                                    ogrenciSoyad: ogrenci?.ogrenciSoyad 
-                                })}
-                            >
-                                <MaterialIcons name="add" size={20} color="white" />
-                                <Text style={styles.kaynakEkleText}>Kaynak Yönet</Text>
-                            </TouchableOpacity>
+                                {/* Kaynak Yönetimi Butonu */}
+                                <TouchableOpacity
+                                    style={styles.kaynakEkleButon}
+                                    onPress={() => navigation.navigate('KaynakYonetimi', {
+                                        ogrenciId: ogrenci?.ogrenciId,
+                                        ogrenciAd: ogrenci?.ogrenciAd,
+                                        ogrenciSoyad: ogrenci?.ogrenciSoyad
+                                    })}
+                                >
+                                    <MaterialIcons name="add" size={20} color="white" />
+                                    <Text style={styles.kaynakEkleText}>Kaynak Yönet</Text>
+                                </TouchableOpacity>
 
-                            {/* Kaynak Seçimi veya Serbest Giriş */}
-                            {!kayitsizKaynak ? (
-                                <View style={styles.inputContainer}>
-                                    <Text style={styles.inputLabel}>Kaynak Seç (İsteğe Bağlı)</Text>
-                                    <View style={styles.pickerContainer}>
-                                        <Picker
-                                            selectedValue={seciliKaynak}
-                                            onValueChange={setSeciliKaynak}
-                                            style={styles.picker}
-                                        >
-                                            <Picker.Item label="Kaynak seçiniz..." value="" color="#333" />
-                                            {kaynaklar.map((kaynak) => (
-                                                <Picker.Item
-                                                    key={kaynak.kaynakId}
-                                                    label={kaynak.kaynak}
-                                                    value={kaynak.kaynak}
-                                                    color="#333"
-                                                />
-                                            ))}
-                                        </Picker>
+                                {/* Kaynak Seçimi veya Serbest Giriş */}
+                                {!kayitsizKaynak ? (
+                                    <View style={styles.inputContainer}>
+                                        <Text style={styles.inputLabel}>Kaynak Seç ( Bağlı)</Text>
+                                        <View style={styles.pickerContainer}>
+                                            <Picker
+                                                selectedValue={seciliKaynak}
+                                                onValueChange={setSeciliKaynak}
+                                                style={styles.picker}
+                                            >
+                                                <Picker.Item label="Kaynak seçiniz..." value="" color="#333" />
+                                                {kaynaklar.map((kaynak) => (
+                                                    <Picker.Item
+                                                        key={kaynak.kaynakId}
+                                                        label={kaynak.kaynak}
+                                                        value={kaynak.kaynak}
+                                                        color="#f11313ff"
+                                                    />
+                                                ))}
+                                            </Picker>
+                                        </View>
                                     </View>
-                                </View>
-                            ) : (
-                                <View style={styles.inputContainer}>
-                                    <Text style={styles.inputLabel}>Kaynak Adı (İsteğe Bağlı)</Text>
-                                    <TextInput
-                                        style={styles.textInput}
-                                        value={serbetKaynak}
-                                        onChangeText={setSerbetKaynak}
-                                        placeholder="Kaynak adını yazınız"
+                                ) : (
+                                    <View style={styles.inputContainer}>
+                                        <Text style={styles.inputLabel}>Kaynak Adı (İsteğe Bağlı)</Text>
+                                        <TextInput
+                                            style={styles.textInput}
+                                            value={serbetKaynak}
+                                            onChangeText={setSerbetKaynak}
+                                            placeholder="Kaynak adını yazınız"
+                                        />
+                                    </View>
+                                )}
+
+                                {/* Kayıtsız Kaynak Switch */}
+                                <View style={styles.switchContainer}>
+                                    <Text style={styles.switchLabel}>Serbest Kaynak Girişi</Text>
+                                    <Switch
+                                        value={kayitsizKaynak}
+                                        onValueChange={setKayitsizKaynak}
+                                        thumbColor={kayitsizKaynak ? "#4CAF50" : "#f4f3f4"}
+                                        trackColor={{ false: "#767577", true: "#81b0ff" }}
                                     />
                                 </View>
-                            )}
 
-                            {/* Kayıtsız Kaynak Switch */}
-                            <View style={styles.switchContainer}>
-                                <Text style={styles.switchLabel}>Serbest Kaynak Girişi</Text>
-                                <Switch
-                                    value={kayitsizKaynak}
-                                    onValueChange={setKayitsizKaynak}
-                                    thumbColor={kayitsizKaynak ? "#4CAF50" : "#f4f3f4"}
-                                    trackColor={{ false: "#767577", true: "#81b0ff" }}
-                                />
-                            </View>
+                                {/* Ödev Konusu */}
+                                <View style={styles.inputContainer}>
+                                    <Text style={styles.inputLabel}>Ödev Konusu *</Text>
+                                    <TextInput
+                                        style={[styles.textInput, styles.textArea]}
+                                        value={odevKonusu}
+                                        onChangeText={setOdevKonusu}
+                                        placeholder="Ödev konusunu yazınız"
+                                        multiline={true}
+                                        numberOfLines={3}
+                                    />
+                                </View>
 
-                            {/* Ödev Konusu */}
-                            <View style={styles.inputContainer}>
-                                <Text style={styles.inputLabel}>Ödev Konusu *</Text>
-                                <TextInput
-                                    style={[styles.textInput, styles.textArea]}
-                                    value={odevKonusu}
-                                    onChangeText={setOdevKonusu}
-                                    placeholder="Ödev konusunu yazınız"
-                                    multiline={true}
-                                    numberOfLines={3}
-                                />
-                            </View>
+                                {/* Verilme Tarihi */}
+                                <View style={styles.inputContainer}>
+                                    <Text style={styles.inputLabel}>Verilme Tarihi</Text>
+                                    <TouchableOpacity
+                                        style={styles.dateButton}
+                                        onPress={() => setVerilmeTarihPickerAcik(true)}
+                                    >
+                                        <MaterialIcons name="date-range" size={20} color="#666" />
+                                        <Text style={styles.dateText}>{formatTarih(verilmeTarihi)}</Text>
+                                    </TouchableOpacity>
+                                </View>
 
-                            {/* Verilme Tarihi */}
-                            <View style={styles.inputContainer}>
-                                <Text style={styles.inputLabel}>Verilme Tarihi</Text>
+                                {/* Teslim Tarihi */}
+                                <View style={styles.inputContainer}>
+                                    <Text style={styles.inputLabel}>Teslim Tarihi</Text>
+                                    <TouchableOpacity
+                                        style={styles.dateButton}
+                                        onPress={() => setTeslimTarihPickerAcik(true)}
+                                    >
+                                        <MaterialIcons name="date-range" size={20} color="#666" />
+                                        <Text style={styles.dateText}>{formatTarih(teslimTarihi)}</Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                                {/* Ödev Ver Butonu */}
                                 <TouchableOpacity
-                                    style={styles.dateButton}
-                                    onPress={() => setVerilmeTarihPickerAcik(true)}
+                                    style={styles.odevVerButon}
+                                    onPress={odevEkle}
                                 >
-                                    <MaterialIcons name="date-range" size={20} color="#666" />
-                                    <Text style={styles.dateText}>{formatTarih(verilmeTarihi)}</Text>
+                                    <MaterialIcons name="assignment" size={20} color="white" />
+                                    <Text style={styles.odevVerText}>Ödev Ver</Text>
                                 </TouchableOpacity>
                             </View>
-
-                            {/* Teslim Tarihi */}
-                            <View style={styles.inputContainer}>
-                                <Text style={styles.inputLabel}>Teslim Tarihi</Text>
-                                <TouchableOpacity
-                                    style={styles.dateButton}
-                                    onPress={() => setTeslimTarihPickerAcik(true)}
-                                >
-                                    <MaterialIcons name="date-range" size={20} color="#666" />
-                                    <Text style={styles.dateText}>{formatTarih(teslimTarihi)}</Text>
-                                </TouchableOpacity>
-                            </View>
-
-                            {/* Ödev Ver Butonu */}
-                            <TouchableOpacity
-                                style={styles.odevVerButon}
-                                onPress={odevEkle}
-                            >
-                                <MaterialIcons name="assignment" size={20} color="white" />
-                                <Text style={styles.odevVerText}>Ödev Ver</Text>
-                            </TouchableOpacity>
-                        </View>
                         )}
 
                         {/* Ödevler Listesi */}
@@ -477,6 +505,7 @@ export default function OdevEkle() {
                                         <OdevItem
                                             item={item}
                                             onGuncelle={odevGuncelleKaydet}
+                                            onSil={odevSilmeOnayi}
                                         />
                                     )}
                                     keyExtractor={item => (item.odevId?.toString() || Math.random().toString())}
@@ -541,7 +570,7 @@ export default function OdevEkle() {
                         <Text style={styles.modalSubtitle}>Tarih aralığı seçiniz:</Text>
 
                         <View style={styles.dateRangeContainer}>
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 style={styles.reportDateButton}
                                 onPress={() => setShowRaporBaslangicPicker(true)}
                             >
@@ -549,7 +578,7 @@ export default function OdevEkle() {
                                 <Text style={styles.dateValue}>{formatTarih(raporBaslangic)}</Text>
                             </TouchableOpacity>
 
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 style={styles.reportDateButton}
                                 onPress={() => setShowRaporBitisPicker(true)}
                             >
@@ -559,7 +588,7 @@ export default function OdevEkle() {
                         </View>
 
                         <View style={styles.raporAksiyonlar}>
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 style={[styles.raporAksiyonButon, { backgroundColor: '#3498db' }]}
                                 onPress={() => odevRaporuOlustur('indir')}
                                 disabled={isGeneratingPDF}
@@ -569,7 +598,7 @@ export default function OdevEkle() {
                             </TouchableOpacity>
 
                             <View style={styles.raporPaylasımGrup}>
-                                <TouchableOpacity 
+                                <TouchableOpacity
                                     style={[styles.paylasimButon, { backgroundColor: '#27ae60' }]}
                                     onPress={() => odevRaporuOlustur('ogrenci')}
                                     disabled={isGeneratingPDF}
@@ -578,7 +607,7 @@ export default function OdevEkle() {
                                     <Text style={styles.paylasimText}>Öğrenciye</Text>
                                 </TouchableOpacity>
 
-                                <TouchableOpacity 
+                                <TouchableOpacity
                                     style={[styles.paylasimButon, { backgroundColor: '#8e44ad' }]}
                                     onPress={() => odevRaporuOlustur('veli')}
                                     disabled={isGeneratingPDF}
@@ -805,7 +834,7 @@ const styles = StyleSheet.create({
     raporButon: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#e67e22',
+        backgroundColor: '#f7eee7ff',
         paddingVertical: 8,
         paddingHorizontal: 16,
         borderRadius: 20,

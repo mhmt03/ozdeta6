@@ -268,6 +268,7 @@ export default function OgrenciDetay() {
         { id: 5, text: 'Ödevler', icon: 'assignment', sayfa: 'OdevEkle', parametre: { ogrenciId: ogrenci.ogrenciId } },
         { id: 6, text: 'Ders Rapor', icon: 'assessment', sayfa: 'DersRapor', parametre: { ogrenciId: ogrenci.ogrenciId } },
         { id: 7, text: 'Kaynaklar', icon: 'book', sayfa: 'KaynakYonetimi', parametre: { ogrenciId: ogrenci.ogrenciId, ogrenciAd: ogrenci.ogrenciAd, ogrenciSoyad: ogrenci.ogrenciSoyad } },
+        { id: 8, text: 'Denemeler', icon: 'assessment', sayfa: 'Denemeler', parametre: { ogrenciId: ogrenci.ogrenciId } },
         { id: 1, text: 'Ders Yap', icon: 'school', action: dersPopupAc },
     ];
 

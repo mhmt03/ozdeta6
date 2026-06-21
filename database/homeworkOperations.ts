@@ -170,6 +170,20 @@ export async function odevGuncelle(odevId: number, odevVerisi: OdevType) {
     }
 }
 
+export async function odevSil(odevId: number) {
+    try {
+        const db = await ensureDatabaseReady();
+        const result = await db.runAsync(
+            `DELETE FROM odevler WHERE odevId=?`,
+            [odevId]
+        );
+        return { success: result.changes > 0 };
+    } catch (error: any) {
+        console.error("Ödev silme hatası:", error);
+        return { success: false, error: error.message };
+    }
+}
+
 export async function ogrenciOdevleri(ogrenciId: number) {
     try {
         const db = await ensureDatabaseReady();

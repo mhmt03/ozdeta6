@@ -281,11 +281,11 @@ export default function Ayarlar() {
                     // Tarih formatı YYYY-MM-DD varsayılıyor
                     const dateA = new Date(a.odemetarih);
                     const dateB = new Date(b.odemetarih);
-                    
+
                     if (dateB.getTime() !== dateA.getTime()) {
                         return dateB.getTime() - dateA.getTime();
                     }
-                    
+
                     // Tarihler aynıysa saate göre sırala
                     const timeA = a.odemesaati || '00:00';
                     const timeB = b.odemesaati || '00:00';
@@ -313,7 +313,7 @@ export default function Ayarlar() {
 
             Alert.alert(
                 'Veritabanı Yedekle',
-                'SQLite veritabanı .db dosyası olarak yedeklenecek. Devam edilsin mi?',
+                'Verileriniz yedeklenecek. Devam edilsin mi?',
                 [
                     { text: 'İptal', style: 'cancel' },
                     {
@@ -349,7 +349,7 @@ export default function Ayarlar() {
                                 if (result.success) {
                                     // Kaydetme başarılı, paylaşım seçeneği sun
                                     Alert.alert(
-                                        'Yedekleme Başarılı',
+                                        'Yedekleme Başarılı ${yedekDosyaAdi}',
                                         result.message,
                                         [
                                             {
@@ -798,7 +798,7 @@ export default function Ayarlar() {
                         <View style={styles.ayarText}>
                             <Text style={styles.ayarBaslik}>Veritabanını Yedekle (.db)</Text>
                             <Text style={styles.ayarAciklama}>
-                                SQLite veritabanını .db dosyası olarak uygulama klasörüne kaydet
+                                veritabanını  uygulama klasörüne kaydet
                             </Text>
                         </View>
                     </TouchableOpacity>

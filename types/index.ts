@@ -107,3 +107,20 @@ export interface AjandaWithOgrenciType extends AjandaType {
     ogrenciAd?: string;
     ogrenciSoyad?: string;
 }
+
+export interface SinavTuruType {
+    id?: number;
+    ad: string;
+}
+
+export interface DenemeType {
+    id?: number;
+    ogrenciId: number;
+    sinavTuruId: number;
+    denemeAd: string;
+    tarih: string;
+    dogru: number;
+    yanlis: number;
+    // For joining queries:
+    sinavTuruAd?: string;
+}

@@ -7,7 +7,7 @@ const DATABASE_NAME = 'ozdeta.db';
 const DB_PASSWORD: string = '';
 
 // VERİTABANI VERSİYONU - Değişiklik yaptığınızda sadece bunu artırın!
-const DATABASE_VERSION = 6; // V5->V6: ajanda tablosuna tamamlandiMi eklendi
+const DATABASE_VERSION = 8; // V5->V6: ajanda tablosuna tamamlandiMi eklendi; V6->V7: sinav_turleri tablosu ekleniyor; V7->V8: denemeler tablosu eklendi
 
 export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
     try {
@@ -149,6 +149,32 @@ async function applyMigration(database: SQLite.SQLiteDatabase, version: number) 
             } catch (error) {
                 console.log('tamamlandiMi sütunu zaten mevcut, atlanıyor...');
             }
+            break;
+        case 7:
+            // Yeni sinav_turleri tablosu oluştur
+            await database.execAsync(`
+                CREATE TABLE IF NOT EXISTS sinav_turleri (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ad TEXT UNIQUE NOT NULL
+                );
+            `);
+            break;
+        case 8:
+            // Yeni denemeler tablosu oluştur
+            await database.execAsync(`
+                DROP TABLE IF EXISTS denemeler;
+                CREATE TABLE denemeler (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ogrenciId INTEGER NOT NULL,
+                    sinavTuruId INTEGER NOT NULL,
+                    denemeAd TEXT,
+                    tarih TEXT NOT NULL,
+                    dogru INTEGER NOT NULL,
+                    yanlis INTEGER NOT NULL,
+                    FOREIGN KEY (ogrenciId) REFERENCES ogrenciler(ogrenciId),
+                    FOREIGN KEY (sinavTuruId) REFERENCES sinav_turleri(id)
+                );
+            `);
             break;
         default:
             throw new Error(`Bilinmeyen migration versiyonu: ${version}`);

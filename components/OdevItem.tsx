@@ -8,9 +8,10 @@ import { OdevType } from '../types';
 interface OdevItemProps {
     item: OdevType;
     onGuncelle: (guncelOdev: OdevType) => void;
+    onSil: (id: number) => void;
 }
 
-const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle }) => {
+const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle, onSil }) => {
     const [yapilmaDurumu, setYapilmaDurumu] = useState(item.yapilmadurumu || 'Bekliyor');
     const [verilme, setVerilme] = useState(new Date(item.verilmetarihi));
     const [teslim, setTeslim] = useState(new Date(item.teslimttarihi));
@@ -77,21 +78,31 @@ const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle }) => {
                 </Picker>
             </View>
 
-            {/* Güncelle Butonu */}
-            <TouchableOpacity
-                style={styles.guncelleButon}
-                onPress={() =>
-                    onGuncelle({
-                        ...item,
-                        yapilmadurumu: yapilmaDurumu,
-                        verilmetarihi: verilme.toISOString().split('T')[0],
-                        teslimttarihi: teslim.toISOString().split('T')[0],
-                    })
-                }
-            >
-                <MaterialIcons name="save" size={20} color="white" />
-                <Text style={styles.guncelleText}>Güncelle</Text>
-            </TouchableOpacity>
+            {/* Güncelle ve Sil Butonları */}
+            <View style={styles.actionButtonsContainer}>
+                <TouchableOpacity
+                    style={styles.guncelleButon}
+                    onPress={() =>
+                        onGuncelle({
+                            ...item,
+                            yapilmadurumu: yapilmaDurumu,
+                            verilmetarihi: verilme.toISOString().split('T')[0],
+                            teslimttarihi: teslim.toISOString().split('T')[0],
+                        })
+                    }
+                >
+                    <MaterialIcons name="save" size={20} color="white" />
+                    <Text style={styles.guncelleText}>Güncelle</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={styles.silButon}
+                    onPress={() => item.odevId && onSil(item.odevId)}
+                >
+                    <MaterialIcons name="delete" size={20} color="white" />
+                    <Text style={styles.silText}>Sil</Text>
+                </TouchableOpacity>
+            </View>
 
             {/* DatePickers */}
             {verilmePickerAcik && (
@@ -171,16 +182,32 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         backgroundColor: '#fffde7', // Light yellow
     },
+    actionButtonsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 10,
+        gap: 8,
+    },
     guncelleButon: {
+        flex: 1,
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#3498db',
         padding: 10,
         borderRadius: 6,
-        marginTop: 10,
     },
     guncelleText: { color: '#ffffff', marginLeft: 6, fontWeight: 'bold' },
+    silButon: {
+        flex: 0.3,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#e74c3c',
+        padding: 10,
+        borderRadius: 6,
+    },
+    silText: { color: '#ffffff', marginLeft: 4, fontWeight: 'bold' },
 });
 
 export default OdevItem;
