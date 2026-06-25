@@ -50,7 +50,7 @@ const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle, onSil }) => {
                     onPress={() => setVerilmePickerAcik(true)}
                 >
                     <MaterialIcons name="date-range" size={16} color="#666" />
-                    <Text style={styles.dateText}>Verildi: {formatTarih(verilme)}</Text>
+                    <Text style={styles.dateText}>Ver: {formatTarih(verilme)}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -58,13 +58,13 @@ const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle, onSil }) => {
                     onPress={() => setTeslimPickerAcik(true)}
                 >
                     <MaterialIcons name="date-range" size={16} color="#666" />
-                    <Text style={styles.dateText}>Teslim: {formatTarih(teslim)}</Text>
+                    <Text style={styles.dateText}>Tes: {formatTarih(teslim)}</Text>
                 </TouchableOpacity>
             </View>
 
             <View style={styles.durumContainer}>
                 <View style={[styles.durumRenkSutunu, { backgroundColor: getDurumRenk(yapilmaDurumu) }]} />
-                <Text style={styles.durumLabel}>Durum:</Text>
+                <Text style={styles.durumLabel}>Durum</Text>
                 <Picker
                     selectedValue={yapilmaDurumu}
                     onValueChange={(val: string) => setYapilmaDurumu(val)}
@@ -90,7 +90,7 @@ const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle, onSil }) => {
                     }
                 >
                     <MaterialIcons name="save" size={20} color="white" />
-                    <Text style={styles.guncelleText}>Güncelle</Text>
+                    <Text style={styles.guncelleText}>Güncelle</Text>  {/* güncelle butonu*/}
                 </TouchableOpacity>
 
 
@@ -141,19 +141,19 @@ const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle, onSil }) => {
 
 const styles = StyleSheet.create({
     odevItem: {
-        padding: 12,
-        marginBottom: 12,
-        backgroundColor: '#ffffff',
+        padding: 1,
+        marginBottom: 1,
+        backgroundColor: '#e2e0e0ff',
         borderRadius: 6,
         borderWidth: 1,
         borderColor: '#e1e8ed',
     },
-    odevKonu: { fontSize: 16, fontWeight: 'bold', marginBottom: 4, color: '#2c3e50' },
-    kaynakText: { fontSize: 14, color: '#7f8c8d', marginBottom: 8, fontStyle: 'italic' },
+    odevKonu: { fontSize: 14, fontWeight: 'bold', marginBottom: 4, color: '#2c3e50' },
+    kaynakText: { fontSize: 12, color: '#7f8c8d', marginBottom: 8, fontStyle: 'italic' },
     odevTarihler: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 12,
+        marginBottom: 8,
         gap: 8,
     },
     dateButton: {
@@ -170,12 +170,12 @@ const styles = StyleSheet.create({
     durumContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 10,
+        marginTop: 1,
         borderRadius: 8,
         borderWidth: 1,
         borderColor: '#ddd',
         backgroundColor: '#fff',
-        height: 40,
+        height: 35,
         overflow: 'hidden',
         elevation: 1,
     },
@@ -184,29 +184,30 @@ const styles = StyleSheet.create({
         height: '100%',
         marginRight: 10,
     },
-    durumLabel: { color: '#555', fontWeight: 'bold', fontSize: 12 },
+    durumLabel: { color: '#555', fontWeight: 'bold', fontSize: 8 },
     durumPicker: {
         flex: 1,
         color: '#f73131ff',
         fontWeight: 'bold',
         backgroundColor: '#fffde7', // Light yellow
-        fontSize: 12,
+        fontSize: 10,
     },
     actionButtonsContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginTop: 10,
+        marginTop: 5,
         gap: 8,
     },
     guncelleButon: {
-        flex: 1,
+        flex: 0.3,
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#3498db',
-        padding: 7,
+        padding: 5,
         borderRadius: 6,
-        marginLeft: 10
+        marginLeft: 5,
+        marginRight: 5
     },
     guncelleText: { color: '#ffffff', marginLeft: 1, fontWeight: 'bold' },
     silButon: {
@@ -215,7 +216,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#e74c3c',
-        padding: 7,
+        padding: 5,
         borderRadius: 6,
     },
     silText: { color: '#ffffff', marginLeft: 4, fontWeight: 'bold' },

@@ -454,7 +454,7 @@ export default function OdevEkle() {
                                         onChangeText={setOdevKonusu}
                                         placeholder="Ödev konusunu yazınız"
                                         multiline={true}
-                                        numberOfLines={3}
+                                    // numberOfLines={3}
                                     />
                                 </View>
 
@@ -660,7 +660,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#ffffff',
-        paddingTop: 16,
+        paddingTop: 6,
     },
     loadingContainer: {
         flex: 1,
@@ -670,14 +670,14 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 10,
+        padding: 3,
         backgroundColor: 'white',
         borderBottomWidth: 1,
         borderBottomColor: '#e1e8ed',
         elevation: 2,
     },
     headerTitle: {
-        fontSize: 8,
+        fontSize: 10,
         fontWeight: 'bold',
         marginLeft: 16,
         color: '#333',
@@ -689,12 +689,12 @@ const styles = StyleSheet.create({
     content: {
         flex: 1,
         padding: 10,
-        paddingBottom: 80,
+        paddingBottom: 10,
     },
     formContainer: {
         backgroundColor: 'white',
         borderRadius: 8,
-        padding: 16,
+        padding: 6,
         marginBottom: 16,
         elevation: 2,
     },
@@ -703,17 +703,18 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#3498db',
-        padding: 12,
+        padding: 4,
         borderRadius: 6,
-        marginBottom: 16,
+        marginBottom: 4,
+        flex: 0.3,
     },
     kaynakEkleText: {
         color: 'white',
         fontWeight: 'bold',
-        marginLeft: 6,
+        marginLeft: 4,
     },
     inputContainer: {
-        marginBottom: 16,
+        marginBottom: 6,
     },
     inputLabel: {
         fontSize: 14,
@@ -737,7 +738,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#ced4da',
         borderRadius: 8,
-        backgroundColor: '#fff',
+        backgroundColor: '#f8ceceff',
         overflow: 'hidden',
         justifyContent: 'center',
         elevation: 2,
@@ -753,8 +754,9 @@ const styles = StyleSheet.create({
     switchContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 16,
+        justifyContent: 'flex-end',
+        marginBottom: 1,
+
     },
     switchLabel: {
         fontSize: 14,
@@ -776,11 +778,12 @@ const styles = StyleSheet.create({
         color: '#333',
     },
     odevVerButon: {
+
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#27ae60',
-        padding: 14,
+        padding: 4,
         borderRadius: 6,
         marginTop: 8,
     },
