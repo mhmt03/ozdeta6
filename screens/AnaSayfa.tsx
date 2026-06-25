@@ -6,6 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { ogrencininOdemeleri, tekOgrenci, tumYapilanDersler } from '../utils/database';
 import { tarihAraligiAjandaGetir } from '../utils/ajandaDatabase';
+import GlobalNotlarModal from '../components/GlobalNotlarModal';
 
 import { AjandaType } from '../types';
 import { AjandaWithOgrenciType } from '../utils/ajandaDatabase';
@@ -16,6 +17,7 @@ export default function AnaSayfa() {
     const [aktifTarih, setAktifTarih] = useState(new Date());
     const [aktifTarihRandevulari, setAktifTarihRandevulari] = useState<AjandaWithOgrenciType[]>([]);
     const [sonDersler, setSonDersler] = useState<DersType[]>([]);
+    const [isNotlarModalVisible, setIsNotlarModalVisible] = useState(false);
 
     // Tarih formatı (gün.ay.yıl)
     const formatTarih = (tarih: Date) => {
@@ -264,6 +266,16 @@ export default function AnaSayfa() {
                         </View>
                         <Text style={styles.butonText}>Ajanda</Text>
                     </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.buton}
+                        onPress={() => setIsNotlarModalVisible(true)}
+                    >
+                        <View style={[styles.butonIcon, { backgroundColor: '#f1c40f' }]}>
+                            <MaterialIcons name="notes" size={24} color="white" />
+                        </View>
+                        <Text style={styles.butonText}>Notlar</Text>
+                    </TouchableOpacity>
                 </View>
 
                 {/* Son Yapılan Dersler */}
@@ -283,6 +295,10 @@ export default function AnaSayfa() {
                     />
                 </View>
             </ScrollView>
+            <GlobalNotlarModal 
+                visible={isNotlarModalVisible} 
+                onClose={() => setIsNotlarModalVisible(false)} 
+            />
         </View>
     );
 }
@@ -445,7 +461,7 @@ const styles = StyleSheet.create({
     },
     buton: {
         alignItems: 'center',
-        width: '30%',
+        width: '23%',
     },
     butonIcon: {
         width: 60,

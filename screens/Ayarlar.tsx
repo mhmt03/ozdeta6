@@ -158,7 +158,7 @@ export default function Ayarlar() {
                 success: true,
                 dosyaYolu: dosyaYolu,
                 dosyaAdi: dosyaAdi,
-                message: `Dosya başarıyla kaydedildi: ${dosyaAdi}`
+                message: `Dosya başarıyla şu klasöre kaydedildi: ${ozdetaKlasor}  \n dosya adı: ${dosyaAdi}`
             };
 
         } catch (error) {
@@ -349,7 +349,7 @@ export default function Ayarlar() {
                                 if (result.success) {
                                     // Kaydetme başarılı, paylaşım seçeneği sun
                                     Alert.alert(
-                                        'Yedekleme Başarılı ${yedekDosyaAdi}',
+                                        'Yedekleme Başarılı ',
                                         result.message,
                                         [
                                             {
@@ -922,21 +922,21 @@ export default function Ayarlar() {
                         <View style={styles.ayarText}>
                             <Text style={styles.ayarBaslik}>Geliştirici</Text>
                             <Text style={styles.ayarAciklama}>
-                                created By Mehmet Gündöner {'\n'}
+                                created By M.G. {'\n'}
                                 gundoner@yahoo.com
                             </Text>
                         </View>
                     </View>
 
-                    <View style={styles.bilgiItem}>
+                    {/* <View style={styles.bilgiItem}>
                         <MaterialIcons name="info" size={24} color="#9E9E9E" />
                         <View style={styles.ayarText}>
                             <Text style={styles.ayarBaslik}>Sürüm Bilgisi</Text>
                             <Text style={styles.ayarAciklama}>
-                                Özdeta Öğretmen Takip Uygulaması v1.1
+                                Özdeta Öğretmen Takip Uygulaması v3.3
                             </Text>
                         </View>
-                    </View>
+                    </View> */}
                 </View>
             </ScrollView>
 

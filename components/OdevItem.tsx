@@ -41,6 +41,7 @@ const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle, onSil }) => {
     return (
         <View style={[styles.odevItem, teslimGecmis && { borderColor: 'red', borderWidth: 2 }]}>
             <Text style={styles.odevKonu}>{item.odev}</Text>
+            {item.kaynak ? <Text style={styles.kaynakText}>Kaynak: {item.kaynak}</Text> : null}
 
             {/* Tarih Seçiciler */}
             <View style={styles.odevTarihler}>
@@ -48,7 +49,7 @@ const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle, onSil }) => {
                     style={styles.dateButton}
                     onPress={() => setVerilmePickerAcik(true)}
                 >
-                    <MaterialIcons name="date-range" size={20} color="#666" />
+                    <MaterialIcons name="date-range" size={16} color="#666" />
                     <Text style={styles.dateText}>Verildi: {formatTarih(verilme)}</Text>
                 </TouchableOpacity>
 
@@ -56,7 +57,7 @@ const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle, onSil }) => {
                     style={styles.dateButton}
                     onPress={() => setTeslimPickerAcik(true)}
                 >
-                    <MaterialIcons name="date-range" size={20} color="#666" />
+                    <MaterialIcons name="date-range" size={16} color="#666" />
                     <Text style={styles.dateText}>Teslim: {formatTarih(teslim)}</Text>
                 </TouchableOpacity>
             </View>
@@ -76,10 +77,7 @@ const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle, onSil }) => {
                     <Picker.Item label="Yapılmadı" value="Yapılmadı" color="red" />
                     <Picker.Item label="Eksik" value="Eksik" color="red" />
                 </Picker>
-            </View>
 
-            {/* Güncelle ve Sil Butonları */}
-            <View style={styles.actionButtonsContainer}>
                 <TouchableOpacity
                     style={styles.guncelleButon}
                     onPress={() =>
@@ -95,6 +93,7 @@ const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle, onSil }) => {
                     <Text style={styles.guncelleText}>Güncelle</Text>
                 </TouchableOpacity>
 
+
                 <TouchableOpacity
                     style={styles.silButon}
                     onPress={() => item.odevId && onSil(item.odevId)}
@@ -102,6 +101,15 @@ const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle, onSil }) => {
                     <MaterialIcons name="delete" size={20} color="white" />
                     <Text style={styles.silText}>Sil</Text>
                 </TouchableOpacity>
+
+
+            </View>
+
+            {/* Güncelle ve Sil Butonları */}
+            <View style={styles.actionButtonsContainer}>
+
+
+
             </View>
 
             {/* DatePickers */}
@@ -140,10 +148,11 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#e1e8ed',
     },
-    odevKonu: { fontSize: 16, fontWeight: 'bold', marginBottom: 8, color: '#2c3e50' },
+    odevKonu: { fontSize: 16, fontWeight: 'bold', marginBottom: 4, color: '#2c3e50' },
+    kaynakText: { fontSize: 14, color: '#7f8c8d', marginBottom: 8, fontStyle: 'italic' },
     odevTarihler: {
-        flexDirection: 'column',
-        justifyContent: 'flex-start',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
         marginBottom: 12,
         gap: 8,
     },
@@ -153,11 +162,11 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#ddd',
         borderRadius: 6,
-        padding: 8,
+        padding: 6,
         backgroundColor: '#fff',
         flex: 1,
     },
-    dateText: { marginLeft: 8, flex: 1, flexWrap: 'wrap', color: '#555' },
+    dateText: { marginLeft: 4, flex: 1, flexWrap: 'wrap', color: '#555', fontSize: 11 },
     durumContainer: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -166,7 +175,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#ddd',
         backgroundColor: '#fff',
-        height: 50,
+        height: 40,
         overflow: 'hidden',
         elevation: 1,
     },
@@ -175,12 +184,13 @@ const styles = StyleSheet.create({
         height: '100%',
         marginRight: 10,
     },
-    durumLabel: { color: '#555', fontWeight: 'bold', fontSize: 14 },
+    durumLabel: { color: '#555', fontWeight: 'bold', fontSize: 12 },
     durumPicker: {
         flex: 1,
         color: '#f73131ff',
         fontWeight: 'bold',
         backgroundColor: '#fffde7', // Light yellow
+        fontSize: 12,
     },
     actionButtonsContainer: {
         flexDirection: 'row',
@@ -194,17 +204,18 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#3498db',
-        padding: 10,
+        padding: 7,
         borderRadius: 6,
+        marginLeft: 10
     },
-    guncelleText: { color: '#ffffff', marginLeft: 6, fontWeight: 'bold' },
+    guncelleText: { color: '#ffffff', marginLeft: 1, fontWeight: 'bold' },
     silButon: {
         flex: 0.3,
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#e74c3c',
-        padding: 10,
+        padding: 7,
         borderRadius: 6,
     },
     silText: { color: '#ffffff', marginLeft: 4, fontWeight: 'bold' },

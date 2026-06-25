@@ -10,7 +10,8 @@ import {
     KeyboardAvoidingView,
     Platform,
     TouchableWithoutFeedback,
-    Keyboard
+    Keyboard,
+    ScrollView
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -180,76 +181,87 @@ export default function GlobalKaynakYonetimi() {
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
             >
-                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                    <View style={styles.content}>
-                        <View style={styles.form}>
-                            <Text style={styles.formTitle}>Yeni Ortak Kaynak Ekle</Text>
-                            <View style={styles.inputRow}>
-                                <TextInput
-                                    style={styles.input}
-                                    value={yeniKaynak}
-                                    onChangeText={setYeniKaynak}
-                                    placeholder="Kitap/Kaynak adı giriniz"
-                                />
-                                <TouchableOpacity style={styles.ekleButon} onPress={handleEkle}>
-                                    <MaterialIcons name="add" size={24} color="white" />
-                                </TouchableOpacity>
-                            </View>
-                            <Text style={styles.aciklama}>
-                                Buraya eklediğiniz kaynaklar tüm öğrencilerinize ödev verirken veya kaynak seçerken listede görünecektir.
-                            </Text>
-                            
-                            <Text style={styles.formTitle}>Yeni Sınav Türü Ekle</Text>
-                            <View style={styles.inputRow}>
-                                <TextInput
-                                    style={styles.input}
-                                    value={yeniSinavTuru}
-                                    onChangeText={setYeniSinavTuru}
-                                    placeholder="Sınav türü giriniz"
-                                />
-                                <TouchableOpacity style={styles.ekleButon} onPress={handleSinavTuruEkle}>
-                                    <MaterialIcons name="add" size={24} color="white" />
-                                </TouchableOpacity>
-                            </View>
+                <ScrollView
+                    style={{ flex: 1 }}
+                    contentContainerStyle={{ padding: 16 }}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                >
+                    <View style={styles.form}>
+                        <Text style={styles.formTitle}>Yeni Ortak Kaynak Ekle</Text>
+                        <View style={styles.inputRow}>
+                            <TextInput
+                                style={styles.input}
+                                value={yeniKaynak}
+                                onChangeText={setYeniKaynak}
+                                placeholder="Kitap/Kaynak adı giriniz"
+                            />
+                            <TouchableOpacity style={styles.ekleButon} onPress={handleEkle}>
+                                <MaterialIcons name="add" size={24} color="white" />
+                            </TouchableOpacity>
                         </View>
+                        <Text style={styles.aciklama}>
+                            Buraya eklediğiniz kaynaklar tüm öğrencilerinize ödev verirken veya kaynak seçerken listede görünecektir.
+                        </Text>
+                        <Text style={styles.listeTitle}>Sistemdeki Kaynaklar ({kaynaklar.length})</Text>
+                        <FlatList
+                            data={kaynaklar}
+                            renderItem={renderItem}
+                            keyExtractor={item => item.id.toString()}
+                            showsVerticalScrollIndicator={false}
+                            contentContainerStyle={{ paddingBottom: 20 }}
+                            scrollEnabled={false}
+                        />
 
-                        <View style={styles.listeContainer}>
-                            <Text style={styles.listeTitle}>Sistemdeki Kaynaklar ({kaynaklar.length})</Text>
-                            <FlatList
-                                data={kaynaklar}
-                                renderItem={renderItem}
-                                keyExtractor={item => item.id.toString()}
-                                showsVerticalScrollIndicator={false}
-                                contentContainerStyle={{ paddingBottom: 20 }}
-                            />
-                            <Text style={styles.listeTitle}>Sistemdeki Sınav Türleri ({sinavTurleri.length})</Text>
-                            <FlatList
-                                data={sinavTurleri}
-                                renderItem={({ item }) => (
-                                    <View style={styles.item}>
-                                        <View style={styles.itemInfo}>
-                                            <Text style={styles.ad}>{item.ad}</Text>
-                                        </View>
-                                        <TouchableOpacity onPress={() => handleSilSinavTuru(item.id, item.ad)} style={styles.silButon}>
-                                            <MaterialIcons name="delete" size={20} color="#e74c3c" />
-                                        </TouchableOpacity>
-                                    </View>
-                                )}
-                                keyExtractor={item => item.id.toString()}
-                                showsVerticalScrollIndicator={false}
-                                contentContainerStyle={{ paddingBottom: 20 }}
-                            />
-                        </View>
                     </View>
-                </TouchableWithoutFeedback>
+
+
+
+                    <View style={styles.listeContainer}>
+                        <Text style={styles.formTitle}>Yeni Sınav Türü Ekle</Text>
+                        <View style={styles.inputRow}>
+                            <TextInput
+                                style={styles.input}
+                                value={yeniSinavTuru}
+                                onChangeText={setYeniSinavTuru}
+                                placeholder="Sınav türü giriniz"
+                            />
+                            <TouchableOpacity style={styles.ekleButon} onPress={handleSinavTuruEkle}>
+                                <MaterialIcons name="add" size={24} color="white" />
+                            </TouchableOpacity>
+                        </View>
+                        <Text style={styles.listeTitle}>Sistemdeki Sınav Türleri ({sinavTurleri.length})</Text>
+                        <FlatList
+                            data={sinavTurleri}
+                            renderItem={({ item }) => (
+                                <View style={styles.item}>
+                                    <View style={styles.itemInfo}>
+                                        <Text style={styles.ad}>{item.ad}</Text>
+                                    </View>
+                                    <TouchableOpacity onPress={() => handleSilSinavTuru(item.id, item.ad)} style={styles.silButon}>
+                                        <MaterialIcons name="delete" size={20} color="#e74c3c" />
+                                    </TouchableOpacity>
+                                </View>
+                            )}
+                            keyExtractor={item => item.id.toString()}
+                            showsVerticalScrollIndicator={false}
+                            contentContainerStyle={{ paddingBottom: 20 }}
+                            scrollEnabled={false}
+                        />
+                    </View>
+
+
+
+
+                </ScrollView>
             </KeyboardAvoidingView>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { 
-        flex: 1, 
+    container: {
+        flex: 1,
         backgroundColor: '#f8f9fa',
         paddingTop: 16,
         paddingBottom: 80,
@@ -293,7 +305,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     aciklama: { fontSize: 12, color: '#7f8c8d', marginTop: 10, fontStyle: 'italic' },
-    listeContainer: { flex: 1, backgroundColor: 'white', padding: 16, borderRadius: 12, elevation: 2 },
+    listeContainer: { flex: 1, backgroundColor: 'white', padding: 16, borderRadius: 12, elevation: 2, marginBottom: 30 },
     listeTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 12, color: '#2c3e50' },
     item: {
         flexDirection: 'row',

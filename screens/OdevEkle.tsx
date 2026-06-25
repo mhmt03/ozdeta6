@@ -28,10 +28,10 @@ import {
     kaynakListesi,
     odevKaydet,
     odevGuncelle,
-    odevSil,
     ogrenciOdevleri,
     tekOgrenci
 } from '../utils/database';
+import { odevSil } from '../database/homeworkOperations';
 import { KaynakType, OdevType, OgrenciType } from '../types';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -181,26 +181,25 @@ export default function OdevEkle() {
         }
     };
 
-    // Ödev silme fonksiyonu
-    const odevSilmeOnayi = (id: number) => {
+    const handleOdevSil = (id: number) => {
         Alert.alert(
-            "Emin misiniz?",
-            "Bu ödev kaydı tamamen silinecek.",
+            'Ödev Sil',
+            'Bu ödevi silmek istediğinizden emin misiniz?',
             [
-                { text: "Vazgeç", style: "cancel" },
+                { text: 'İptal', style: 'cancel' },
                 {
-                    text: "Sil",
-                    style: "destructive",
+                    text: 'Sil',
+                    style: 'destructive',
                     onPress: async () => {
                         try {
                             const result = await odevSil(id);
                             if (result.success) {
                                 await odevleriYenile();
                             } else {
-                                Alert.alert('Hata', 'Kayıt silinemedi.');
+                                Alert.alert('Hata', 'Ödev silinemedi');
                             }
                         } catch (error) {
-                            Alert.alert('Hata', 'Bir sorun oluştu.');
+                            Alert.alert('Hata', 'Silme işlemi başarısız');
                         }
                     }
                 }
@@ -275,6 +274,7 @@ export default function OdevEkle() {
                         <thead>
                             <tr>
                                 <th>Verilme</th>
+                                <th>Teslim</th>
                                 <th>Ödev Konusu</th>
                                 <th>Kaynak</th>
                                 <th>Durum</th>
@@ -284,6 +284,7 @@ export default function OdevEkle() {
                             ${filtrelenmişOdevler.map(o => `
                                 <tr>
                                     <td>${formatTarih(o.verilmetarihi)}</td>
+                                    <td>${formatTarih(o.teslimttarihi)}</td>
                                     <td>${o.odev}</td>
                                     <td>${o.kaynak || '-'}</td>
                                     <td class="status-${o.yapilmadurumu}">${o.yapilmadurumu}</td>
@@ -402,14 +403,14 @@ export default function OdevEkle() {
                                 {/* Kaynak Seçimi veya Serbest Giriş */}
                                 {!kayitsizKaynak ? (
                                     <View style={styles.inputContainer}>
-                                        <Text style={styles.inputLabel}>Kaynak Seç ( Bağlı)</Text>
+                                        <Text style={styles.inputLabel}>Kaynak Seç (İsteğe Bağlı)</Text>
                                         <View style={styles.pickerContainer}>
                                             <Picker
                                                 selectedValue={seciliKaynak}
                                                 onValueChange={setSeciliKaynak}
                                                 style={styles.picker}
                                             >
-                                                <Picker.Item label="Kaynak seçiniz..." value="" color="#333" />
+                                                <Picker.Item label="Kaynak seçiniz..." value="" color="#f11616ff" />
                                                 {kaynaklar.map((kaynak) => (
                                                     <Picker.Item
                                                         key={kaynak.kaynakId}
@@ -505,7 +506,7 @@ export default function OdevEkle() {
                                         <OdevItem
                                             item={item}
                                             onGuncelle={odevGuncelleKaydet}
-                                            onSil={odevSilmeOnayi}
+                                            onSil={handleOdevSil}
                                         />
                                     )}
                                     keyExtractor={item => (item.odevId?.toString() || Math.random().toString())}
@@ -669,14 +670,14 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 16,
+        padding: 10,
         backgroundColor: 'white',
         borderBottomWidth: 1,
         borderBottomColor: '#e1e8ed',
         elevation: 2,
     },
     headerTitle: {
-        fontSize: 18,
+        fontSize: 8,
         fontWeight: 'bold',
         marginLeft: 16,
         color: '#333',
@@ -687,7 +688,7 @@ const styles = StyleSheet.create({
     },
     content: {
         flex: 1,
-        padding: 16,
+        padding: 10,
         paddingBottom: 80,
     },
     formContainer: {
@@ -834,7 +835,7 @@ const styles = StyleSheet.create({
     raporButon: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#f7eee7ff',
+        backgroundColor: '#0b9211ff',
         paddingVertical: 8,
         paddingHorizontal: 16,
         borderRadius: 20,

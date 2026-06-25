@@ -7,7 +7,7 @@ const DATABASE_NAME = 'ozdeta.db';
 const DB_PASSWORD: string = '';
 
 // VERİTABANI VERSİYONU - Değişiklik yaptığınızda sadece bunu artırın!
-const DATABASE_VERSION = 8; // V5->V6: ajanda tablosuna tamamlandiMi eklendi; V6->V7: sinav_turleri tablosu ekleniyor; V7->V8: denemeler tablosu eklendi
+const DATABASE_VERSION = 9; // V5->V6: ajanda tablosuna tamamlandiMi eklendi; V6->V7: sinav_turleri tablosu ekleniyor; V7->V8: denemeler tablosu eklendi; V8->V9: global_notlar tablosu eklendi
 
 export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
     try {
@@ -173,6 +173,16 @@ async function applyMigration(database: SQLite.SQLiteDatabase, version: number) 
                     yanlis INTEGER NOT NULL,
                     FOREIGN KEY (ogrenciId) REFERENCES ogrenciler(ogrenciId),
                     FOREIGN KEY (sinavTuruId) REFERENCES sinav_turleri(id)
+                );
+            `);
+            break;
+        case 9:
+            // Yeni global_notlar tablosu oluştur
+            await database.execAsync(`
+                CREATE TABLE IF NOT EXISTS global_notlar (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    not_metni TEXT NOT NULL,
+                    tarih_saat TEXT NOT NULL
                 );
             `);
             break;
