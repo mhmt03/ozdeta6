@@ -109,6 +109,21 @@ export async function ogrencileriListele(pasifGoster: boolean = false) {
     }
 }
 
+export async function tumOgrencileriListele() {
+    try {
+        const db = await ensureDatabaseReady();
+
+        const result = await db.getAllAsync<OgrenciType>(
+            `SELECT * FROM ogrenciler ORDER BY ogrenciAd ASC`
+        );
+
+        return { success: true, data: result };
+    } catch (error: any) {
+        console.error("Tüm öğrenci listeleme hatası:", error);
+        return { success: false, error: error.message };
+    }
+}
+
 export async function tekOgrenci(ogrenciId: number) {
     try {
         const db = await ensureDatabaseReady();

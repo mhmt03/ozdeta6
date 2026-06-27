@@ -389,38 +389,45 @@ export default function Denemeler() {
                                     />
                                 </View>
 
-                                <View style={styles.inputContainer}>
-                                    <Text style={styles.inputLabel}>Sınav Türü Seç</Text>
-                                    <View style={styles.pickerContainer}>
-                                        <Picker
-                                            selectedValue={seciliSinavTuru}
-                                            onValueChange={(val) => setSeciliSinavTuru(val)}
-                                            style={styles.picker}
-                                        >
-                                            <Picker.Item label="Sınav türü seçiniz..." value="" color="#333" />
-                                            {sinavTurleri.map((tur) => (
-                                                <Picker.Item
-                                                    key={tur.id}
-                                                    label={tur.ad}
-                                                    value={tur.id}
-                                                    color="#333"
-                                                />
-                                            ))}
-                                        </Picker>
+
+                                <View style={{ flexDirection: 'row' }}>
+                                    <View style={[styles.inputContainer, { width: '40%' }]}>
+                                        <Text style={styles.inputLabel}>Sınav Türü Seç</Text>
+                                        <View style={styles.pickerContainer}>
+                                            <Picker
+                                                selectedValue={seciliSinavTuru}
+                                                onValueChange={(val) => setSeciliSinavTuru(val)}
+                                                style={styles.picker}
+                                            >
+                                                <Picker.Item label="Sınav türü seçiniz..." value="" color="#333" />
+                                                {sinavTurleri.map((tur) => (
+                                                    <Picker.Item
+                                                        key={tur.id}
+                                                        label={tur.ad}
+                                                        value={tur.id}
+                                                        color="#f31717ff"
+
+                                                    />
+                                                ))}
+                                            </Picker>
+                                        </View>
                                     </View>
-                                </View>
 
-                                <View style={styles.inputContainer}>
-                                    <Text style={styles.inputLabel}>Tarih</Text>
-                                    <TouchableOpacity
-                                        style={styles.dateButton}
-                                        onPress={() => setTarihPickerAcik(true)}
-                                    >
-                                        <MaterialIcons name="date-range" size={20} color="#666" />
-                                        <Text style={styles.dateText}>{formatTarih(denemeTarih)}</Text>
-                                    </TouchableOpacity>
-                                </View>
+                                    <View style={[styles.inputContainer, { width: '40%', paddingLeft: 20 }]}>
+                                        <Text style={styles.inputLabel}>Tarih</Text>
+                                        <TouchableOpacity
+                                            style={[styles.dateButton, { width: '100%' }]}
+                                            onPress={() => setTarihPickerAcik(true)}
+                                        >
+                                            <MaterialIcons name="date-range" size={20} color="#666" />
+                                            <Text style={styles.dateText}>{formatTarih(denemeTarih)}</Text>
+                                        </TouchableOpacity>
 
+
+
+                                    </View>
+
+                                </View>
                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                                     <View style={[styles.inputContainer, { flex: 0.48 }]}>
                                         <Text style={styles.inputLabel}>Doğru Sayısı</Text>
@@ -428,7 +435,7 @@ export default function Denemeler() {
                                             style={styles.textInput}
                                             value={dogruSayisi}
                                             onChangeText={setDogruSayisi}
-                                            placeholder="Örn: 100"
+                                            placeholder="Örn: 10"
                                             keyboardType="numeric"
                                         />
                                     </View>
@@ -438,7 +445,7 @@ export default function Denemeler() {
                                             style={styles.textInput}
                                             value={yanlisSayisi}
                                             onChangeText={setYanlisSayisi}
-                                            placeholder="Örn: 20"
+                                            placeholder="Örn: 2"
                                             keyboardType="numeric"
                                         />
                                     </View>
@@ -500,8 +507,8 @@ export default function Denemeler() {
                                                     <View style={styles.denemeStats}>
                                                         <Text style={styles.statCorrect}>{item.dogru} Doğru</Text>
                                                         <Text style={styles.statWrong}>{item.yanlis} Yanlış</Text>
-                                                        
-                                                        <View style={{flexDirection: 'row', marginLeft: 'auto', gap: 12}}>
+
+                                                        <View style={{ flexDirection: 'row', marginLeft: 'auto', gap: 12 }}>
                                                             <TouchableOpacity
                                                                 style={styles.editBtn}
                                                                 onPress={() => handleGuncelleClick(item)}
@@ -565,7 +572,7 @@ export default function Denemeler() {
                                 <MaterialIcons name="close" size={24} color="#666" />
                             </TouchableOpacity>
                         </View>
-                        
+
                         {editingDeneme && (
                             <ScrollView>
                                 <View style={styles.inputContainer}>
@@ -820,8 +827,9 @@ const styles = StyleSheet.create({
         padding: 18
     },
     picker: {
-        height: 40,
-        color: '#1180eeff',
+        height: 75,
+        color: '#032c55ff',
+        fontSize: 18,
     },
     dateButton: {
         flexDirection: 'row',
@@ -830,7 +838,7 @@ const styles = StyleSheet.create({
         borderColor: '#ddd',
         borderRadius: 6,
         padding: 12,
-        backgroundColor: '#fff',
+        backgroundColor: '#facbcbff',
     },
     dateText: {
         marginLeft: 8,
@@ -847,12 +855,14 @@ const styles = StyleSheet.create({
     },
     kaydetButon: {
         flexDirection: 'row',
-        alignItems: 'center',
+        alignItems: 'flex-end',
         justifyContent: 'center',
         backgroundColor: '#27ae60',
         padding: 14,
         borderRadius: 6,
         marginTop: 8,
+        width: '40%',
+        alignSelf: 'flex-end',
     },
     kaydetButonText: {
         color: 'white',

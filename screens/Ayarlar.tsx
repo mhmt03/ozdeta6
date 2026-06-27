@@ -11,7 +11,8 @@ import {
     FlatList,
     Modal,
     ActivityIndicator,
-    Platform
+    Platform,
+    TextInput
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -27,10 +28,17 @@ import {
     ogrencininOdemeleri,
     tumYapilanDersler,
     tumOdemeleriGetir,
-    veritabaniTemizle
+    veritabaniTemizle,
+    tumOgrencileriListele,
+    getDersler,
+    getOdemeler,
+    ogrenciNotlari,
+    ogrenciOdevleri,
+    kaynakListesi
 } from '../utils/database';
+import { getDenemeler } from '../database/denemeOperations';
 import { getSetting, saveSetting } from '../database/settingsOperations';
-
+import { closeDatabase, initDatabase } from '../database/init';
 export default function Ayarlar() {
     const navigation = useNavigation<any>();
 
@@ -46,6 +54,11 @@ export default function Ayarlar() {
     const [bitisPickerAcik, setBitisPickerAcik] = useState(false);
     const [sonOdemelerAcik, setSonOdemelerAcik] = useState(false);
     const [sonOdemeler, setSonOdemeler] = useState<any[]>([]);
+
+    // Öğrenci Excel Raporu state'leri
+    const [ogrenciExcelModalAcik, setOgrenciExcelModalAcik] = useState(false);
+    const [tumOgrenciListesi, setTumOgrenciListesi] = useState<any[]>([]);
+    const [aramaMetni, setAramaMetni] = useState('');
 
     // Veritabanı temizleme state'leri
     const [temizlikModalAcik, setTemizlikModalAcik] = useState(false);
@@ -105,7 +118,7 @@ export default function Ayarlar() {
     };
 
     /**
-     * Downloads/ozdeta klasörünü oluşturma - DÜZELTİLDİ
+     * Downloads/ozdeta klasörünü oluşturma 
      */
     const ozdetaKlasoruKontrolEt = async () => {
         try {
@@ -435,14 +448,16 @@ export default function Ayarlar() {
                                         from: targetDbPath,
                                         to: guvenlikYedekYolu
                                     });
+                                    console.log("güvenlik yedeği alındı:", guvenlikYedekYolu);
                                 } catch (backupError) {
                                     console.warn('Güvenlik yedeği alınamadı:', backupError);
                                 }
-
+                                await closeDatabase();
                                 await FileSystem.copyAsync({
                                     from: fileUri ?? '',
                                     to: targetDbPath
                                 });
+                                await initDatabase();
 
                                 Alert.alert(
                                     'Geri Yükleme Başarılı',
@@ -575,7 +590,7 @@ export default function Ayarlar() {
                 });
 
                 const borcluWorksheet = XLSX.utils.aoa_to_sheet(borcluOgrencilerData);
-                XLSX.utils.book_append_sheet(workbook, borcluWorksheet, 'Öğrenciler');
+                XLSX.utils.book_append_sheet(workbook, borcluWorksheet, 'borclu_Öğrenciler');
             }
 
             // ÖDEMELER sayfası
@@ -660,6 +675,268 @@ export default function Ayarlar() {
             setLoading(false);
         }
     };
+
+    /**
+     * Öğrenci Excel Raporu - Tüm öğrencilerin listesini yükle
+     */
+    const ogrenciExcelModalAc = async () => {
+        try {
+            setLoading(true);
+            const result = await tumOgrencileriListele();
+            if (result.success && result.data) {
+                setTumOgrenciListesi(result.data);
+                setAramaMetni('');
+                setOgrenciExcelModalAcik(true);
+            } else {
+                Alert.alert('Hata', 'Öğrenci listesi alınamadı');
+            }
+        } catch (error) {
+            console.error('Öğrenci listesi yükleme hatası:', error);
+            Alert.alert('Hata', 'Bir hata oluştu');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    /**
+     * Seçilen öğrencinin tüm verilerini Excel'e aktar
+     */
+    const ogrenciExcelRaporOlustur = async (ogrenci: any) => {
+        try {
+            setOgrenciExcelModalAcik(false);
+            setLoading(true);
+
+            const ogrenciId = ogrenci.ogrenciId!;
+            const ogrenciAdSoyad = `${ogrenci.ogrenciAd} ${ogrenci.ogrenciSoyad}`;
+
+            // Tüm verileri paralel olarak çek
+            const [derslerRes, odemelerRes, notlarRes, odevlerRes, kaynaklarRes, denemelerRes] = await Promise.all([
+                getDersler(ogrenciId),
+                getOdemeler(ogrenciId),
+                ogrenciNotlari(ogrenciId),
+                ogrenciOdevleri(ogrenciId),
+                kaynakListesi(ogrenciId),
+                getDenemeler(ogrenciId)
+            ]);
+
+            const dersler = derslerRes || [];
+            const odemeler = odemelerRes || [];
+            const notlar = notlarRes.success ? (notlarRes.data || []) : [];
+            const odevler = odevlerRes.success ? (odevlerRes.data || []) : [];
+            const kaynaklar = kaynaklarRes.success ? (kaynaklarRes.data || []) : [];
+            const denemeler = denemelerRes.success ? (denemelerRes.data || []) : [];
+
+            // Excel Workbook oluştur
+            const workbook = XLSX.utils.book_new();
+
+            // 1. ÖĞRENCİ DETAYLARI sayfası
+            const detayData: any[][] = [
+                ['ÖĞRENCİ DETAYLARI'],
+                [`Oluşturulma Tarihi: ${new Date().toLocaleString('tr-TR')}`],
+                [''],
+                ['Bilgi', 'Değer'],
+                ['Ad', ogrenci.ogrenciAd || '-'],
+                ['Soyad', ogrenci.ogrenciSoyad || '-'],
+                ['Telefon', ogrenci.ogrenciTel || '-'],
+                ['Veli Adı', ogrenci.veliAd || '-'],
+                ['Veli Telefon', ogrenci.veliTel || '-'],
+                ['Okul', ogrenci.okul || '-'],
+                ['Sınıf', ogrenci.sinif || '-'],
+                ['Ders Ücreti', ogrenci.ucret ? `${ogrenci.ucret} TL` : '-'],
+                ['Kayıt Tarihi', ogrenci.kayitTarihi || '-'],
+                ['Durum', ogrenci.aktifmi ? 'Aktif' : 'Pasif'],
+                ['Açıklama 1', ogrenci.aciklama1 || '-'],
+                ['Açıklama 2', ogrenci.aciklama2 || '-'],
+            ];
+            const detayWorksheet = XLSX.utils.aoa_to_sheet(detayData);
+            XLSX.utils.book_append_sheet(workbook, detayWorksheet, 'Öğrenci Detayı');
+
+            // 2. DERSLER sayfası
+            const derslerData: any[][] = [
+                ['DERS KAYITLARI'],
+                [`Öğrenci: ${ogrenciAdSoyad}`],
+                [`Toplam Ders Sayısı: ${dersler.length}`],
+                [''],
+                ['Tarih', 'Saat', 'Konu', 'Ders Türü', 'Ücret (TL)']
+            ];
+            let toplamDersUcreti = 0;
+            dersler.forEach(ders => {
+                derslerData.push([
+                    ders.tarih || '-',
+                    ders.saat || '-',
+                    ders.konu || '-',
+                    ders.dersturu || '-',
+                    parseInt(String(ders.ucret)) || 0
+                ]);
+                toplamDersUcreti += parseInt(String(ders.ucret)) || 0;
+            });
+            derslerData.push(['', '', '', 'TOPLAM:', `${toplamDersUcreti} TL`]);
+            const derslerWorksheet = XLSX.utils.aoa_to_sheet(derslerData);
+            XLSX.utils.book_append_sheet(workbook, derslerWorksheet, 'Dersler');
+
+            // 3. ÖDEMELER sayfası
+            const odemelerData: any[][] = [
+                ['ÖDEME KAYITLARI'],
+                [`Öğrenci: ${ogrenciAdSoyad}`],
+                [`Toplam Ödeme Sayısı: ${odemeler.length}`],
+                [''],
+                ['Tarih', 'Saat', 'Tür', 'Açıklama', 'Miktar (TL)']
+            ];
+            let toplamOdeme = 0;
+            odemeler.forEach(odeme => {
+                odemelerData.push([
+                    odeme.odemetarih || '-',
+                    odeme.odemesaati || '-',
+                    odeme.odemeturu || '-',
+                    odeme.aciklama || '-',
+                    parseInt(String(odeme.alinanucret)) || 0
+                ]);
+                toplamOdeme += parseInt(String(odeme.alinanucret)) || 0;
+            });
+            odemelerData.push(['', '', '', 'TOPLAM ÖDEME:', `${toplamOdeme} TL`]);
+            odemelerData.push(['', '', '', 'KALAN BORÇ:', `${toplamDersUcreti - toplamOdeme} TL`]);
+            const odemelerWorksheet = XLSX.utils.aoa_to_sheet(odemelerData);
+            XLSX.utils.book_append_sheet(workbook, odemelerWorksheet, 'Ödemeler');
+
+            // 4. NOTLAR sayfası
+            const notlarData: any[][] = [
+                ['NOT KAYITLARI'],
+                [`Öğrenci: ${ogrenciAdSoyad}`],
+                [`Toplam Not Sayısı: ${notlar.length}`],
+                [''],
+                ['Tarih', 'Not İçeriği']
+            ];
+            notlar.forEach(not => {
+                notlarData.push([
+                    not.tarih || '-',
+                    not.not1 || '-'
+                ]);
+            });
+            const notlarWorksheet = XLSX.utils.aoa_to_sheet(notlarData);
+            XLSX.utils.book_append_sheet(workbook, notlarWorksheet, 'Notlar');
+
+            // 5. ÖDEVLER sayfası
+            const odevlerData: any[][] = [
+                ['ÖDEV KAYITLARI'],
+                [`Öğrenci: ${ogrenciAdSoyad}`],
+                [`Toplam Ödev Sayısı: ${odevler.length}`],
+                [''],
+                ['Kaynak', 'Ödev', 'Verilme Tarihi', 'Teslim Tarihi', 'Kontrol Tarihi', 'Durum', 'Açıklama']
+            ];
+            odevler.forEach(odev => {
+                odevlerData.push([
+                    odev.kaynak || '-',
+                    odev.odev || '-',
+                    odev.verilmetarihi || '-',
+                    odev.teslimttarihi || '-',
+                    odev.kontroltarihi || '-',
+                    odev.yapilmadurumu || '-',
+                    odev.aciklama || '-'
+                ]);
+            });
+            const odevlerWorksheet = XLSX.utils.aoa_to_sheet(odevlerData);
+            XLSX.utils.book_append_sheet(workbook, odevlerWorksheet, 'Ödevler');
+
+            // 6. KAYNAKLAR sayfası
+            const kaynaklarData: any[][] = [
+                ['KAYNAK KAYITLARI'],
+                [`Öğrenci: ${ogrenciAdSoyad}`],
+                [`Toplam Kaynak Sayısı: ${kaynaklar.length}`],
+                [''],
+                ['Kaynak Adı']
+            ];
+            kaynaklar.forEach(kaynak => {
+                kaynaklarData.push([
+                    kaynak.kaynak || '-'
+                ]);
+            });
+            const kaynaklarWorksheet = XLSX.utils.aoa_to_sheet(kaynaklarData);
+            XLSX.utils.book_append_sheet(workbook, kaynaklarWorksheet, 'Kaynaklar');
+
+            // 7. DENEMELER sayfası
+            const denemelerData: any[][] = [
+                ['DENEME KAYITLARI'],
+                [`Öğrenci: ${ogrenciAdSoyad}`],
+                [`Toplam Deneme Sayısı: ${denemeler.length}`],
+                [''],
+                ['Tarih', 'Sınav Türü', 'Deneme Adı', 'Doğru', 'Yanlış', 'Net']
+            ];
+            denemeler.forEach(deneme => {
+                const net = (deneme.dogru || 0) - ((deneme.yanlis || 0) / 4);
+                denemelerData.push([
+                    deneme.tarih || '-',
+                    deneme.sinavTuruAd || '-',
+                    deneme.denemeAd || '-',
+                    deneme.dogru || 0,
+                    deneme.yanlis || 0,
+                    parseFloat(net.toFixed(2))
+                ]);
+            });
+            const denemelerWorksheet = XLSX.utils.aoa_to_sheet(denemelerData);
+            XLSX.utils.book_append_sheet(workbook, denemelerWorksheet, 'Denemeler');
+
+            // Excel dosyasını base64 formatında oluştur
+            const excelBuffer = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
+
+            // Dosya adını oluştur
+            const dosyaAdi = `ogrenci_rapor_${ogrenci.ogrenciAd}_${ogrenci.ogrenciSoyad}_${detayliTarihFormatla()}.xlsx`;
+
+            // Dosyayı kaydet
+            const result = await akilliDosyaKaydet(
+                dosyaAdi,
+                excelBuffer,
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            );
+
+            if (result.success) {
+                Alert.alert(
+                    'Öğrenci Excel Raporu Oluşturuldu',
+                    `${ogrenciAdSoyad} için rapor başarıyla oluşturuldu.\n\nSayfalar: Öğrenci Detayı, Dersler (${dersler.length}), Ödemeler (${odemeler.length}), Notlar (${notlar.length}), Ödevler (${odevler.length}), Kaynaklar (${kaynaklar.length}), Denemeler (${denemeler.length})`,
+                    [
+                        {
+                            text: 'Tamam',
+                            onPress: () => console.log('Öğrenci raporu tamamlandı')
+                        },
+                        {
+                            text: 'Paylaş',
+                            onPress: async () => {
+                                if (await Sharing.isAvailableAsync()) {
+                                    if (result.dosyaYolu) {
+                                        await Sharing.shareAsync(result.dosyaYolu, {
+                                            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                                            dialogTitle: `${ogrenciAdSoyad} - Excel Raporu`
+                                        });
+                                    } else {
+                                        Alert.alert('Hata', 'Paylaşılacak dosya yolu bulunamadı.');
+                                    }
+                                } else {
+                                    Alert.alert('Hata', 'Paylaşım özelliği bu cihazda kullanılamıyor.');
+                                }
+                            }
+                        }
+                    ]
+                );
+            } else {
+                Alert.alert('Hata', result.error || 'Excel raporu kaydedilemedi');
+            }
+
+        } catch (error) {
+            console.error('Öğrenci excel rapor hatası:', error);
+            Alert.alert('Hata', 'Öğrenci excel raporu oluşturulamadı: ' + (error as any).message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    /**
+     * Filtrelenmiş öğrenci listesi
+     */
+    const filtrelenmisOgrenciler = tumOgrenciListesi.filter(ogrenci => {
+        if (!aramaMetni) return true;
+        const aramaLower = aramaMetni.toLowerCase();
+        const adSoyad = `${ogrenci.ogrenciAd} ${ogrenci.ogrenciSoyad}`.toLowerCase();
+        return adSoyad.includes(aramaLower);
+    });
 
     /**
      * Veritabanı temizleme işlemi
@@ -842,6 +1119,19 @@ export default function Ayarlar() {
                             <Text style={styles.ayarBaslik}>Excel Raporu Oluştur (.xlsx)</Text>
                             <Text style={styles.ayarAciklama}>
                                 Ders, öğrenci ve borç raporunu Excel formatında oluştur
+                            </Text>
+                        </View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.ayarItem}
+                        onPress={ogrenciExcelModalAc}
+                    >
+                        <MaterialIcons name="person-search" size={24} color="#9C27B0" />
+                        <View style={styles.ayarText}>
+                            <Text style={styles.ayarBaslik}>Öğrenci Excel Raporu</Text>
+                            <Text style={styles.ayarAciklama}>
+                                Bir öğrenciye ait tüm verileri Excel dosyasına aktar
                             </Text>
                         </View>
                     </TouchableOpacity>
@@ -1249,6 +1539,85 @@ export default function Ayarlar() {
                     </View>
                 </View>
             </Modal>
+
+            {/* Öğrenci Seçimi Modalı */}
+            <Modal
+                visible={ogrenciExcelModalAcik}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={() => setOgrenciExcelModalAcik(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, styles.borcModalContent]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>
+                                Öğrenci Seçin ({filtrelenmisOgrenciler.length})
+                            </Text>
+                            <TouchableOpacity onPress={() => setOgrenciExcelModalAcik(false)}>
+                                <MaterialIcons name="close" size={24} color="#666" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.ogrenciAramaContainer}>
+                            <MaterialIcons name="search" size={20} color="#999" />
+                            <TextInput
+                                style={styles.ogrenciAramaInput}
+                                placeholder="Öğrenci ara..."
+                                value={aramaMetni}
+                                onChangeText={setAramaMetni}
+                                placeholderTextColor="#999"
+                            />
+                            {aramaMetni.length > 0 && (
+                                <TouchableOpacity onPress={() => setAramaMetni('')}>
+                                    <MaterialIcons name="close" size={20} color="#999" />
+                                </TouchableOpacity>
+                            )}
+                        </View>
+
+                        {filtrelenmisOgrenciler.length > 0 ? (
+                            <FlatList
+                                data={filtrelenmisOgrenciler}
+                                renderItem={({ item }) => (
+                                    <TouchableOpacity
+                                        style={styles.ogrenciSecimItem}
+                                        onPress={() => ogrenciExcelRaporOlustur(item)}
+                                    >
+                                        <View style={styles.ogrenciSecimInfo}>
+                                            <Text style={styles.ogrenciSecimAd}>
+                                                {item.ogrenciAd} {item.ogrenciSoyad}
+                                            </Text>
+                                            <Text style={styles.ogrenciSecimDetay}>
+                                                {item.okul || '-'} • {item.sinif || '-'} • {item.aktifmi ? 'Aktif' : 'Pasif'}
+                                            </Text>
+                                        </View>
+                                        <View style={[
+                                            styles.ogrenciDurumBadge,
+                                            { backgroundColor: item.aktifmi ? '#E8F5E9' : '#FFEBEE' }
+                                        ]}>
+                                            <Text style={[
+                                                styles.ogrenciDurumText,
+                                                { color: item.aktifmi ? '#4CAF50' : '#F44336' }
+                                            ]}>
+                                                {item.aktifmi ? 'Aktif' : 'Pasif'}
+                                            </Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                )}
+                                keyExtractor={item => item.ogrenciId.toString()}
+                                style={styles.borcListe}
+                                showsVerticalScrollIndicator={false}
+                            />
+                        ) : (
+                            <View style={styles.borcBosListe}>
+                                <MaterialIcons name="person-off" size={48} color="#ddd" />
+                                <Text style={styles.borcBosText}>
+                                    {aramaMetni ? 'Aramanızla eşleşen öğrenci bulunamadı.' : 'Kayıtlı öğrenci bulunmuyor.'}
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -1588,6 +1957,60 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#4CAF50',
         marginLeft: 10,
+    },
+    ogrenciAramaContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f5f5f5',
+        borderRadius: 10,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        marginHorizontal: 20,
+        marginVertical: 10,
+        borderWidth: 1,
+        borderColor: '#e0e0e0',
+    },
+    ogrenciAramaInput: {
+        flex: 1,
+        fontSize: 16,
+        color: '#333',
+        marginLeft: 8,
+        paddingVertical: 4,
+    },
+    ogrenciSecimItem: {
+        backgroundColor: '#fff',
+        borderRadius: 8,
+        padding: 15,
+        marginBottom: 8,
+        borderLeftWidth: 4,
+        borderLeftColor: '#9C27B0',
+        elevation: 1,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    ogrenciSecimInfo: {
+        flex: 1,
+    },
+    ogrenciSecimAd: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#333',
+        marginBottom: 4,
+    },
+    ogrenciSecimDetay: {
+        fontSize: 12,
+        color: '#666',
+    },
+    ogrenciDurumBadge: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+        marginLeft: 10,
+    },
+    ogrenciDurumText: {
+        fontSize: 12,
+        fontWeight: '600',
     },
 });
 

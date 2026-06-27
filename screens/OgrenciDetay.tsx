@@ -29,6 +29,7 @@ export default function OgrenciDetay() {
     const [dersAciklama, setDersAciklama] = useState('');
     const [tarihPickerAcik, setTarihPickerAcik] = useState(false);
     const [saatPickerAcik, setSaatPickerAcik] = useState(false);
+    const [ucretGoster, setUcretGoster] = useState(false);
 
     // Ödeme popup state'leri
     const [odemeTarih, setOdemeTarih] = useState(new Date());
@@ -531,13 +532,26 @@ export default function OgrenciDetay() {
                             {/* Ücret */}
                             <View style={styles.inputContainer}>
                                 <Text style={styles.inputLabel}>Ücret (TL)</Text>
-                                <TextInput
-                                    style={styles.textInput}
-                                    value={dersUcret}
-                                    onChangeText={setDersUcret}
-                                    placeholder="Ücret giriniz"
-                                    keyboardType="numeric"
-                                />
+                                <View style={styles.passwordInputContainer}>
+                                    <TextInput
+                                        style={[styles.textInput, styles.passwordInput]}
+                                        value={dersUcret}
+                                        onChangeText={setDersUcret}
+                                        placeholder="Ücret giriniz"
+                                        keyboardType="numeric"
+                                        secureTextEntry={!ucretGoster}
+                                    />
+                                    <TouchableOpacity
+                                        style={styles.eyeButton}
+                                        onPress={() => setUcretGoster(!ucretGoster)}
+                                    >
+                                        <MaterialIcons
+                                            name={ucretGoster ? "visibility" : "visibility-off"}
+                                            size={22}
+                                            color="#666"
+                                        />
+                                    </TouchableOpacity>
+                                </View>
                             </View>
 
                             {/* Açıklama */}
@@ -798,6 +812,21 @@ const styles = StyleSheet.create({
         zIndex: 999,
     },
     // Modal Stilleri
+    passwordInputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 8,
+        backgroundColor: '#f9f9f9',
+    },
+    passwordInput: {
+        flex: 1,
+        borderWidth: 0, // dış container'da border var
+    },
+    eyeButton: {
+        padding: 10,
+    },
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
