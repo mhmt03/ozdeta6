@@ -321,7 +321,7 @@ export default function Ajanda() {
 
     // Randevu item render'ı (FlatList için)
     const renderRandevuItem = ({ item }: { item: AjandaWithOgrenciType }) => {
-        const isCompleted = item.tamamlanma === '1' || item.sutun1 === 'tamamlandı' || item.tamamlandiMi === 1;
+        const isCompleted = item.tamamlanma === '1' || item.sutun1 === 'tamamlandı';
         const isCancelled = item.iptal === 1;
 
         return (
@@ -420,7 +420,7 @@ export default function Ajanda() {
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        style={[styles.bugunButton, { backgroundColor: '#f8badeff' }]}
+                        style={[styles.bugunButton, { backgroundColor: '#3498db' }]}
                         onPress={fetchSevenDayData}
                     >
                         <Text style={[styles.bugunButtonText, { color: 'white' }]}>7 Günlük</Text>
@@ -429,13 +429,13 @@ export default function Ajanda() {
 
                 <View style={styles.ayNavigasyon}>
                     <TouchableOpacity onPress={() => (isWeekView ? changeWeek(-1) : changeMonth(-1))} style={styles.navButton}>
-                        <MaterialIcons name="chevron-left" size={25} color="#2c3e50" />
+                        <MaterialIcons name="chevron-left" size={20} color="#2c3e50" />
                     </TouchableOpacity>
 
                     <Text style={styles.ayText}>{isWeekView ? `${currentWeek.getDate()} ${currentWeek.toLocaleString('tr-TR', { month: 'short' })}` : currentMonth.toLocaleString('tr-TR', { month: 'long', year: 'numeric' })}</Text>
 
                     <TouchableOpacity onPress={() => (isWeekView ? changeWeek(1) : changeMonth(1))} style={styles.navButton}>
-                        <MaterialIcons name="chevron-right" size={25} color="#2c3e50" />
+                        <MaterialIcons name="chevron-right" size={20} color="#2c3e50" />
                     </TouchableOpacity>
                 </View>
 
@@ -455,7 +455,7 @@ export default function Ajanda() {
 
                 <View style={styles.selectedDateContainer}>
                     <TouchableOpacity onPress={() => selectDay({ date: new Date(selectedDate.getTime() - 86400000), isCurrentMonth: true, isToday: false, hasEvent: false })}>
-                        <MaterialIcons name="chevron-left" size={44} color="#3498db" />
+                        <MaterialIcons name="chevron-left" size={24} color="#3498db" />
                     </TouchableOpacity>
 
                     <Text style={styles.selectedDateText}>
@@ -463,7 +463,7 @@ export default function Ajanda() {
                     </Text>
 
                     <TouchableOpacity onPress={() => selectDay({ date: new Date(selectedDate.getTime() + 86400000), isCurrentMonth: true, isToday: false, hasEvent: false })}>
-                        <MaterialIcons name="chevron-right" size={44} color="#3498db" />
+                        <MaterialIcons name="chevron-right" size={24} color="#3498db" />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -558,12 +558,7 @@ export default function Ajanda() {
                                                     {appointments.length > 0 ? (
                                                         appointments.sort((a, b) => a.saat.localeCompare(b.saat)).map((app, idx) => (
                                                             <View key={idx} style={styles.appCardVertical}>
-                                                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                                                    <Text style={styles.appTimeText}>{app.saat}</Text>
-                                                                    {(app.tamamlandiMi === 1 || app.tamamlanma === '1' || app.sutun1 === 'tamamlandı') && (
-                                                                        <MaterialIcons name="check-circle" size={12} color="#27ae60" style={{ marginLeft: 4 }} />
-                                                                    )}
-                                                                </View>
+                                                                <Text style={styles.appTimeText}>{app.saat}</Text>
                                                                 <Text style={styles.appStudentTextAbbr} numberOfLines={1}>
                                                                     {(() => {
                                                                         const parts = app.ogrAdsoyad?.split(' ') || [];
@@ -594,9 +589,6 @@ export default function Ajanda() {
                                                         appointments.sort((a, b) => a.saat.localeCompare(b.saat)).map((app, idx) => (
                                                             <View key={idx} style={styles.appCardHorizontal}>
                                                                 <Text style={styles.appTimeText}>{app.saat}</Text>
-                                                                {(app.tamamlandiMi === 1 || app.tamamlanma === '1' || app.sutun1 === 'tamamlandı') && (
-                                                                    <MaterialIcons name="check-circle" size={12} color="#27ae60" style={{ marginLeft: 4 }} />
-                                                                )}
                                                             </View>
                                                         ))
                                                     ) : (
@@ -627,27 +619,27 @@ export default function Ajanda() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#b5dafdff',
+        backgroundColor: '#bed9f3ff',
         justifyContent: 'flex-start',
         padding: 1,
-        paddingTop: 0,
+        paddingTop: 16,
     },
     centerContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#def7e0ff',
+        backgroundColor: '#15e427ff',
     },
     loadingText: {
-        marginTop: 0,
+        marginTop: 1,
         color: '#7f8c8d',
         fontSize: 10,
     },
 
     takvimContainer: {
-        marginTop: 0,
-        backgroundColor: '#daecf8ff',
-        padding: 1,
+        marginTop: 1,
+        backgroundColor: 'white',
+        padding: 1, // küçültüldü -> header daha kompakt
         borderBottomLeftRadius: 24,
         borderBottomRightRadius: 12,
         shadowColor: '#000',
@@ -655,33 +647,31 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.06,
         shadowRadius: 3,
         elevation: 2,
-        maxHeight: 380,
+        maxHeight: 380, // azaltıldı -> takvim daha tepede, randevu listesi görünür olur,
     },
 
     ustBar: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 0,
+        marginBottom: 1, // azaltıldı,
         backgroundColor: 'transparent',
-
     },
     switchContainer: {
         flexDirection: 'row',
         alignItems: 'center',
     },
     switchLabel: {
-        fontSize: 11,
+        fontSize: 11, // küçültüldü
         color: '#7f8c8d',
         marginHorizontal: 6,
         fontWeight: '500',
     },
     bugunButton: {
-        backgroundColor: '#cdc2f5ff',
-        paddingHorizontal: 2,
+        backgroundColor: '#ecf0f1',
+        paddingHorizontal: 8,
         paddingVertical: 5,
         borderRadius: 14,
-        marginRight: 24,
     },
     bugunButtonText: {
         fontSize: 11, // küçültüldü
@@ -698,11 +688,6 @@ const styles = StyleSheet.create({
     navButton: {
         padding: 6,
         borderRadius: 12,
-        width: 74,
-        height: 32,
-        backgroundColor: '#66e4faff',
-        justifyContent: 'center',
-        alignItems: 'center',
     },
     ayText: {
         fontSize: 14, // küçültüldü
@@ -743,7 +728,7 @@ const styles = StyleSheet.create({
         borderRadius: 6,
     },
     nonCurrentMonthDay: {
-        opacity: 0.7,
+        opacity: 0.35,
     },
     selectedDay: {
         backgroundColor: '#3498db',
@@ -753,7 +738,7 @@ const styles = StyleSheet.create({
         borderColor: '#e74c3c',
     },
     dayText: {
-        fontSize: 10,
+        fontSize: 10, // küçültüldü
         color: '#2c3e50',
         fontWeight: '600',
     },
@@ -779,7 +764,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     selectedDateText: {
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '700',
         color: '#2c3e50',
         flex: 1,
@@ -994,12 +979,12 @@ const styles = StyleSheet.create({
     // 7 GÜNLÜK POPUP STİLLERİ
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.7)',
+        backgroundColor: 'rgba(0,0,0,0.7)', // Daha koyu yarı saydam arka plan
         justifyContent: 'center',
         alignItems: 'center',
     },
     sevenDayModalContent: {
-        backgroundColor: 'white',
+        backgroundColor: 'white', // Tam opak beyaz arka plan
         borderRadius: 24,
         padding: 10,
         width: '94%',
@@ -1100,30 +1085,30 @@ const styles = StyleSheet.create({
     },
     // Landscape (Yatay) - Günler yan yana, Randevular alt alta
     landscapeDayColumn: {
-        width: 80,
-        marginRight: 3,
+        width: 80, // Küçültüldü
+        marginRight: 3, // Küçültüldü
         backgroundColor: '#ffffff',
         borderRadius: 12,
-        padding: 2,
+        padding: 2, // Küçültüldü
         borderWidth: 1,
         borderColor: '#e2e5e9ff',
-        minHeight: 120,
+        minHeight: 120, // Küçültüldü
     },
     dayHeaderBox: {
         alignItems: 'center',
-        marginBottom: 8,
+        marginBottom: 8, // Küçültüldü
         borderBottomWidth: 1,
         borderBottomColor: '#f1f2f6',
-        paddingBottom: 4,
+        paddingBottom: 4, // Küçültüldü
     },
     dayNameText: {
-        fontSize: 10,
+        fontSize: 10, // Küçültüldü
         fontWeight: 'bold',
         color: '#7f8c8d',
         textTransform: 'uppercase',
     },
     dayNumText: {
-        fontSize: 9,
+        fontSize: 9, // Küçültüldü
         fontWeight: '900',
         color: '#3498db',
     },
@@ -1131,23 +1116,23 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     appCardVertical: {
-        backgroundColor: '#f1f8ff',
-        padding: 2,
-        borderRadius: 6,
-        marginBottom: 4,
+        backgroundColor: '#f1f8ff', // Hafif mavi tonu
+        padding: 2, // Küçültüldü
+        borderRadius: 6, // Küçültüldü
+        marginBottom: 4, // Küçültüldü
         borderWidth: 1,
         borderColor: '#d0e1f9',
         alignItems: 'center',
     },
     appTimeText: {
-        fontSize: 11,
+        fontSize: 11, // Küçültüldü
         fontWeight: 'bold',
         color: '#1976d2',
     },
     appStudentTextAbbr: {
-        fontSize: 8,
+        fontSize: 8, // Küçültüldü
         color: '#546e7a',
-        marginTop: 1,
+        marginTop: 1, // Küçültüldü
         textAlign: 'center',
         fontWeight: '600',
     },

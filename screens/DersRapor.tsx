@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+
 import {
     View,
     Text,
@@ -7,7 +8,7 @@ import {
     TouchableOpacity,
     FlatList,
     Alert,
-    Linking
+    Linking, Switch
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -26,7 +27,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Modal, TextInput, Platform, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, ActivityIndicator } from 'react-native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system/legacy';
+
+
 
 export default function DersRapor() {
     const navigation = useNavigation<any>();
@@ -54,6 +56,7 @@ export default function DersRapor() {
     const [formKonu, setFormKonu] = useState('');
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showTimePicker, setShowTimePicker] = useState(false);
+    const [odemeGoster, setOdemeGoster] = useState(false); // default kapalı
 
     useEffect(() => {
         veriAl();
@@ -103,7 +106,7 @@ export default function DersRapor() {
     };
 
     // PDF Raporu Oluştur
-    const generatePDF = async (type: 'ders' | 'odeme', showPrice: boolean = true) => {
+    const generatePDF = async (type: 'ders' | 'odeme') => {
         try {
             const title = type === 'ders' ? 'Ders Raporu' : 'Ödeme Raporu';
             const studentName = ogrenci ? `${ogrenci.ogrenciAd} ${ogrenci.ogrenciSoyad}` : 'Tüm Öğrenciler';
@@ -133,7 +136,7 @@ export default function DersRapor() {
                         <thead>
                             <tr>
                                 ${type === 'ders'
-                    ? '<th>Tarih</th>' + (isGeneralReport ? '<th>Öğrenci</th>' : '') + '<th>Konu</th>' + (showPrice ? '<th>Ücret</th>' : '')
+                    ? '<th>Tarih</th><th>Saat</th>' + (isGeneralReport ? '<th>Öğrenci</th>' : '') + '<th>Konu</th><th>Ücret</th>'
                     : '<th>Tarih</th>' + (isGeneralReport ? '<th>Öğrenci</th>' : '') + '<th>Tür</th><th>Açıklama</th><th>Miktar</th>'
                 }
                             </tr>
@@ -143,9 +146,10 @@ export default function DersRapor() {
                     ? dersler.map(d => `
                                     <tr>
                                         <td>${formatTarih(d.tarih)}</td>
+                                        <td>${d.saat}</td>
                                         ${isGeneralReport ? `<td>${d.ogrenciAdSoyad || '-'}</td>` : ''}
                                         <td>${d.konu || '-'}</td>
-                                        ${showPrice ? `<td>${d.ucret} TL</td>` : ''}
+                                        <td>${d.ucret} TL</td>
                                     </tr>
                                 `).join('')
                     : odemeler.map(o => `
@@ -160,14 +164,9 @@ export default function DersRapor() {
                 }
                         </tbody>
                     </table>
-                    ${type === 'ders' && showPrice ? `
                     <div class="total">
-                        Toplam Ders Ücreti: ${toplamDersUcreti()} TL
-                    </div>` : ''}
-                    ${type === 'odeme' ? `
-                    <div class="total">
-                        Toplam Tahsilat: ${toplamOdeme()} TL
-                    </div>` : ''}
+                        Toplam ${type === 'ders' ? 'Ders Ücreti' : 'Tahsilat'}: ${type === 'ders' ? toplamDersUcreti() : toplamOdeme()} TL
+                    </div>
                     <div class="footer">
                         Özdeta Öğretmen Takip Sistemi tarafından oluşturulmuştur.
                     </div>
@@ -177,18 +176,8 @@ export default function DersRapor() {
 
             const { uri } = await Print.printToFileAsync({ html: htmlContent });
 
-            // Özel dosya adı oluştur: "{Ad_Soyad}_{YYYYMMDD_HHmmss}.pdf"
-            const now = new Date();
-            const pad = (n: number) => n.toString().padStart(2, '0');
-            const tarihDamgasi = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-            const temizIsim = studentName.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_çÇğĞıİöÖşŞüÜ]/g, '');
-            const ozelDosyaAdi = `${temizIsim}_${tarihDamgasi}.pdf`;
-            // @ts-ignore
-            const yeniUri = (FileSystem.cacheDirectory ?? '') + ozelDosyaAdi;
-            await FileSystem.copyAsync({ from: uri, to: yeniUri });
-
             if (await Sharing.isAvailableAsync()) {
-                await Sharing.shareAsync(yeniUri, {
+                await Sharing.shareAsync(uri, {
                     mimeType: 'application/pdf',
                     dialogTitle: `${studentName} ${title}`,
                     UTI: 'com.adobe.pdf'
@@ -200,24 +189,6 @@ export default function DersRapor() {
             console.error('PDF Hatası:', error);
             Alert.alert('Hata', 'PDF raporu oluşturulamadı');
         }
-    };
-
-    // Ders PDF butonuna basıldığında ücret gösterilsin mi diye sor
-    const handleDersPdfPress = () => {
-        Alert.alert(
-            'Ders PDF',
-            'Yapılan derslerin ücretleri gösterilsin mi?',
-            [
-                {
-                    text: 'Hayır',
-                    onPress: () => generatePDF('ders', false)
-                },
-                {
-                    text: 'Evet',
-                    onPress: () => generatePDF('ders', true)
-                }
-            ]
-        );
     };
 
     // Teşekkür WhatsApp Mesajı Gönder
@@ -439,7 +410,8 @@ export default function DersRapor() {
                     <Text style={styles.itemTarih}>{formatTarih(item.tarih)}</Text>
                 </View>
                 <View style={styles.itemActions}>
-                    <Text style={[styles.itemUcret, { marginRight: 10 }]}>{item.ucret} TL</Text>
+                    {odemeGoster && (<Text style={[styles.itemUcret, { marginRight: 10 }]}>{item.ucret} TL</Text>)}
+
                     <TouchableOpacity onPress={() => duzenleDersAc(item)} style={styles.actionIcon}>
                         <MaterialIcons name="edit" size={20} color="#3498db" />
                     </TouchableOpacity>
@@ -448,11 +420,6 @@ export default function DersRapor() {
                     </TouchableOpacity>
                 </View>
             </View>
-            {isGeneralReport && item.ogrenciAdSoyad && (
-                <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#2c3e50', marginBottom: 4 }}>
-                    {item.ogrenciAdSoyad}
-                </Text>
-            )}
             <Text style={styles.itemKonu}>{item.konu || 'Konu belirtilmemiş'}</Text>
             <Text style={styles.itemSaat}>Saat: {item.saat}</Text>
         </View>
@@ -511,9 +478,18 @@ export default function DersRapor() {
 
             {/* Rapor PDF Butonları */}
             <View style={styles.pdfButtonsContainer}>
+                <View style={styles.switchContainer}>
+                    <Text style={styles.switchLabel}>Ödeme Göster</Text>
+                    <Switch
+                        value={odemeGoster}
+                        onValueChange={setOdemeGoster}
+                        trackColor={{ false: '#ccc', true: '#3498db' }}
+                        thumbColor={'#fff'}
+                    />
+                </View>
                 <TouchableOpacity
                     style={[styles.pdfButton, { backgroundColor: '#e67e22' }]}
-                    onPress={handleDersPdfPress}
+                    onPress={() => generatePDF('ders')}
                 >
                     <MaterialCommunityIcons name="file-pdf-box" size={20} color="white" />
                     <Text style={styles.pdfButtonText}>Ders PDF</Text>
@@ -529,27 +505,28 @@ export default function DersRapor() {
 
             <ScrollView style={styles.content}>
                 {/* Özet Bilgiler */}
-                <View style={styles.ozetContainer}>
-                    <View style={styles.ozetItem}>
-                        <Text style={styles.ozetLabel}>Toplam Ders</Text>
-                        <Text style={styles.ozetDeger}>{dersler.length}</Text>
+                {odemeGoster && (
+                    <View style={styles.ozetContainer}>
+                        <View style={styles.ozetItem}>
+                            <Text style={styles.ozetLabel}>Toplam Ders</Text>
+                            <Text style={styles.ozetDeger}>{dersler.length}</Text>
+                        </View>
+                        <View style={styles.ozetItem}>
+                            <Text style={styles.ozetLabel}>Ders Ücreti</Text>
+                            <Text style={styles.ozetDeger}>{toplamDersUcreti()} TL</Text>
+                        </View>
+                        <View style={styles.ozetItem}>
+                            <Text style={styles.ozetLabel}>Ödenen</Text>
+                            <Text style={styles.ozetDeger}>{toplamOdeme()} TL</Text>
+                        </View>
+                        <View style={styles.ozetItem}>
+                            <Text style={styles.ozetLabel}>Kalan</Text>
+                            <Text style={[styles.ozetDeger, { color: kalanUcret() > 0 ? '#e74c3c' : '#27ae60' }]}>
+                                {kalanUcret()} TL
+                            </Text>
+                        </View>
                     </View>
-                    <View style={styles.ozetItem}>
-                        <Text style={styles.ozetLabel}>Ders Ücreti</Text>
-                        <Text style={styles.ozetDeger}>{toplamDersUcreti()} TL</Text>
-                    </View>
-                    <View style={styles.ozetItem}>
-                        <Text style={styles.ozetLabel}>Ödenen</Text>
-                        <Text style={styles.ozetDeger}>{toplamOdeme()} TL</Text>
-                    </View>
-                    <View style={styles.ozetItem}>
-                        <Text style={styles.ozetLabel}>Kalan</Text>
-                        <Text style={[styles.ozetDeger, { color: kalanUcret() > 0 ? '#e74c3c' : '#27ae60' }]}>
-                            {kalanUcret()} TL
-                        </Text>
-                    </View>
-                </View>
-
+                )}
                 {/* Dersler Bölümü */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Yapılan Dersler ({dersler.length})</Text>
@@ -811,6 +788,16 @@ const styles = StyleSheet.create({
         marginLeft: 5,
         fontSize: 13,
     },
+    switchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    switchLabel: {
+        fontSize: 12,
+        color: '#333',
+        marginRight: 6,
+        fontWeight: '600',
+    },
     content: {
         flex: 1,
         padding: 16,
@@ -916,7 +903,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#3498db',
         padding: 12,
         borderRadius: 8,
-        marginBottom: 96,
+        marginBottom: 16,
     },
     odemeRaporButonText: {
         color: 'white',
@@ -928,16 +915,15 @@ const styles = StyleSheet.create({
         padding: 16,
         backgroundColor: 'white',
         borderTopWidth: 1,
-        borderTopColor: '#c7e3f7ff',
+        borderTopColor: '#e1e8ed',
     },
     smsButon: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#5bf89dff',
+        backgroundColor: '#27ae60',
         padding: 14,
         borderRadius: 8,
-        marginBottom: 80,
     },
     smsButonText: {
         color: 'white',

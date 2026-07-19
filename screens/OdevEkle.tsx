@@ -31,7 +31,6 @@ import {
     ogrenciOdevleri,
     tekOgrenci
 } from '../utils/database';
-import { odevSil } from '../database/homeworkOperations';
 import { KaynakType, OdevType, OgrenciType } from '../types';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -181,32 +180,6 @@ export default function OdevEkle() {
         }
     };
 
-    const handleOdevSil = (id: number) => {
-        Alert.alert(
-            'Ödev Sil',
-            'Bu ödevi silmek istediğinizden emin misiniz?',
-            [
-                { text: 'İptal', style: 'cancel' },
-                {
-                    text: 'Sil',
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            const result = await odevSil(id);
-                            if (result.success) {
-                                await odevleriYenile();
-                            } else {
-                                Alert.alert('Hata', 'Ödev silinemedi');
-                            }
-                        } catch (error) {
-                            Alert.alert('Hata', 'Silme işlemi başarısız');
-                        }
-                    }
-                }
-            ]
-        );
-    };
-
     // Tarih formatı
     const formatTarih = (tarih: string | Date | null | undefined) => {
         if (!tarih) return '-';
@@ -274,7 +247,6 @@ export default function OdevEkle() {
                         <thead>
                             <tr>
                                 <th>Verilme</th>
-                                <th>Teslim</th>
                                 <th>Ödev Konusu</th>
                                 <th>Kaynak</th>
                                 <th>Durum</th>
@@ -284,7 +256,6 @@ export default function OdevEkle() {
                             ${filtrelenmişOdevler.map(o => `
                                 <tr>
                                     <td>${formatTarih(o.verilmetarihi)}</td>
-                                    <td>${formatTarih(o.teslimttarihi)}</td>
                                     <td>${o.odev}</td>
                                     <td>${o.kaynak || '-'}</td>
                                     <td class="status-${o.yapilmadurumu}">${o.yapilmadurumu}</td>
@@ -410,13 +381,12 @@ export default function OdevEkle() {
                                                 onValueChange={setSeciliKaynak}
                                                 style={styles.picker}
                                             >
-                                                <Picker.Item label="Kaynak seçiniz..." value="" color="#f11616ff" />
+                                                <Picker.Item label="Kaynak seçiniz..." value="" />
                                                 {kaynaklar.map((kaynak) => (
                                                     <Picker.Item
                                                         key={kaynak.kaynakId}
                                                         label={kaynak.kaynak}
                                                         value={kaynak.kaynak}
-                                                        color="#f11313ff"
                                                     />
                                                 ))}
                                             </Picker>
@@ -454,7 +424,7 @@ export default function OdevEkle() {
                                         onChangeText={setOdevKonusu}
                                         placeholder="Ödev konusunu yazınız"
                                         multiline={true}
-                                    // numberOfLines={3}
+                                        numberOfLines={3}
                                     />
                                 </View>
 
@@ -506,7 +476,6 @@ export default function OdevEkle() {
                                         <OdevItem
                                             item={item}
                                             onGuncelle={odevGuncelleKaydet}
-                                            onSil={handleOdevSil}
                                         />
                                     )}
                                     keyExtractor={item => (item.odevId?.toString() || Math.random().toString())}
@@ -659,8 +628,8 @@ export default function OdevEkle() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#ffffff',
-        paddingTop: 6,
+        backgroundColor: '#f8f9fa',
+        paddingTop: 16,
     },
     loadingContainer: {
         flex: 1,
@@ -670,14 +639,14 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 3,
+        padding: 16,
         backgroundColor: 'white',
         borderBottomWidth: 1,
         borderBottomColor: '#e1e8ed',
         elevation: 2,
     },
     headerTitle: {
-        fontSize: 10,
+        fontSize: 18,
         fontWeight: 'bold',
         marginLeft: 16,
         color: '#333',
@@ -688,13 +657,13 @@ const styles = StyleSheet.create({
     },
     content: {
         flex: 1,
-        padding: 10,
-        paddingBottom: 10,
+        padding: 16,
+        paddingBottom: 80,
     },
     formContainer: {
         backgroundColor: 'white',
         borderRadius: 8,
-        padding: 6,
+        padding: 16,
         marginBottom: 16,
         elevation: 2,
     },
@@ -703,18 +672,17 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#3498db',
-        padding: 4,
+        padding: 12,
         borderRadius: 6,
-        marginBottom: 4,
-        flex: 0.3,
+        marginBottom: 16,
     },
     kaynakEkleText: {
         color: 'white',
         fontWeight: 'bold',
-        marginLeft: 4,
+        marginLeft: 6,
     },
     inputContainer: {
-        marginBottom: 6,
+        marginBottom: 16,
     },
     inputLabel: {
         fontSize: 14,
@@ -738,7 +706,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#ced4da',
         borderRadius: 8,
-        backgroundColor: '#f8ceceff',
+        backgroundColor: '#fff',
         overflow: 'hidden',
         justifyContent: 'center',
         elevation: 2,
@@ -754,9 +722,8 @@ const styles = StyleSheet.create({
     switchContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'flex-end',
-        marginBottom: 1,
-
+        justifyContent: 'space-between',
+        marginBottom: 16,
     },
     switchLabel: {
         fontSize: 14,
@@ -778,12 +745,11 @@ const styles = StyleSheet.create({
         color: '#333',
     },
     odevVerButon: {
-
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#27ae60',
-        padding: 4,
+        padding: 14,
         borderRadius: 6,
         marginTop: 8,
     },
@@ -798,7 +764,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         padding: 16,
         elevation: 2,
-        marginBottom: 20,
+        marginBottom: 30,
     },
     sectionTitle: {
         fontSize: 16,
@@ -838,7 +804,7 @@ const styles = StyleSheet.create({
     raporButon: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#0b9211ff',
+        backgroundColor: '#e67e22',
         paddingVertical: 8,
         paddingHorizontal: 16,
         borderRadius: 20,

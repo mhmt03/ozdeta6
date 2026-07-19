@@ -1,12 +1,11 @@
 
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Image, BackHandler, Alert, Platform, StatusBar as RNStatusBar } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Image, BackHandler, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { ogrencininOdemeleri, tekOgrenci, tumYapilanDersler } from '../utils/database';
 import { tarihAraligiAjandaGetir } from '../utils/ajandaDatabase';
-import GlobalNotlarModal from '../components/GlobalNotlarModal';
 
 import { AjandaType } from '../types';
 import { AjandaWithOgrenciType } from '../utils/ajandaDatabase';
@@ -17,7 +16,6 @@ export default function AnaSayfa() {
     const [aktifTarih, setAktifTarih] = useState(new Date());
     const [aktifTarihRandevulari, setAktifTarihRandevulari] = useState<AjandaWithOgrenciType[]>([]);
     const [sonDersler, setSonDersler] = useState<DersType[]>([]);
-    const [isNotlarModalVisible, setIsNotlarModalVisible] = useState(false);
 
     // Tarih formatı (gün.ay.yıl)
     const formatTarih = (tarih: Date) => {
@@ -55,7 +53,6 @@ export default function AnaSayfa() {
     const oncekiGun = () => {
         const yeniTarih = new Date(aktifTarih);
         yeniTarih.setDate(yeniTarih.getDate() - 1);
-        yeniTarih.setHours(12, 0, 0, 0);
         setAktifTarih(yeniTarih);
     };
 
@@ -63,15 +60,7 @@ export default function AnaSayfa() {
     const sonrakiGun = () => {
         const yeniTarih = new Date(aktifTarih);
         yeniTarih.setDate(yeniTarih.getDate() + 1);
-        yeniTarih.setHours(12, 0, 0, 0);
         setAktifTarih(yeniTarih);
-    };
-
-    // Bugün'e git.
-    const buguneGit = () => {
-        const today = new Date();
-        today.setHours(12, 0, 0, 0);
-        setAktifTarih(today);
     };
 
     useEffect(() => {
@@ -79,12 +68,7 @@ export default function AnaSayfa() {
 
         const asyncFonksion = async () => {
             try {
-                const year = aktifTarih.getFullYear();
-                const month = String(aktifTarih.getMonth() + 1).padStart(2, '0');
-                const day = String(aktifTarih.getDate()).padStart(2, '0');
-                const formattedDate = `${year}-${month}-${day}`;
-
-                const randevular = await tarihAraligiAjandaGetir(formattedDate, formattedDate);
+                const randevular = await tarihAraligiAjandaGetir(aktifTarih.toISOString().split('T')[0], aktifTarih.toISOString().split('T')[0]);
                 setAktifTarihRandevulari(randevular.data || []);
                 console.log("anasayfa_randevular", randevular.data);
             } catch (error) {
@@ -116,41 +100,32 @@ export default function AnaSayfa() {
         return today.toLocaleDateString('tr-TR', options);
     };
 
-    const renderRandevuItem = ({ item }: { item: AjandaWithOgrenciType }) => {
-        const isCancelled = item.iptal === 1;
-
-        return (
-            <TouchableOpacity
-                style={[styles.randevuItem, isCancelled && { opacity: 0.6 }]}
-                onPress={async () => {
-                    try {
-                        const ogrenciResult = await tekOgrenci(item.ogrenciId);
-                        if (ogrenciResult.success && ogrenciResult.data) {
-                            navigation.navigate('ogrenciDetay', { ogrenci: ogrenciResult.data });
-                        } else {
-                            console.error('Öğrenci bulunamadı:', ogrenciResult.error);
-                        }
-                    } catch (error) {
-                        console.error('Öğrenci bilgisi alınamadı:', error);
+    const renderRandevuItem = ({ item }: { item: AjandaWithOgrenciType }) => (
+        <TouchableOpacity
+            style={styles.randevuItem}
+            onPress={async () => {
+                try {
+                    const ogrenciResult = await tekOgrenci(item.ogrenciId);
+                    if (ogrenciResult.success && ogrenciResult.data) {
+                        navigation.navigate('ogrenciDetay', { ogrenci: ogrenciResult.data });
+                    } else {
+                        console.error('Öğrenci bulunamadı:', ogrenciResult.error);
                     }
-                }}
-            >
-                <View style={[styles.randevuSaat, isCancelled && { backgroundColor: '#e74c3c' }]}>
-                    <Text style={styles.randevuSaatText}>{item.saat}</Text>
-                </View>
-                <View style={styles.randevuBilgi}>
-                    <Text style={[styles.randevuOgrenci, isCancelled && { textDecorationLine: 'line-through', color: '#95a5a6' }]}>
-                        {item.ogrAdsoyad} {isCancelled && <Text style={{ color: '#e74c3c', fontSize: 12, fontWeight: 'bold' }}>(İPTAL EDİLDİ)</Text>}
-                    </Text>
-                    {/* <Text style={styles.randevuDers}>{item.konu || 'Ders'}</Text> */}
-                </View>
-                {item.tamamlandiMi === 1 && (
-                    <MaterialIcons name="check-circle" size={20} color="#2ecc71" style={{ marginRight: 10 }} />
-                )}
-                <MaterialIcons name="arrow-forward-ios" size={16} color="#666" />
-            </TouchableOpacity>
-        );
-    };
+                } catch (error) {
+                    console.error('Öğrenci bilgisi alınamadı:', error);
+                }
+            }}
+        >
+            <View style={styles.randevuSaat}>
+                <Text style={styles.randevuSaatText}>{item.saat}</Text>
+            </View>
+            <View style={styles.randevuBilgi}>
+                <Text style={styles.randevuOgrenci}>{item.ogrAdsoyad}</Text>
+                <Text style={styles.randevuDers}>{item.saat}</Text>
+            </View>
+            <MaterialIcons name="arrow-forward-ios" size={16} color="#666" />
+        </TouchableOpacity>
+    );
 
     const renderDersItem = ({ item }: { item: DersType }) => (
         <View style={styles.dersItem}>
@@ -209,12 +184,6 @@ export default function AnaSayfa() {
                             </Text>
                         </View>
 
-                        {!tarihleriKarsilastir(aktifTarih, new Date()) && (
-                            <TouchableOpacity onPress={buguneGit} style={styles.bugunButtonSmall}>
-                                <Text style={styles.bugunButtonTextSmall}>Bugün</Text>
-                            </TouchableOpacity>
-                        )}
-
                         <TouchableOpacity onPress={sonrakiGun} style={styles.tarihOk}>
                             <MaterialIcons name="chevron-right" size={24} color="#3498db" />
                         </TouchableOpacity>
@@ -244,7 +213,7 @@ export default function AnaSayfa() {
                         <View style={[styles.butonIcon, { backgroundColor: '#e74c3c' }]}>
                             <Ionicons name="settings" size={24} color="white" />
                         </View>
-                        <Text style={styles.butonText}>İşlemler</Text>
+                        <Text style={styles.butonText}>Ayarlar</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -266,16 +235,6 @@ export default function AnaSayfa() {
                         </View>
                         <Text style={styles.butonText}>Ajanda</Text>
                     </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={styles.buton}
-                        onPress={() => setIsNotlarModalVisible(true)}
-                    >
-                        <View style={[styles.butonIcon, { backgroundColor: '#f1c40f' }]}>
-                            <MaterialIcons name="notes" size={24} color="white" />
-                        </View>
-                        <Text style={styles.butonText}>Notlar</Text>
-                    </TouchableOpacity>
                 </View>
 
                 {/* Son Yapılan Dersler */}
@@ -295,10 +254,6 @@ export default function AnaSayfa() {
                     />
                 </View>
             </ScrollView>
-            <GlobalNotlarModal 
-                visible={isNotlarModalVisible} 
-                onClose={() => setIsNotlarModalVisible(false)} 
-            />
         </View>
     );
 }
@@ -306,8 +261,8 @@ export default function AnaSayfa() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#dfedfcff',
-        paddingTop: 0,
+        backgroundColor: '#f8f9fa',
+        paddingTop: 16,
     },
     scrollContent: {
         padding: 16,
@@ -316,7 +271,7 @@ const styles = StyleSheet.create({
     header: {
         backgroundColor: '#2c3e50',
         padding: 20,
-        paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight ? RNStatusBar.currentHeight + 15 : 40) : 45,
+        paddingTop: 40,
         borderBottomLeftRadius: 20,
         borderBottomRightRadius: 20,
         marginBottom: 20,
@@ -328,7 +283,7 @@ const styles = StyleSheet.create({
     headerExitButton: {
         position: 'absolute',
         right: 20,
-        top: Platform.OS === 'android' ? (RNStatusBar.currentHeight ? RNStatusBar.currentHeight + 15 : 40) : 45,
+        top: 40,
     },
     headerDate: {
         fontSize: 16,
@@ -336,13 +291,13 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     randevularContainer: {
-        backgroundColor: '#d4e4f7ff',
+        backgroundColor: 'white',
         borderRadius: 15,
         padding: 15,
         marginBottom: 20,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.4,
+        shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3,
     },
@@ -368,35 +323,18 @@ const styles = StyleSheet.create({
         paddingVertical: 15,
         paddingHorizontal: 10,
         marginBottom: 10,
-        backgroundColor: '#d4e4f7ff',
+        backgroundColor: '#f8f9fa',
         borderRadius: 10,
     },
     tarihOk: {
         padding: 8,
         borderRadius: 20,
-        backgroundColor: '#a4e2faff',
+        backgroundColor: 'white',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
         shadowRadius: 2,
         elevation: 2,
-    },
-    bugunButtonSmall: {
-        backgroundColor: '#cdc2f5ff',
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: 12,
-        marginHorizontal: 5,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
-    },
-    bugunButtonTextSmall: {
-        fontSize: 12,
-        color: '#2c3e50',
-        fontWeight: 'bold',
     },
     tarihContainer: {
         alignItems: 'center',
@@ -461,7 +399,7 @@ const styles = StyleSheet.create({
     },
     buton: {
         alignItems: 'center',
-        width: '23%',
+        width: '30%',
     },
     butonIcon: {
         width: 60,
@@ -470,15 +408,11 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 8,
-        shadowColor: '#b3adadff',
-        shadowOffset: { width: 2, height: 2 },
-        shadowOpacity: 0.6,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
         shadowRadius: 3,
         elevation: 3,
-        borderWidth: 3,
-        borderColor: 'rgba(179, 173, 173, 0.4)',
-
-
     },
     butonText: {
         fontSize: 12,
@@ -487,25 +421,15 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     derslerContainer: {
-        backgroundColor: '#d4e4f7ff',
+        backgroundColor: 'white',
         borderRadius: 15,
         padding: 15,
         marginBottom: 20,
         shadowColor: '#000',
-        shadowOffset: { width: 3, height: 5 },
+        shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3,
-        // İç gölge efekti
-        borderTopWidth: 1,
-        borderTopColor: 'rgba(255, 255, 255, 0.8)',
-        borderLeftWidth: 1,
-        borderLeftColor: 'rgba(255, 255, 255, 0.8)',
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(0, 0, 0, 0.08)',
-        borderRightWidth: 1,
-        borderRightColor: 'rgba(0, 0, 0, 0.08)',
-
     },
     dersItem: {
         flexDirection: 'row',

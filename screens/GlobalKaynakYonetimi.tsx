@@ -10,8 +10,7 @@ import {
     KeyboardAvoidingView,
     Platform,
     TouchableWithoutFeedback,
-    Keyboard,
-    ScrollView
+    Keyboard
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -20,20 +19,15 @@ import {
     getTumKaynaklar,
     tumKaynakSil
 } from '../database/homeworkOperations';
-import { sinavTuruEkle, getTumSinavTurleri, sinavTuruSil } from '../database/examTypeOperations';
-
 
 export default function GlobalKaynakYonetimi() {
     const navigation = useNavigation<any>();
     const [kaynaklar, setKaynaklar] = useState<{ id: number; ad: string }[]>([]);
     const [yeniKaynak, setYeniKaynak] = useState('');
-    const [sinavTurleri, setSinavTurleri] = useState<{ id: number; ad: string }[]>([]);
-    const [yeniSinavTuru, setYeniSinavTuru] = useState('');
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         verileriYukle();
-        loadSinavTurleri();
     }, []);
 
     const verileriYukle = async () => {
@@ -44,22 +38,10 @@ export default function GlobalKaynakYonetimi() {
                 setKaynaklar(result.data);
             }
         } catch (error) {
-            console.error('Kaynak yükleme hatası:', error);
+            console.error('Veri yükleme hatası:', error);
             Alert.alert('Hata', 'Kaynaklar yüklenemedi');
         } finally {
             setLoading(false);
-        }
-    };
-
-    const loadSinavTurleri = async () => {
-        try {
-            const result = await getTumSinavTurleri();
-            if (result.success) {
-                setSinavTurleri(result.data);
-            }
-        } catch (error) {
-            console.error('Sınav türleri yükleme hatası:', error);
-            Alert.alert('Hata', 'Sınav türleri yüklenemedi');
         }
     };
 
@@ -68,11 +50,14 @@ export default function GlobalKaynakYonetimi() {
             Alert.alert('Uyarı', 'Lütfen kaynak adını giriniz');
             return;
         }
+
+        // Aynı kaynak var mı kontrol et
         const mevcut = kaynaklar.find(k => k.ad.toLowerCase() === yeniKaynak.trim().toLowerCase());
         if (mevcut) {
             Alert.alert('Uyarı', 'Bu kaynak zaten mevcut');
             return;
         }
+
         try {
             const result = await tumKaynakEkle(yeniKaynak.trim());
             if (result.success) {
@@ -81,30 +66,6 @@ export default function GlobalKaynakYonetimi() {
                 Keyboard.dismiss();
             } else {
                 Alert.alert('Hata', 'Kaynak eklenemedi');
-            }
-        } catch (error) {
-            Alert.alert('Hata', 'İşlem başarısız');
-        }
-    };
-
-    const handleSinavTuruEkle = async () => {
-        if (!yeniSinavTuru.trim()) {
-            Alert.alert('Uyarı', 'Lütfen sınav türü giriniz');
-            return;
-        }
-        const mevcut = sinavTurleri.find(s => s.ad.toLowerCase() === yeniSinavTuru.trim().toLowerCase());
-        if (mevcut) {
-            Alert.alert('Uyarı', 'Bu sınav türü zaten mevcut');
-            return;
-        }
-        try {
-            const result = await sinavTuruEkle(yeniSinavTuru.trim());
-            if (result.success) {
-                setYeniSinavTuru('');
-                await loadSinavTurleri();
-                Keyboard.dismiss();
-            } else {
-                Alert.alert('Hata', 'Sınav türü eklenemedi');
             }
         } catch (error) {
             Alert.alert('Hata', 'İşlem başarısız');
@@ -124,28 +85,6 @@ export default function GlobalKaynakYonetimi() {
                         const result = await tumKaynakSil(id);
                         if (result.success) {
                             await verileriYukle();
-                        } else {
-                            Alert.alert('Hata', 'Silme işlemi başarısız');
-                        }
-                    }
-                }
-            ]
-        );
-    };
-
-    const handleSilSinavTuru = (id: number, ad: string) => {
-        Alert.alert(
-            'Sınav Türü Sil',
-            `"${ad}" sınav türünü silmek istediğinizden emin misiniz?`,
-            [
-                { text: 'Vazgeç', style: 'cancel' },
-                {
-                    text: 'Sil',
-                    style: 'destructive',
-                    onPress: async () => {
-                        const result = await sinavTuruSil(id);
-                        if (result.success) {
-                            await loadSinavTurleri();
                         } else {
                             Alert.alert('Hata', 'Silme işlemi başarısız');
                         }
@@ -181,87 +120,46 @@ export default function GlobalKaynakYonetimi() {
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
             >
-                <ScrollView
-                    style={{ flex: 1 }}
-                    contentContainerStyle={{ padding: 16 }}
-                    keyboardShouldPersistTaps="handled"
-                    showsVerticalScrollIndicator={false}
-                >
-                    <View style={styles.form}>
-                        <Text style={styles.formTitle}>Yeni Ortak Kaynak Ekle</Text>
-                        <View style={styles.inputRow}>
-                            <TextInput
-                                style={styles.input}
-                                value={yeniKaynak}
-                                onChangeText={setYeniKaynak}
-                                placeholder="Kitap/Kaynak adı giriniz"
-                            />
-                            <TouchableOpacity style={styles.ekleButon} onPress={handleEkle}>
-                                <MaterialIcons name="add" size={24} color="white" />
-                            </TouchableOpacity>
+                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                    <View style={styles.content}>
+                        <View style={styles.form}>
+                            <Text style={styles.formTitle}>Yeni Ortak Kaynak Ekle</Text>
+                            <View style={styles.inputRow}>
+                                <TextInput
+                                    style={styles.input}
+                                    value={yeniKaynak}
+                                    onChangeText={setYeniKaynak}
+                                    placeholder="Kitap/Kaynak adı giriniz"
+                                />
+                                <TouchableOpacity style={styles.ekleButon} onPress={handleEkle}>
+                                    <MaterialIcons name="add" size={24} color="white" />
+                                </TouchableOpacity>
+                            </View>
+                            <Text style={styles.aciklama}>
+                                Buraya eklediğiniz kaynaklar tüm öğrencilerinize ödev verirken veya kaynak seçerken listede görünecektir.
+                            </Text>
                         </View>
-                        <Text style={styles.aciklama}>
-                            Buraya eklediğiniz kaynaklar tüm öğrencilerinize ödev verirken veya kaynak seçerken listede görünecektir.
-                        </Text>
-                        <Text style={styles.listeTitle}>Sistemdeki Kaynaklar ({kaynaklar.length})</Text>
-                        <FlatList
-                            data={kaynaklar}
-                            renderItem={renderItem}
-                            keyExtractor={item => item.id.toString()}
-                            showsVerticalScrollIndicator={false}
-                            contentContainerStyle={{ paddingBottom: 20 }}
-                            scrollEnabled={false}
-                        />
 
-                    </View>
-
-
-
-                    <View style={styles.listeContainer}>
-                        <Text style={styles.formTitle}>Yeni Sınav Türü Ekle</Text>
-                        <View style={styles.inputRow}>
-                            <TextInput
-                                style={styles.input}
-                                value={yeniSinavTuru}
-                                onChangeText={setYeniSinavTuru}
-                                placeholder="Sınav türü giriniz"
+                        <View style={styles.listeContainer}>
+                            <Text style={styles.listeTitle}>Sistemdeki Kaynaklar ({kaynaklar.length})</Text>
+                            <FlatList
+                                data={kaynaklar}
+                                renderItem={renderItem}
+                                keyExtractor={item => item.id.toString()}
+                                showsVerticalScrollIndicator={false}
+                                contentContainerStyle={{ paddingBottom: 20 }}
                             />
-                            <TouchableOpacity style={styles.ekleButon} onPress={handleSinavTuruEkle}>
-                                <MaterialIcons name="add" size={24} color="white" />
-                            </TouchableOpacity>
                         </View>
-                        <Text style={styles.listeTitle}>Sistemdeki Sınav Türleri ({sinavTurleri.length})</Text>
-                        <FlatList
-                            data={sinavTurleri}
-                            renderItem={({ item }) => (
-                                <View style={styles.item}>
-                                    <View style={styles.itemInfo}>
-                                        <Text style={styles.ad}>{item.ad}</Text>
-                                    </View>
-                                    <TouchableOpacity onPress={() => handleSilSinavTuru(item.id, item.ad)} style={styles.silButon}>
-                                        <MaterialIcons name="delete" size={20} color="#e74c3c" />
-                                    </TouchableOpacity>
-                                </View>
-                            )}
-                            keyExtractor={item => item.id.toString()}
-                            showsVerticalScrollIndicator={false}
-                            contentContainerStyle={{ paddingBottom: 20 }}
-                            scrollEnabled={false}
-                        />
                     </View>
-
-
-
-
-                </ScrollView>
+                </TouchableWithoutFeedback>
             </KeyboardAvoidingView>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
+    container: { 
+        flex: 1, 
         backgroundColor: '#f8f9fa',
         paddingTop: 16,
         paddingBottom: 80,
@@ -305,7 +203,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     aciklama: { fontSize: 12, color: '#7f8c8d', marginTop: 10, fontStyle: 'italic' },
-    listeContainer: { flex: 1, backgroundColor: 'white', padding: 16, borderRadius: 12, elevation: 2, marginBottom: 30 },
+    listeContainer: { flex: 1, backgroundColor: 'white', padding: 16, borderRadius: 12, elevation: 2 },
     listeTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 12, color: '#2c3e50' },
     item: {
         flexDirection: 'row',

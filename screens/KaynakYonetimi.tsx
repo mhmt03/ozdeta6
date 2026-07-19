@@ -212,7 +212,7 @@ export default function KaynakYonetimi() {
                                     <MaterialIcons name="add" size={24} color="white" />
                                 </TouchableOpacity>
                             </View>
-                            <TouchableOpacity
+                            <TouchableOpacity 
                                 style={styles.manageGlobalBtn}
                                 onPress={() => navigation.navigate('GlobalKaynakYonetimi')}
                             >
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
         borderColor: '#ddd',
         borderRadius: 6,
         marginRight: 10,
-        backgroundColor: '#f8c8c8ff',
+        backgroundColor: '#fff',
         height: 50,
         justifyContent: 'center',
     },

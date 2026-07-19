@@ -391,7 +391,7 @@ export default function Denemeler() {
 
 
                                 <View style={{ flexDirection: 'row' }}>
-                                    <View style={[styles.inputContainer, { width: '40%' }]}>
+                                    <View style={[styles.inputContainer, { width: '50%' }]}>
                                         <Text style={styles.inputLabel}>Sınav Türü Seç</Text>
                                         <View style={styles.pickerContainer}>
                                             <Picker
@@ -413,7 +413,7 @@ export default function Denemeler() {
                                         </View>
                                     </View>
 
-                                    <View style={[styles.inputContainer, { width: '40%', paddingLeft: 20 }]}>
+                                    <View style={[styles.inputContainer, { width: '50%', paddingLeft: 20 }]}>
                                         <Text style={styles.inputLabel}>Tarih</Text>
                                         <TouchableOpacity
                                             style={[styles.dateButton, { width: '100%' }]}
@@ -422,8 +422,6 @@ export default function Denemeler() {
                                             <MaterialIcons name="date-range" size={20} color="#666" />
                                             <Text style={styles.dateText}>{formatTarih(denemeTarih)}</Text>
                                         </TouchableOpacity>
-
-
 
                                     </View>
 
@@ -829,7 +827,7 @@ const styles = StyleSheet.create({
     picker: {
         height: 75,
         color: '#032c55ff',
-        fontSize: 18,
+        fontSize: 1,
     },
     dateButton: {
         flexDirection: 'row',
