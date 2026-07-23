@@ -479,7 +479,7 @@ export default function DersRapor() {
             {/* Rapor PDF Butonları */}
             <View style={styles.pdfButtonsContainer}>
                 <View style={styles.switchContainer}>
-                    <Text style={styles.switchLabel}>Ödeme Göster</Text>
+                    <Text style={styles.switchLabel}>Ücret Göster</Text>
                     <Switch
                         value={odemeGoster}
                         onValueChange={setOdemeGoster}

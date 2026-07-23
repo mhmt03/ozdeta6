@@ -111,6 +111,30 @@ export async function ajandaGuncelle(ajandaId: number, kayit: AjandaType) {
     }
 }
 
+// Öğrenciye ait belirli tarih aralığındaki ajanda kayıtlarını getir
+export async function ogrenciAjandaGetir(ogrenciId: number, baslangicTarih: string, bitisTarih: string) {
+    try {
+        const db = await ensureDatabaseReady();
+        const rows = await db.getAllAsync<AjandaWithOgrenciType>(
+            `SELECT 
+                a.*,
+                o.ogrenciAd,
+                o.ogrenciSoyad,
+                o.ogrenciTel,
+                o.aktifmi
+             FROM ajanda a 
+             LEFT JOIN ogrenciler o ON a.ogrenciId = o.ogrenciId 
+             WHERE a.ogrenciId = ? AND a.tarih BETWEEN ? AND ? 
+             ORDER BY a.tarih DESC, a.saat DESC`,
+            [ogrenciId, baslangicTarih, bitisTarih]
+        );
+        return { success: true, data: rows };
+    } catch (error: any) {
+        console.error("Öğrenci ajanda kayıtları getirilemedi:", error);
+        return { success: false, error: error.message };
+    }
+}
+
 // Randevu iptal et
 export async function randevuIptal(ajandaId: number) {
     try {
@@ -164,29 +188,6 @@ export async function ajandaSiradakiKayitlariSil(olusmaAni: string, tarih: strin
         return { success: true, deletedCount: result.changes };
     } catch (error: any) {
         console.error("Sıradaki ajanda kayıtları silinemedi:", error);
-        return { success: false, error: error.message };
-    }
-}
-
-export async function ogrenciAjandaGetir(ogrenciId: number) {
-    try {
-        const db = await ensureDatabaseReady();
-        const rows = await db.getAllAsync<AjandaWithOgrenciType>(
-            `SELECT 
-                a.*,
-                o.ogrenciAd,
-                o.ogrenciSoyad,
-                o.ogrenciTel,
-                o.aktifmi
-             FROM ajanda a 
-             LEFT JOIN ogrenciler o ON a.ogrenciId = o.ogrenciId 
-             WHERE a.ogrenciId = ? 
-             ORDER BY a.tarih, a.saat`,
-            [ogrenciId]
-        );
-        return { success: true, data: rows };
-    } catch (error: any) {
-        console.error("Öğrenci ajandası getirilemedi:", error);
         return { success: false, error: error.message };
     }
 }

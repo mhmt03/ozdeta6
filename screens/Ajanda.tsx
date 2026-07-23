@@ -509,7 +509,7 @@ export default function Ajanda() {
                                 <Text style={styles.modalTitle}>Öğrenci Listesi ({ogrenciler.length})</Text>
                                 {ogrenciler.length > 0 ? (
                                     <FlatList data={ogrenciler} renderItem={({ item }: { item: OgrenciType }) => (
-                                        <TouchableOpacity style={styles.ogrenciItem} onPress={() => setShowOgrenciList(false)}>
+                                        <TouchableOpacity style={styles.ogrenciItem} onPress={() => { setShowOgrenciList(false); navigation.navigate('ogrenciDetay', { ogrenci: item }); }}>
                                             <Text style={styles.ogrenciText}>{item.ogrenciAd} {item.ogrenciSoyad}</Text>
                                         </TouchableOpacity>
                                     )} keyExtractor={(item) => item.ogrenciId?.toString() || Math.random().toString()} />

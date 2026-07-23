@@ -827,7 +827,7 @@ const styles = StyleSheet.create({
     picker: {
         height: 75,
         color: '#032c55ff',
-        fontSize: 1,
+        fontSize: 10,
     },
     dateButton: {
         flexDirection: 'row',
@@ -840,7 +840,7 @@ const styles = StyleSheet.create({
     },
     dateText: {
         marginLeft: 8,
-        fontSize: 16,
+        fontSize: 12,
         color: '#333',
     },
     textInput: {

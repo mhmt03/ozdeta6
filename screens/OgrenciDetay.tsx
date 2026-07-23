@@ -9,7 +9,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { ogrenciSil } from '../database/studentOperations';
 import { odemeSil, odemeKaydet, dersiKaydet, getOdemeler, getDersler, dersSil, getSonDers } from '../database/financeOperations';
 import { getBekleyenOdevSayisi } from '../database/homeworkOperations';
-import { OgrenciType, DersType, OdemeType } from '../types';
+import { OgrenciType, DersType, OdemeType, AjandaWithOgrenciType } from '../types';
+import { ogrenciAjandaGetir } from '../database/agendaOperations';
 
 export default function OgrenciDetay() {
     const navigation = useNavigation<any>();
@@ -40,6 +41,15 @@ export default function OgrenciDetay() {
     const [kalanUcret, setKalanUcret] = useState(0);
     const [sonDers, setSonDers] = useState<DersType | null>(null);
     const [bekleyenOdevler, setBekleyenOdevler] = useState(0);
+
+    // Ajanda kartı state'leri
+    const [ajandaSwitch, setAjandaSwitch] = useState(false); // default kapalı
+    const [ajandaBaslangic, setAjandaBaslangic] = useState(new Date());
+    const [ajandaBitis, setAjandaBitis] = useState(new Date());
+    const [ajandaBaslangicPicker, setAjandaBaslangicPicker] = useState(false);
+    const [ajandaBitisPicker, setAjandaBitisPicker] = useState(false);
+    const [ajandaKayitlari, setAjandaKayitlari] = useState<AjandaWithOgrenciType[]>([]);
+    const [ajandaYukleniyor, setAjandaYukleniyor] = useState(false);
 
 
     // Telefon arama fonksiyonu
@@ -152,6 +162,30 @@ export default function OgrenciDetay() {
             setBekleyenOdevler(count);
         } catch (error) {
             console.error('Bekleyen ödevler getirme hatası:', error);
+        }
+    };
+
+    // Ajanda kayıtlarını listeleme
+    const ajandaListele = async () => {
+        if (!ogrenci.ogrenciId) return;
+        setAjandaYukleniyor(true);
+        try {
+            const baslangicStr = ajandaBaslangic.toISOString().split('T')[0];
+            const bitisStr = ajandaBitis.toISOString().split('T')[0];
+            const sonuc = await ogrenciAjandaGetir(ogrenci.ogrenciId, baslangicStr, bitisStr);
+            if (sonuc.success && sonuc.data) {
+                setAjandaKayitlari(sonuc.data);
+                if (sonuc.data.length === 0) {
+                    Alert.alert('Bilgi', 'Seçilen tarih aralığında ajanda kaydı bulunamadı.');
+                }
+            } else {
+                Alert.alert('Hata', 'Ajanda kayıtları getirilemedi.');
+            }
+        } catch (error: any) {
+            console.error('Ajanda listeleme hatası:', error);
+            Alert.alert('Hata', 'Ajanda kayıtları getirilemedi: ' + error.message);
+        } finally {
+            setAjandaYukleniyor(false);
         }
     };
 
@@ -460,6 +494,106 @@ export default function OgrenciDetay() {
                                         <Text style={styles.bilgiDeger}>{ogrenci.aciklama2}</Text>
                                     </View>
                                 )}
+                            </View>
+                        )}
+                    </View>
+                )}
+
+                {/* Ajanda Kayıtları Kartı */}
+                <View style={styles.switchContainer}>
+                    <Text style={styles.switchLabel}>Ajanda Kayıtları</Text>
+                    <Switch
+                        value={ajandaSwitch}
+                        onValueChange={setAjandaSwitch}
+                        trackColor={{ false: '#767577', true: '#81b0ff' }}
+                        thumbColor={ajandaSwitch ? '#2196F3' : '#f4f3f4'}
+                    />
+                </View>
+
+                {ajandaSwitch && (
+                    <View style={styles.ajandaCard}>
+                        {/* Tarih Seçiciler */}
+                        <View style={styles.tarihSeciciRow}>
+                            <TouchableOpacity
+                                style={styles.tarihButon}
+                                onPress={() => setAjandaBaslangicPicker(true)}
+                            >
+                                <MaterialIcons name="date-range" size={18} color="#2196F3" />
+                                <Text style={styles.tarihButonText}>
+                                    Başlangıç: {ajandaBaslangic.toLocaleDateString('tr-TR')}
+                                </Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={styles.tarihButon}
+                                onPress={() => setAjandaBitisPicker(true)}
+                            >
+                                <MaterialIcons name="date-range" size={18} color="#2196F3" />
+                                <Text style={styles.tarihButonText}>
+                                    Bitiş: {ajandaBitis.toLocaleDateString('tr-TR')}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {ajandaBaslangicPicker && (
+                            <DateTimePicker
+                                value={ajandaBaslangic}
+                                mode="date"
+                                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                                onChange={(event, selectedDate) => {
+                                    setAjandaBaslangicPicker(false);
+                                    if (selectedDate) setAjandaBaslangic(selectedDate);
+                                }}
+                            />
+                        )}
+
+                        {ajandaBitisPicker && (
+                            <DateTimePicker
+                                value={ajandaBitis}
+                                mode="date"
+                                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                                onChange={(event, selectedDate) => {
+                                    setAjandaBitisPicker(false);
+                                    if (selectedDate) setAjandaBitis(selectedDate);
+                                }}
+                            />
+                        )}
+
+                        {/* Listele Butonu */}
+                        <TouchableOpacity
+                            style={styles.listeleButon}
+                            onPress={ajandaListele}
+                            disabled={ajandaYukleniyor}
+                        >
+                            <MaterialIcons name="search" size={18} color="#fff" />
+                            <Text style={styles.listeleButonText}>
+                                {ajandaYukleniyor ? 'Yükleniyor...' : 'Listele'}
+                            </Text>
+                        </TouchableOpacity>
+
+                        {/* Ajanda Kayıtları Listesi */}
+                        {ajandaKayitlari.length > 0 && (
+                            <View style={styles.ajandaListContainer}>
+                                <Text style={styles.ajandaListBaslik}>
+                                    {ajandaKayitlari.length} kayıt bulundu
+                                </Text>
+                                {ajandaKayitlari.map((item, index) => (
+                                    <TouchableOpacity
+                                        key={item.ajandaId || index}
+                                        style={styles.ajandaListItem}
+                                        onPress={() => {
+                                            navigation.navigate('AjandaRandevuDuzenle', { randevu: item });
+                                        }}
+                                    >
+                                        <View style={styles.ajandaListItemLeft}>
+                                            <MaterialIcons name="event" size={16} color="#2196F3" />
+                                            <Text style={styles.ajandaListItemText}>
+                                                {item.tarih} {item.saat}
+                                            </Text>
+                                        </View>
+                                        <MaterialIcons name="chevron-right" size={20} color="#999" />
+                                    </TouchableOpacity>
+                                ))}
                             </View>
                         )}
                     </View>
@@ -1105,5 +1239,79 @@ const styles = StyleSheet.create({
         padding: 8,
         borderRadius: 5,
         marginLeft: 5,
+    },
+    // Ajanda Kartı Stilleri
+    ajandaCard: {
+        backgroundColor: 'white',
+        padding: 15,
+        borderRadius: 10,
+        marginBottom: 15,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 3,
+    },
+    tarihSeciciRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 15,
+    },
+    tarihButon: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 8,
+        padding: 10,
+        backgroundColor: '#f9f9f9',
+        flex: 0.48,
+    },
+    tarihButonText: {
+        marginLeft: 8,
+        fontSize: 13,
+        color: '#333',
+    },
+    listeleButon: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#2196F3',
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 15,
+    },
+    listeleButonText: {
+        color: '#fff',
+        fontWeight: '600',
+        fontSize: 15,
+        marginLeft: 8,
+    },
+    ajandaListContainer: {
+        marginTop: 5,
+    },
+    ajandaListBaslik: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#7f8c8d',
+        marginBottom: 10,
+    },
+    ajandaListItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 12,
+        paddingHorizontal: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: '#ecf0f1',
+    },
+    ajandaListItemLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    ajandaListItemText: {
+        fontSize: 14,
+        color: '#2c3e50',
+        marginLeft: 10,
     },
 });
