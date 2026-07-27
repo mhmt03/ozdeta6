@@ -1,9 +1,8 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Image, BackHandler, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
+import GlobalNotlarModal from '../components/GlobalNotlarModal';
 import { ogrencininOdemeleri, tekOgrenci, tumYapilanDersler } from '../utils/database';
 import { tarihAraligiAjandaGetir } from '../utils/ajandaDatabase';
 
@@ -13,9 +12,16 @@ import { DersType } from '../types';
 
 export default function AnaSayfa() {
     const navigation = useNavigation<any>();
+    const [notMetni, setNotMetni] = useState('');
+    const [globalNotlarVisible, setGlobalNotlarVisible] = useState(false);
     const [aktifTarih, setAktifTarih] = useState(new Date());
     const [aktifTarihRandevulari, setAktifTarihRandevulari] = useState<AjandaWithOgrenciType[]>([]);
     const [sonDersler, setSonDersler] = useState<DersType[]>([]);
+
+    // Not Modal Aç
+    const openNotlarModal = () => {
+        setGlobalNotlarVisible(true);
+    };
 
     // Tarih formatı (gün.ay.yıl)
     const formatTarih = (tarih: Date) => {
@@ -153,6 +159,10 @@ export default function AnaSayfa() {
 
     return (
         <View style={styles.container}>
+            <GlobalNotlarModal
+                visible={globalNotlarVisible}
+                onClose={() => setGlobalNotlarVisible(false)}
+            />
             {/* Başlık */}
             <View style={styles.header}>
                 <TouchableOpacity style={styles.headerExitButton} onPress={handleExit}>
@@ -166,9 +176,14 @@ export default function AnaSayfa() {
                 <View style={styles.randevularContainer}>
                     <View style={styles.sectionHeader}>
                         <Text style={styles.sectionTitle}>Randevular</Text>
-                        <TouchableOpacity onPress={() => navigation.navigate('Ajanda')}>
-                            <Text style={styles.tumunuGor}>Tümünü Gör</Text>
-                        </TouchableOpacity>
+                        <View style={styles.headerButtonsRow}>
+                            <TouchableOpacity onPress={() => navigation.navigate('Ajanda')} style={styles.tumunuGorButton}>
+                                <Text style={styles.tumunuGor}>Tümünü Gör</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={openNotlarModal} style={styles.tumunuGorButton}>
+                                <Text style={styles.tumunuGor}>Notlar</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
 
                     {/* Tarih Navigasyonu */}
@@ -234,6 +249,16 @@ export default function AnaSayfa() {
                             <MaterialIcons name="event-note" size={24} color="white" />
                         </View>
                         <Text style={styles.butonText}>Ajanda</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.buton}
+                        onPress={openNotlarModal}
+                    >
+                        <View style={[styles.butonIcon, { backgroundColor: '#f1c40f' }]}
+                        >
+                            <Ionicons name="clipboard" size={24} color="white" />
+                        </View>
+                        <Text style={styles.butonText}>Notlar</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -394,12 +419,12 @@ const styles = StyleSheet.create({
     },
     butonlarContainer: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
+        justifyContent: 'space-around',
         marginBottom: 20,
     },
     buton: {
         alignItems: 'center',
-        width: '30%',
+        width: '22%',
     },
     butonIcon: {
         width: 60,

@@ -27,8 +27,12 @@ import {
     ogrencininOdemeleri,
     tumYapilanDersler,
     tumOdemeleriGetir,
-    veritabaniTemizle
+    veritabaniTemizle,
+    getDersler,
+    getOdemeler,
+    ogrenciNotlari
 } from '../utils/database';
+import { ogrenciAjandaGetir } from '../utils/ajandaDatabase';
 
 export default function Ayarlar() {
     const navigation = useNavigation<any>();
@@ -56,6 +60,14 @@ export default function Ayarlar() {
         notlarim: true,
         ajanda: true
     });
+
+    // Öğrenci Excel Raporu state'leri
+    const [ogrenciExcelModalAcik, setOgrenciExcelModalAcik] = useState(false);
+    const [ogrenciListesi, setOgrenciListesi] = useState<any[]>([]);
+
+    // Son Ödemeler state'leri
+    const [sonOdemelerModalAcik, setSonOdemelerModalAcik] = useState(false);
+    const [sonOdemeler, setSonOdemeler] = useState<any[]>([]);
 
     useEffect(() => {
         borcluOgrencileriHesapla();
@@ -665,6 +677,221 @@ export default function Ayarlar() {
     };
 
     /**
+     * Öğrenci Excel Raporu modalını aç
+     */
+    const ogrenciExcelModalAc = async () => {
+        try {
+            setLoading(true);
+            const result = await ogrencileriListele(false);
+            if (result.success) {
+                setOgrenciListesi(result.data ?? []);
+                setOgrenciExcelModalAcik(true);
+            } else {
+                Alert.alert('Hata', 'Öğrenci listesi alınamadı');
+            }
+        } catch (error) {
+            console.error('Öğrenci listesi hatası:', error);
+            Alert.alert('Hata', 'Öğrenci listesi yüklenemedi');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    /**
+     * Seçilen öğrencinin tüm verilerini Excel'e yazdır
+     */
+    const ogrenciExcelRaporuOlustur = async (ogrenci: any) => {
+        try {
+            setOgrenciExcelModalAcik(false);
+            setLoading(true);
+
+            const ogrenciId = ogrenci.ogrenciId;
+            const adSoyad = `${ogrenci.ogrenciAd} ${ogrenci.ogrenciSoyad}`;
+
+            // Tüm verileri paralel olarak çek
+            const [derslerData, odemelerData, notlarData, ajandaData] = await Promise.all([
+                getDersler(ogrenciId),
+                getOdemeler(ogrenciId),
+                ogrenciNotlari(ogrenciId),
+                ogrenciAjandaGetir(ogrenciId, '2020-01-01', '2099-12-31')
+            ]);
+
+            const dersler = derslerData || [];
+            const odemeler = odemelerData || [];
+            const notlar = notlarData?.data || [];
+            const randevular = ajandaData?.data || [];
+
+            // Excel Workbook oluştur
+            const workbook = XLSX.utils.book_new();
+
+            // 1. ÖĞRENCİ BİLGİLERİ sayfası
+            const ogrenciBilgiData: any[][] = [
+                ['ÖĞRENCİ BİLGİLERİ'],
+                [`Oluşturulma Tarihi: ${new Date().toLocaleString('tr-TR')}`],
+                [''],
+                ['Alan', 'Değer'],
+                ['Ad Soyad', adSoyad],
+                ['Telefon', ogrenci.ogrenciTel || '-'],
+                ['Veli Adı', ogrenci.veliAd || '-'],
+                ['Veli Telefon', ogrenci.veliTel || '-'],
+                ['Okul', ogrenci.okul || '-'],
+                ['Sınıf', ogrenci.sinif || '-'],
+                ['Ücret', `${ogrenci.ucret || 0} TL`],
+                ['Kayıt Tarihi', ogrenci.kayitTarihi || '-'],
+                ['Durum', ogrenci.aktifmi ? 'Aktif' : 'Pasif'],
+                ['Açıklama', ogrenci.aciklama1 || '-'],
+            ];
+            const ogrenciSheet = XLSX.utils.aoa_to_sheet(ogrenciBilgiData);
+            XLSX.utils.book_append_sheet(workbook, ogrenciSheet, 'Öğrenci Bilgileri');
+
+            // 2. DERSLER sayfası
+            const derslerSheetData: any[][] = [
+                [`${adSoyad} - DERS RAPORU`],
+                [`Toplam Ders: ${dersler.length}`],
+                [''],
+                ['Tarih', 'Saat', 'Konu', 'Ders Türü', 'Ücret (TL)']
+            ];
+            let toplamDersUcreti = 0;
+            dersler.forEach(ders => {
+                derslerSheetData.push([
+                    ders.tarih,
+                    ders.saat,
+                    ders.konu || '-',
+                    ders.dersturu || '-',
+                    parseInt(String(ders.ucret)) || 0
+                ]);
+                toplamDersUcreti += parseInt(String(ders.ucret)) || 0;
+            });
+            derslerSheetData.push(['', '', '', 'TOPLAM:', `${toplamDersUcreti} TL`]);
+            const derslerSheet = XLSX.utils.aoa_to_sheet(derslerSheetData);
+            XLSX.utils.book_append_sheet(workbook, derslerSheet, 'Dersler');
+
+            // 3. ÖDEMELER sayfası
+            const odemelerSheetData: any[][] = [
+                [`${adSoyad} - ÖDEME RAPORU`],
+                [`Toplam Ödeme Sayısı: ${odemeler.length}`],
+                [''],
+                ['Tarih', 'Saat', 'Tür', 'Açıklama', 'Miktar (TL)']
+            ];
+            let toplamOdeme = 0;
+            odemeler.forEach(odeme => {
+                odemelerSheetData.push([
+                    odeme.odemetarih,
+                    odeme.odemesaati || '-',
+                    odeme.odemeturu || '-',
+                    odeme.aciklama || '-',
+                    parseInt(String(odeme.alinanucret)) || 0
+                ]);
+                toplamOdeme += parseInt(String(odeme.alinanucret)) || 0;
+            });
+            odemelerSheetData.push(['', '', '', 'TOPLAM:', `${toplamOdeme} TL`]);
+            const odemelerSheet = XLSX.utils.aoa_to_sheet(odemelerSheetData);
+            XLSX.utils.book_append_sheet(workbook, odemelerSheet, 'Ödemeler');
+
+            // 4. RANDEVULAR (AJANDA) sayfası
+            const ajandaSheetData: any[][] = [
+                [`${adSoyad} - RANDEVU RAPORU`],
+                [`Toplam Randevu: ${randevular.length}`],
+                [''],
+                ['Tarih', 'Saat', 'Durum']
+            ];
+            randevular.forEach((randevu: any) => {
+                const durum = randevu.tamamlandiMi ? 'Tamamlandı' : (randevu.iptal ? 'İptal' : 'Bekliyor');
+                ajandaSheetData.push([
+                    randevu.tarih,
+                    randevu.saat,
+                    durum
+                ]);
+            });
+            const ajandaSheet = XLSX.utils.aoa_to_sheet(ajandaSheetData);
+            XLSX.utils.book_append_sheet(workbook, ajandaSheet, 'Randevular');
+
+            // 5. NOTLAR sayfası
+            const notlarSheetData: any[][] = [
+                [`${adSoyad} - NOTLAR`],
+                [`Toplam Not: ${notlar.length}`],
+                [''],
+                ['Tarih', 'Not İçeriği']
+            ];
+            notlar.forEach((not: any) => {
+                notlarSheetData.push([
+                    not.tarih,
+                    not.not1 || '-'
+                ]);
+            });
+            const notlarSheet = XLSX.utils.aoa_to_sheet(notlarSheetData);
+            XLSX.utils.book_append_sheet(workbook, notlarSheet, 'Notlar');
+
+            // ÖZET sayfası
+            const ozetData: any[][] = [
+                [`${adSoyad} - ÖZET RAPOR`],
+                [`Oluşturulma Tarihi: ${new Date().toLocaleString('tr-TR')}`],
+                [''],
+                ['Bilgi', 'Değer'],
+                ['Toplam Ders Sayısı', dersler.length],
+                ['Toplam Ders Ücreti', `${toplamDersUcreti} TL`],
+                ['Toplam Ödeme Sayısı', odemeler.length],
+                ['Toplam Ödenen', `${toplamOdeme} TL`],
+                ['Kalan Borç', `${toplamDersUcreti - toplamOdeme} TL`],
+                ['Toplam Randevu', randevular.length],
+                ['Toplam Not', notlar.length],
+            ];
+            const ozetSheet = XLSX.utils.aoa_to_sheet(ozetData);
+            XLSX.utils.book_append_sheet(workbook, ozetSheet, 'Özet');
+
+            // Excel dosyasını oluştur
+            const excelBuffer = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
+            const dosyaAdi = `ogrenci_rapor_${ogrenci.ogrenciAd}_${ogrenci.ogrenciSoyad}_${detayliTarihFormatla()}.xlsx`;
+
+            const result = await akilliDosyaKaydet(
+                dosyaAdi,
+                excelBuffer,
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            );
+
+            if (result.success) {
+                Alert.alert('Excel Raporu Oluşturuldu', `${adSoyad} için rapor başarıyla oluşturuldu.\n\n${result.message}`);
+            } else {
+                Alert.alert('Hata', result.error || 'Rapor oluşturulamadı');
+            }
+
+        } catch (error) {
+            console.error('Öğrenci Excel raporu hatası:', error);
+            Alert.alert('Hata', 'Öğrenci raporu oluşturulamadı: ' + (error as any).message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    /**
+     * Son 20 ödemeyi getir ve modalı aç
+     */
+    const sonOdemeleriGetir = async () => {
+        try {
+            setLoading(true);
+            const result = await tumOdemeleriGetir();
+            if (result.success) {
+                const tumOdemeler = result.odemeler || [];
+                // Tarihe göre ters sırala ve ilk 20'yi al
+                const sirali = [...tumOdemeler].sort((a, b) => {
+                    const tarihA = new Date(a.odemetarih).getTime();
+                    const tarihB = new Date(b.odemetarih).getTime();
+                    return tarihB - tarihA;
+                });
+                setSonOdemeler(sirali.slice(0, 20));
+                setSonOdemelerModalAcik(true);
+            } else {
+                Alert.alert('Hata', 'Ödemeler alınamadı');
+            }
+        } catch (error) {
+            console.error('Son ödemeler hatası:', error);
+            Alert.alert('Hata', 'Ödemeler yüklenemedi');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    /**
      * Borçlu öğrenci listesi render fonksiyonu
      */
     const renderBorcluOgrenci = ({ item }: { item: any }) => (
@@ -771,6 +998,19 @@ export default function Ayarlar() {
                             </Text>
                         </View>
                     </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.ayarItem}
+                        onPress={ogrenciExcelModalAc}
+                    >
+                        <MaterialIcons name="person-search" size={24} color="#9C27B0" />
+                        <View style={styles.ayarText}>
+                            <Text style={styles.ayarBaslik}>Öğrenci Excel Raporu</Text>
+                            <Text style={styles.ayarAciklama}>
+                                Seçilen öğrencinin tüm verilerini Excel dosyasına aktar
+                            </Text>
+                        </View>
+                    </TouchableOpacity>
                 </View>
 
                 <View style={styles.section}>
@@ -785,6 +1025,19 @@ export default function Ayarlar() {
                             <Text style={styles.ayarBaslik}>Borçlu Öğrenci Listesi</Text>
                             <Text style={styles.ayarAciklama}>
                                 Kalan ücretleri olan öğrencilerin listesi ({borcluOgrenciler.length} öğrenci)
+                            </Text>
+                        </View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.ayarItem}
+                        onPress={sonOdemeleriGetir}
+                    >
+                        <MaterialIcons name="receipt-long" size={24} color="#4CAF50" />
+                        <View style={styles.ayarText}>
+                            <Text style={styles.ayarBaslik}>Son Ödemeler</Text>
+                            <Text style={styles.ayarAciklama}>
+                                Son alınan 20 ödemeyi listele
                             </Text>
                         </View>
                     </TouchableOpacity>
@@ -1082,6 +1335,130 @@ export default function Ayarlar() {
                                 <Text style={styles.borcToplamLabel}>Toplam Alacak:</Text>
                                 <Text style={styles.borcToplamMiktar}>
                                     {borcluOgrenciler.reduce((toplam, item) => toplam + (parseFloat(item.kalanBorc) || 0), 0)} TL
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Öğrenci Excel Raporu - Öğrenci Seçim Modalı */}
+            <Modal
+                visible={ogrenciExcelModalAcik}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={() => setOgrenciExcelModalAcik(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, styles.borcModalContent]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>
+                                Öğrenci Seçin
+                            </Text>
+                            <TouchableOpacity onPress={() => setOgrenciExcelModalAcik(false)}>
+                                <MaterialIcons name="close" size={24} color="#666" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text style={{ padding: 15, color: '#666', fontSize: 14, textAlign: 'center' }}>
+                            Excel raporu oluşturmak istediğiniz öğrenciyi seçin
+                        </Text>
+
+                        {ogrenciListesi.length > 0 ? (
+                            <FlatList
+                                data={ogrenciListesi}
+                                keyExtractor={item => (item.ogrenciId ?? item.id ?? Math.random()).toString()}
+                                showsVerticalScrollIndicator={false}
+                                style={{ paddingHorizontal: 15 }}
+                                renderItem={({ item }) => (
+                                    <TouchableOpacity
+                                        style={[styles.ayarItem, { marginBottom: 6 }]}
+                                        onPress={() => ogrenciExcelRaporuOlustur(item)}
+                                    >
+                                        <MaterialIcons name="person" size={24} color="#9C27B0" />
+                                        <View style={styles.ayarText}>
+                                            <Text style={styles.ayarBaslik}>
+                                                {item.ogrenciAd} {item.ogrenciSoyad}
+                                            </Text>
+                                            <Text style={styles.ayarAciklama}>
+                                                {item.okul || 'Okul belirtilmemiş'} • {item.aktifmi ? 'Aktif' : 'Pasif'}
+                                            </Text>
+                                        </View>
+                                        <MaterialIcons name="chevron-right" size={24} color="#ccc" />
+                                    </TouchableOpacity>
+                                )}
+                            />
+                        ) : (
+                            <View style={styles.borcBosListe}>
+                                <MaterialIcons name="person-off" size={48} color="#ddd" />
+                                <Text style={styles.borcBosText}>
+                                    Kayıtlı öğrenci bulunmuyor.
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Son Ödemeler Modalı */}
+            <Modal
+                visible={sonOdemelerModalAcik}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={() => setSonOdemelerModalAcik(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, styles.borcModalContent]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>
+                                Son Ödemeler ({sonOdemeler.length})
+                            </Text>
+                            <TouchableOpacity onPress={() => setSonOdemelerModalAcik(false)}>
+                                <MaterialIcons name="close" size={24} color="#666" />
+                            </TouchableOpacity>
+                        </View>
+
+                        {sonOdemeler.length > 0 ? (
+                            <FlatList
+                                data={sonOdemeler}
+                                keyExtractor={(item, index) => (item.odemeId ?? index).toString()}
+                                showsVerticalScrollIndicator={false}
+                                style={{ paddingHorizontal: 15, paddingTop: 10 }}
+                                renderItem={({ item }) => (
+                                    <View style={[styles.borcItem, { borderLeftColor: '#4CAF50' }]}>
+                                        <View style={styles.borcHeader}>
+                                            <Text style={styles.borcOgrenciAd}>
+                                                {item.ogrenciAdSoyad || 'Belirtilmemiş'}
+                                            </Text>
+                                            <Text style={[styles.borcMiktar, { color: '#4CAF50' }]}>
+                                                {item.alinanucret} TL
+                                            </Text>
+                                        </View>
+                                        <View style={styles.borcDetay}>
+                                            <Text style={styles.borcDetayText}>
+                                                Tarih: {item.odemetarih} {item.odemesaati ? `• ${item.odemesaati}` : ''}
+                                            </Text>
+                                            <Text style={styles.borcDetayText}>
+                                                Tür: {item.odemeturu || '-'} {item.aciklama ? `• ${item.aciklama}` : ''}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                )}
+                            />
+                        ) : (
+                            <View style={styles.borcBosListe}>
+                                <MaterialIcons name="receipt-long" size={48} color="#ddd" />
+                                <Text style={styles.borcBosText}>
+                                    Henüz ödeme kaydı bulunmuyor.
+                                </Text>
+                            </View>
+                        )}
+
+                        {sonOdemeler.length > 0 && (
+                            <View style={[styles.borcToplamFooter, { backgroundColor: '#f0fff0' }]}>
+                                <Text style={styles.borcToplamLabel}>Toplam:</Text>
+                                <Text style={[styles.borcToplamMiktar, { color: '#4CAF50' }]}>
+                                    {sonOdemeler.reduce((t, item) => t + (parseFloat(item.alinanucret) || 0), 0)} TL
                                 </Text>
                             </View>
                         )}
