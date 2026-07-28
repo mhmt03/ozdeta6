@@ -19,7 +19,6 @@ export async function odemeKaydet(odeme: OdemeType) {
             ]
         );
 
-        console.log('Ödeme başarıyla kaydedildi:', odeme);
         return { success: true, result };
     } catch (error: any) {
         console.error('Ödeme kaydetme hatası:', error);
@@ -64,8 +63,6 @@ export async function dersiKaydet(dersVerisi: DersType) {
             ]
         );
 
-        console.log("✅ Ders başarıyla kaydedildi!");
-        
         // Ajandada bu tarihte bu öğrenci için randevu varsa tamamlandı olarak işaretle
         await ajandaTamamla(dersVerisi.ogrenciId, dersVerisi.tarih, true);
         

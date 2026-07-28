@@ -11,8 +11,6 @@ export async function notKaydet(notVerisi: NotType) {
             `INSERT INTO notlarim (ogrenciId, tarih, not1) VALUES (?, ?, ?)`,
             [notVerisi.ogrenciId, notVerisi.tarih, notVerisi.not1]
         );
-
-        console.log("Not başarıyla kaydedildi");
         return { success: true, result };
     } catch (error: any) {
         console.error("Not kaydetme hatası:", error);

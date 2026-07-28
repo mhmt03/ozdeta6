@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Image, BackHandler, Alert } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import GlobalNotlarModal from '../components/GlobalNotlarModal';
 import { ogrencininOdemeleri, tekOgrenci, tumYapilanDersler } from '../utils/database';
@@ -12,6 +12,7 @@ import { DersType } from '../types';
 
 export default function AnaSayfa() {
     const navigation = useNavigation<any>();
+    const isFocused = useIsFocused();
     const [notMetni, setNotMetni] = useState('');
     const [globalNotlarVisible, setGlobalNotlarVisible] = useState(false);
     const [aktifTarih, setAktifTarih] = useState(new Date());
@@ -71,19 +72,21 @@ export default function AnaSayfa() {
 
     useEffect(() => {
         // Aktif tarihe göre randevuları güncelle
-
         const asyncFonksion = async () => {
             try {
-                const randevular = await tarihAraligiAjandaGetir(aktifTarih.toISOString().split('T')[0], aktifTarih.toISOString().split('T')[0]);
+                const year = aktifTarih.getFullYear();
+                const month = String(aktifTarih.getMonth() + 1).padStart(2, '0');
+                const day = String(aktifTarih.getDate()).padStart(2, '0');
+                const formattedDate = `${year}-${month}-${day}`;
+                const randevular = await tarihAraligiAjandaGetir(formattedDate, formattedDate);
                 setAktifTarihRandevulari(randevular.data || []);
-                console.log("anasayfa_randevular", randevular.data);
             } catch (error) {
-                console.log("anasayfa_randevu alma hatası:", error);
+                console.error("anasayfa_randevu alma hatası:", error);
             }
-        }
+        };
         asyncFonksion();
 
-    }, [aktifTarih]);
+    }, [aktifTarih, isFocused]);
 
     useEffect(() => {
         // Son yapılan dersler 
@@ -96,8 +99,10 @@ export default function AnaSayfa() {
                 console.error("Ders verileri alınamadı:", error);
             }
         }
-        asyncFonksion();
-    }, []);
+        if (isFocused) {
+            asyncFonksion();
+        }
+    }, [isFocused]);
 
     // Tarih fonksiyonu
     const getTodayDate = () => {
@@ -106,32 +111,41 @@ export default function AnaSayfa() {
         return today.toLocaleDateString('tr-TR', options);
     };
 
-    const renderRandevuItem = ({ item }: { item: AjandaWithOgrenciType }) => (
-        <TouchableOpacity
-            style={styles.randevuItem}
-            onPress={async () => {
-                try {
-                    const ogrenciResult = await tekOgrenci(item.ogrenciId);
-                    if (ogrenciResult.success && ogrenciResult.data) {
-                        navigation.navigate('ogrenciDetay', { ogrenci: ogrenciResult.data });
-                    } else {
-                        console.error('Öğrenci bulunamadı:', ogrenciResult.error);
+    const renderRandevuItem = ({ item }: { item: AjandaWithOgrenciType }) => {
+        const isCompleted = item.dersYapildiMi === 1 || item.tamamlandiMi === 1 || item.tamamlanma === '1' || item.sutun1 === 'tamamlandı';
+
+        return (
+            <TouchableOpacity
+                style={styles.randevuItem}
+                onPress={async () => {
+                    try {
+                        const ogrenciResult = await tekOgrenci(item.ogrenciId);
+                        if (ogrenciResult.success && ogrenciResult.data) {
+                            navigation.navigate('ogrenciDetay', { ogrenci: ogrenciResult.data });
+                        } else {
+                            console.error('Öğrenci bulunamadı:', ogrenciResult.error);
+                        }
+                    } catch (error) {
+                        console.error('Öğrenci bilgisi alınamadı:', error);
                     }
-                } catch (error) {
-                    console.error('Öğrenci bilgisi alınamadı:', error);
-                }
-            }}
-        >
-            <View style={styles.randevuSaat}>
-                <Text style={styles.randevuSaatText}>{item.saat}</Text>
-            </View>
-            <View style={styles.randevuBilgi}>
-                <Text style={styles.randevuOgrenci}>{item.ogrAdsoyad}</Text>
-                <Text style={styles.randevuDers}>{item.saat}</Text>
-            </View>
-            <MaterialIcons name="arrow-forward-ios" size={16} color="#666" />
-        </TouchableOpacity>
-    );
+                }}
+            >
+                <View style={styles.randevuSaat}>
+                    <Text style={styles.randevuSaatText}>{item.saat}</Text>
+                </View>
+                <View style={styles.randevuBilgi}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Text style={styles.randevuOgrenci}>{item.ogrAdsoyad}</Text>
+                        {isCompleted && (
+                            <MaterialIcons name="check-circle" size={18} color="#27ae60" style={{ marginLeft: 6 }} />
+                        )}
+                    </View>
+                    <Text style={styles.randevuDers}>{item.saat}</Text>
+                </View>
+                <MaterialIcons name="arrow-forward-ios" size={16} color="#666" />
+            </TouchableOpacity>
+        );
+    };
 
     const renderDersItem = ({ item }: { item: DersType }) => (
         <View style={styles.dersItem}>
@@ -176,13 +190,13 @@ export default function AnaSayfa() {
                 <View style={styles.randevularContainer}>
                     <View style={styles.sectionHeader}>
                         <Text style={styles.sectionTitle}>Randevular</Text>
-                        <View style={styles.headerButtonsRow}>
+                        <View style={styles.headerbuttonsrow}>
                             <TouchableOpacity onPress={() => navigation.navigate('Ajanda')} style={styles.tumunuGorButton}>
                                 <Text style={styles.tumunuGor}>Tümünü Gör</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity onPress={openNotlarModal} style={styles.tumunuGorButton}>
+                            {/* <TouchableOpacity onPress={openNotlarModal} style={styles.tumunuGorButton}>
                                 <Text style={styles.tumunuGor}>Notlar</Text>
-                            </TouchableOpacity>
+                            </TouchableOpacity> */}
                         </View>
                     </View>
 
@@ -228,7 +242,7 @@ export default function AnaSayfa() {
                         <View style={[styles.butonIcon, { backgroundColor: '#e74c3c' }]}>
                             <Ionicons name="settings" size={24} color="white" />
                         </View>
-                        <Text style={styles.butonText}>Ayarlar</Text>
+                        <Text style={styles.butonText}>İşlemler</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -287,8 +301,28 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f8f9fa',
-        paddingTop: 16,
+        paddingTop: 0,
     },
+    headerbuttonsrow: {
+        flex: 1,
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        marginTop: 10,
+        
+    },
+    tumunugorbutton: {
+        backgroundColor: '#f1c40f',
+        padding: 8,
+        borderRadius: 8,
+        marginRight: 10,
+    },
+    headerbuttonsrowtext: {
+        color: 'black',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    
     scrollContent: {
         padding: 16,
         paddingBottom: 80,

@@ -94,14 +94,12 @@ export default function Ayarlar() {
             // Android için documentDirectory kullan (Downloads'a doğrudan yazma izni yok)
             // @ts-ignore - expo-file-system documentDirectory
             const ozdetaKlasor = (FileSystem.documentDirectory ?? '') + 'ozdeta/';
-            console.log("klayıt klasoru:" + ozdetaKlasor);
             // Klasör var mı kontrol et
             const dirInfo = await FileSystem.getInfoAsync(ozdetaKlasor);
 
             if (!dirInfo.exists) {
                 // Klasör yoksa oluştur
                 await FileSystem.makeDirectoryAsync(ozdetaKlasor, { intermediates: true });
-                console.log('Ozdeta klasörü oluşturuldu:', ozdetaKlasor);
             }
 
             return ozdetaKlasor;
@@ -302,8 +300,7 @@ export default function Ayarlar() {
                                         result.message,
                                         [
                                             {
-                                                text: 'Tamam',
-                                                onPress: () => console.log('Yedekleme tamamlandı')
+                                                text: 'Tamam'
                                             },
                                             {
                                                 text: 'Paylaş',
@@ -575,8 +572,7 @@ export default function Ayarlar() {
                     result.message,
                     [
                         {
-                            text: 'Tamam',
-                            onPress: () => console.log('Rapor oluşturma tamamlandı')
+                            text: 'Tamam'
                         },
                         {
                             text: 'Paylaş',
@@ -937,7 +933,7 @@ export default function Ayarlar() {
             <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
                 <View style={styles.header}>
                     <MaterialIcons name="settings" size={32} color="#2196F3" />
-                    <Text style={styles.headerTitle}>Ayarlar</Text>
+                    <Text style={styles.headerTitle}>İşlemler</Text>
                 </View>
 
                 <View style={styles.section}>

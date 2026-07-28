@@ -29,8 +29,6 @@ export async function ajandaKayitEkle(kayit: AjandaType) {
                 kayit.sutun2 || ''
             ]
         );
-
-        console.log("Ajanda kaydı eklendi:", result.lastInsertRowId);
         return { success: true, insertId: result.lastInsertRowId };
     } catch (error: any) {
         console.error("ajandaDatabase_Ajanda kaydı eklenemedi:", error);
@@ -47,7 +45,8 @@ export async function tumAjandaKayitlariniGetir() {
                 o.ogrenciAd,
                 o.ogrenciSoyad,
                 o.ogrenciTel,
-                o.aktifmi
+                o.aktifmi,
+                CASE WHEN (a.tamamlandiMi = 1 OR a.tamamlanma = '1' OR a.sutun1 = 'tamamlandı' OR EXISTS (SELECT 1 FROM dersler d WHERE d.ogrenciId = a.ogrenciId AND d.tarih = a.tarih)) THEN 1 ELSE 0 END AS dersYapildiMi
              FROM ajanda a 
              LEFT JOIN ogrenciler o ON a.ogrenciId = o.ogrenciId 
              ORDER BY a.tarih, a.saat`
@@ -68,7 +67,8 @@ export async function gunlukAjandaGetir(tarih: string) {
                 o.ogrenciAd,
                 o.ogrenciSoyad,
                 o.ogrenciTel,
-                o.aktifmi
+                o.aktifmi,
+                CASE WHEN (a.tamamlandiMi = 1 OR a.tamamlanma = '1' OR a.sutun1 = 'tamamlandı' OR EXISTS (SELECT 1 FROM dersler d WHERE d.ogrenciId = a.ogrenciId AND d.tarih = a.tarih)) THEN 1 ELSE 0 END AS dersYapildiMi
              FROM ajanda a 
              LEFT JOIN ogrenciler o ON a.ogrenciId = o.ogrenciId 
              WHERE a.tarih = ? 
@@ -83,7 +83,6 @@ export async function gunlukAjandaGetir(tarih: string) {
 }
 
 export async function ajandaGuncelle(ajandaId: number, kayit: AjandaType) {
-    console.log(`[agendaOperations.ts] ajandaGuncelle starting. ajandaId: ${ajandaId}, kayit:`, kayit);
     try {
         const db = await ensureDatabaseReady();
         const result = await db.runAsync(
@@ -103,7 +102,6 @@ export async function ajandaGuncelle(ajandaId: number, kayit: AjandaType) {
                 ajandaId
             ]
         );
-        console.log(`[agendaOperations.ts] ajandaGuncelle finished. Success: ${result.changes > 0}`);
         return { success: result.changes > 0 };
     } catch (error: any) {
         console.error("[agendaOperations.ts] ajandaGuncelle error:", error);
@@ -121,7 +119,8 @@ export async function ogrenciAjandaGetir(ogrenciId: number, baslangicTarih: stri
                 o.ogrenciAd,
                 o.ogrenciSoyad,
                 o.ogrenciTel,
-                o.aktifmi
+                o.aktifmi,
+                CASE WHEN (a.tamamlandiMi = 1 OR a.tamamlanma = '1' OR a.sutun1 = 'tamamlandı' OR EXISTS (SELECT 1 FROM dersler d WHERE d.ogrenciId = a.ogrenciId AND d.tarih = a.tarih)) THEN 1 ELSE 0 END AS dersYapildiMi
              FROM ajanda a 
              LEFT JOIN ogrenciler o ON a.ogrenciId = o.ogrenciId 
              WHERE a.ogrenciId = ? AND a.tarih BETWEEN ? AND ? 
@@ -201,7 +200,8 @@ export async function ajandaGrupGetir(olusmaAni: string) {
                 o.ogrenciAd,
                 o.ogrenciSoyad,
                 o.ogrenciTel,
-                o.aktifmi
+                o.aktifmi,
+                CASE WHEN (a.tamamlandiMi = 1 OR a.tamamlanma = '1' OR a.sutun1 = 'tamamlandı' OR EXISTS (SELECT 1 FROM dersler d WHERE d.ogrenciId = a.ogrenciId AND d.tarih = a.tarih)) THEN 1 ELSE 0 END AS dersYapildiMi
              FROM ajanda a 
              LEFT JOIN ogrenciler o ON a.ogrenciId = o.ogrenciId 
              WHERE a.olusmaAni = ? 
@@ -216,17 +216,14 @@ export async function ajandaGrupGetir(olusmaAni: string) {
 }
 
 export async function ajandaGrupGuncelle(olusmaAni: string, seciliTarih: string, yeniTekrarSayisi: number, yeniSaat: string, yeniPeriyot: number = 7) {
-    console.log(`[agendaOperations.ts] ajandaGrupGuncelle called. args:`, { olusmaAni, seciliTarih, yeniTekrarSayisi, yeniSaat, yeniPeriyot });
     try {
         const db = await ensureDatabaseReady();
 
-        console.log(`[agendaOperations.ts] Deleting future records: olusmaAni: ${olusmaAni}, tarih > ${seciliTarih}`);
         await db.runAsync(
             `DELETE FROM ajanda WHERE olusmaAni = ? AND tarih > ?`,
             [olusmaAni, seciliTarih]
         );
 
-        console.log(`[agendaOperations.ts] Fetching mevcutKayit for olusmaAni: ${olusmaAni}, tarih: ${seciliTarih}`);
         const mevcutKayit = await db.getFirstAsync<AjandaType>(
             `SELECT * FROM ajanda WHERE olusmaAni = ? AND tarih = ?`,
             [olusmaAni, seciliTarih]
@@ -237,7 +234,6 @@ export async function ajandaGrupGuncelle(olusmaAni: string, seciliTarih: string,
             throw new Error('Güncellenecek kayıt bulunamadı');
         }
 
-        console.log(`[agendaOperations.ts] Updating existing record. setting saat=${yeniSaat}, tekrarsayisi=${yeniTekrarSayisi}`);
         await db.runAsync(
             `UPDATE ajanda 
              SET saat = ?, tekrarsayisi = ?, kalanTekrarSayisi = ?
@@ -247,7 +243,6 @@ export async function ajandaGrupGuncelle(olusmaAni: string, seciliTarih: string,
 
         const baslangicTarihi = new Date(seciliTarih);
 
-        console.log(`[agendaOperations.ts] Inserting ${yeniTekrarSayisi - 1} new dependent records.`);
         for (let i = 1; i < yeniTekrarSayisi; i++) {
             const yeniTarih = new Date(baslangicTarihi);
             yeniTarih.setDate(baslangicTarihi.getDate() + (i * yeniPeriyot));
@@ -274,7 +269,6 @@ export async function ajandaGrupGuncelle(olusmaAni: string, seciliTarih: string,
             );
         }
 
-        console.log(`[agendaOperations.ts] ajandaGrupGuncelle successful.`);
         return { success: true };
     } catch (error: any) {
         console.error("[agendaOperations.ts] Ajanda grup güncellemesi başarısız:", error);
@@ -304,7 +298,6 @@ export async function ajandaTamamla(ogrenciId: number, tarih: string, tamamlandi
             `UPDATE ajanda SET tamamlandiMi = ? WHERE ogrenciId = ? AND tarih = ?`,
             [status, ogrenciId, tarih]
         );
-        console.log(`Ajanda tamamlanma durumu güncellendi. Öğrenci: ${ogrenciId}, Tarih: ${tarih}, Durum: ${status}`);
         return { success: true, changes: result.changes };
     } catch (error: any) {
         console.error("ajandaTamamla hatası:", error);
@@ -321,7 +314,8 @@ export async function tarihAraligiAjandaGetir(baslangicTarihi: string, bitisTari
                 o.ogrenciAd,
                 o.ogrenciSoyad,
                 o.ogrenciTel,
-                o.aktifmi
+                o.aktifmi,
+                CASE WHEN (a.tamamlandiMi = 1 OR a.tamamlanma = '1' OR a.sutun1 = 'tamamlandı' OR EXISTS (SELECT 1 FROM dersler d WHERE d.ogrenciId = a.ogrenciId AND d.tarih = a.tarih)) THEN 1 ELSE 0 END AS dersYapildiMi
              FROM ajanda a 
              LEFT JOIN ogrenciler o ON a.ogrenciId = o.ogrenciId 
              WHERE a.tarih BETWEEN ? AND ?

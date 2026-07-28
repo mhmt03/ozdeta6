@@ -16,7 +16,6 @@ export default function OgrenciDetay() {
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
     const { ogrenci } = route.params as { ogrenci: OgrenciType };
-    console.log("ogrenciDetay_ogrenci:", ogrenci);
 
     const [detayGoster, setDetayGoster] = useState(false);
     const [dersPopupAcik, setDersPopupAcik] = useState(false);
@@ -133,12 +132,8 @@ export default function OgrenciDetay() {
 
             const kalan = toplamucret - toplamodeme;
             setKalanUcret(kalan);
-
-            odemeler.forEach((odeme: OdemeType) => console.log("odeme", odeme.alinanucret));
-            dersler.forEach((ders: DersType) => console.log("ucret", ders.ucret));
-
         } catch (error) {
-            console.log('Kalan ücret hesaplama hatası:', error);
+            console.error('Kalan ücret hesaplama hatası:', error);
             setKalanUcret(0);
         }
     };
@@ -221,18 +216,16 @@ export default function OgrenciDetay() {
                 sutun1: dersSaat.toTimeString().split(' ')[0] // Saat bilgisi
             };
 
-            console.log('Kaydedilecek ödeme verisi:', odemeVerisi);
-
-
-            const result = await odemeKaydet(odemeVerisi);
+            await odemeKaydet(odemeVerisi);
 
             ToastAndroid.show('Ödeme başarıyla kaydedildi', ToastAndroid.SHORT);
-            odemePopupKapat(); // Otomatik kapanması için eklendi
+            odemePopupKapat();
 
         } catch (error: any) {
             Alert.alert('Hata', 'Ödeme kaydedilemedi: ' + error.message);
         }
     };
+
     // Ders kaydetme işlemi
     const finalizeDersKayit = async (dersVerisi: DersType) => {
         try {
@@ -262,8 +255,6 @@ export default function OgrenciDetay() {
                 ogrenciAdSoyad: ogrenci.ogrenciAd + " " + ogrenci.ogrenciSoyad
             };
 
-            console.log('Ders kaydı başlatılıyor:', dersVerisi.tarih);
-
             // Mükerrer ders kontrolü
             const mevcutDersler = await getDersler(ogrenci.ogrenciId!);
             const ayniGunDers = mevcutDersler.find(d => d.tarih === dersVerisi.tarih);
@@ -281,7 +272,7 @@ export default function OgrenciDetay() {
                 await finalizeDersKayit(dersVerisi);
             }
         } catch (error: any) {
-            console.log("Ders kaydı hatası:", error);
+            console.error("Ders kaydı hatası:", error);
             Alert.alert('Hata', 'Bir sorun oluştu: ' + error.message);
         }
     };

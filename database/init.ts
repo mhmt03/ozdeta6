@@ -192,24 +192,18 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
     const currentVersion = row?.version ?? 0;
 
     if (currentVersion >= DATABASE_VERSION) {
-        console.log(`Veritabanı güncel (v${currentVersion})`);
         return;
     }
-
-    console.log(`Migration: v${currentVersion} → v${DATABASE_VERSION}`);
 
     for (let i = currentVersion; i < DATABASE_VERSION; i++) {
         const step = migrations[i];
         if (step) await step(database);
-        console.log(`  ✓ adım ${i + 1}`);
     }
 
     await database.runAsync(
         'INSERT OR REPLACE INTO database_version (id, version) VALUES (1, ?)',
         [DATABASE_VERSION]
     );
-
-    console.log(`Migration tamamlandı (v${DATABASE_VERSION})`);
 }
 
 // ─── PUBLIC API ───────────────────────────────────────────────────────────────

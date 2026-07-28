@@ -37,8 +37,6 @@ export async function ogrenciKaydet(params: OgrenciType) {
                 params.aktifmi ? 1 : 0
             ]
         );
-
-        console.log("Öğrenci kaydı başarılı");
         return { success: true, result };
     } catch (error: any) {
         console.error("Öğrenci kaydı eklenemedi:", error);

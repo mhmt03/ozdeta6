@@ -8,8 +8,6 @@ import { ensureDatabaseReady } from './init';
 export async function veritabaniTemizle(tarih: string, seciliTablolar: string[]) {
     try {
         const db = await ensureDatabaseReady();
-        
-        console.log(`Veritabanı temizleme başlatıldı. Tarih: ${tarih}, Tablolar: ${seciliTablolar.join(', ')}`);
 
         // İşlemleri sırasıyla yapalım. 
         // Eğer öğrenciler silinecekse, onlara bağlı tüm verileri (tarih bağımsız) temizlemek gerekir.
@@ -50,7 +48,6 @@ export async function veritabaniTemizle(tarih: string, seciliTablolar: string[])
         // Veritabanı dosyasını fiziksel olarak küçült
         await db.execAsync('VACUUM');
 
-        console.log('Veritabanı temizleme ve VACUUM tamamlandı.');
         return { success: true };
     } catch (error: any) {
         console.error('Veritabanı temizleme hatası:', error);

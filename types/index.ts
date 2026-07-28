@@ -97,6 +97,7 @@ export interface AjandaType {
     olusmaAni: string;
     tamamlanma: string;
     tamamlandiMi?: number;
+    dersYapildiMi?: number;
     iptal?: number;
     konu?: string;
     sutun1?: string;

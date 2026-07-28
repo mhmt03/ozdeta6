@@ -243,12 +243,6 @@ export default function AjandaKayitEkle() {
                 if (!result.success) {
                     throw new Error(result.error);
                 }
-
-                console.log(`Kayıt ${i + 1}/${tekrarSayisi} eklendi:`, {
-                    tarih: record.tarih,
-                    saat: record.saat,
-                    kalanTekrar: record.kalanTekrarSayisi
-                });
             }
 
             // Başarılı kayıt sonrası işlemler - Toast göster ve geri dön
@@ -309,7 +303,7 @@ export default function AjandaKayitEkle() {
             >
                 {/* BAŞLIK */}
                 <View style={styles.header}>
-                    <Text style={styles.headerTitle}>Yeni Randevu</Text>
+                    {/* <Text style={styles.headerTitle}>Yeni Randevu</Text> */}
                     <Text style={styles.headerSubtitle}>
                         Randevu detaylarını belirleyiniz
                     </Text>
@@ -591,7 +585,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f8f9fa',
-        paddingTop: 16,
+        paddingTop: 1,
     },
     scrollView: {
         flex: 1,
@@ -601,7 +595,7 @@ const styles = StyleSheet.create({
     // 📋 Başlık bölümü
     header: {
         backgroundColor: 'white',
-        padding: 20,
+        padding: 10,
         borderBottomLeftRadius: 15,
         borderBottomRightRadius: 15,
         marginBottom: 10,

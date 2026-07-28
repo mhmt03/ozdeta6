@@ -40,6 +40,7 @@ export default function DersRapor() {
     const [dersler, setDersler] = useState<DersType[]>([]);
     const [odemeler, setOdemeler] = useState<OdemeType[]>([]);
     const [odemeRaporAcik, setOdemeRaporAcik] = useState(false);
+    const [dersRaporAcik, setDersRaporAcik] = useState(false);
     const [seciliOdeme, setSeciliOdeme] = useState<OdemeType | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -527,22 +528,37 @@ export default function DersRapor() {
                         </View>
                     </View>
                 )}
+                {/* Ders Rapor Butonu */}
+                <TouchableOpacity
+                    style={styles.dersRaporButon}
+                    onPress={() => setDersRaporAcik(!dersRaporAcik)}
+                >
+                    <MaterialIcons
+                        name={dersRaporAcik ? "expand-less" : "expand-more"}
+                        size={24}
+                        color="white"
+                    />
+                    <Text style={styles.dersRaporButonText}>Ders Rapor</Text>
+                </TouchableOpacity>
+
                 {/* Dersler Bölümü */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Yapılan Dersler ({dersler.length})</Text>
-                    {dersler.length > 0 ? (
-                        <FlatList
-                            data={dersler}
-                            renderItem={renderDers}
-                            keyExtractor={item => (item.dersId?.toString() || Math.random().toString())}
-                            scrollEnabled={false}
-                        />
-                    ) : (
-                        <View style={styles.bosListe}>
-                            <Text style={styles.bosListeText}>Henüz ders kaydı bulunmamaktadır</Text>
-                        </View>
-                    )}
-                </View>
+                {dersRaporAcik && (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Yapılan Dersler ({dersler.length})</Text>
+                        {dersler.length > 0 ? (
+                            <FlatList
+                                data={dersler}
+                                renderItem={renderDers}
+                                keyExtractor={item => (item.dersId?.toString() || Math.random().toString())}
+                                scrollEnabled={false}
+                            />
+                        ) : (
+                            <View style={styles.bosListe}>
+                                <Text style={styles.bosListeText}>Henüz ders kaydı bulunmamaktadır</Text>
+                            </View>
+                        )}
+                    </View>
+                )}
 
                 {/* Ödeme Rapor Butonu */}
                 <TouchableOpacity
@@ -895,6 +911,21 @@ const styles = StyleSheet.create({
     bosListeText: {
         color: '#666',
         fontStyle: 'italic',
+    },
+    dersRaporButon: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#e67e22',
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 16,
+    },
+    dersRaporButonText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginLeft: 8,
     },
     odemeRaporButon: {
         flexDirection: 'row',

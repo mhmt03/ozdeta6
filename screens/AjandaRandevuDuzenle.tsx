@@ -67,9 +67,6 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
             const yerelTarihString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
             const saatStr = date.toTimeString().slice(0, 5);
 
-            console.log(`[AjandaRandevuDuzenle.tsx] handleKaydet called. degisiklikTipi: ${degisiklikTipi}`);
-
-            // 1. Her durumda mevcut kaydı güncelliyoruz
             const updatedRandevu: AjandaType = {
                 ...randevu,
                 tarih: yerelTarihString,
@@ -82,13 +79,10 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
                 tamamlandiMi: randevu.tamamlandiMi || 0
             };
 
-            console.log(`[AjandaRandevuDuzenle.tsx] Calling ajandaGuncelle with:`, updatedRandevu);
             await ajandaGuncelle(randevu.ajandaId!, updatedRandevu);
 
             // 2. Eğer tüm kayıtları etkileyecekse grubu güncelliyoruz
             if (degisiklikTipi === 'tumKayitlar' && randevu.olusmaAni) {
-                console.log(`[AjandaRandevuDuzenle.tsx] Calling ajandaGrupGuncelle... olusmaAni: ${randevu.olusmaAni}, yerelTarihString: ${yerelTarihString}, kalanTekrar: ${kalanTekrar}`);
-
                 // yerelTarihString, grup güncellemesinin "seciliTarih" parametresi olur
                 const guncelleResult = await ajandaGrupGuncelle(randevu.olusmaAni, yerelTarihString, kalanTekrar, saatStr, periyot);
                 if (!guncelleResult.success) {

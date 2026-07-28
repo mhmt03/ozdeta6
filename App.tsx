@@ -70,7 +70,6 @@ export default function App() {
         }
 
         await initDatabase();
-        console.log('Veritabanı başarıyla başlatıldı');
         setDbInitialized(true);
 
       } catch (error) {
@@ -170,7 +169,7 @@ export default function App() {
         />
         <Stack.Screen
           name='Ajanda'
-          options={{ title: 'Ajanda / Takvim' }}
+          options={{ title: 'Ajanda / Takvim' , headerStyle: { height: 70 , backgroundColor: '#75796dff' } }}
           component={Ajanda}
         />
         <Stack.Screen
@@ -246,7 +245,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   infoText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#666',
     textAlign: 'center',
     marginBottom: 10,
