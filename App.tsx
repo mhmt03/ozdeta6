@@ -1,5 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, ActivityIndicator, Alert, Platform } from 'react-native';
+import { StyleSheet, Text, View, ActivityIndicator, Alert, Platform, TouchableOpacity } from 'react-native';
+import { FontAwesome5, MaterialIcons } from '@expo/vector-icons';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useEffect, useState } from 'react';
@@ -162,8 +163,16 @@ export default function App() {
         />
         <Stack.Screen
           name='ogrenciDetay'
-          options={({ route }) => ({
-            title: route.params?.ogrenci ? `${route.params.ogrenci.ogrenciAd} ${route.params.ogrenci.ogrenciSoyad}` : 'Öğrenci Detayı'
+          options={({ route, navigation }) => ({
+            title: route.params?.ogrenci ? `${route.params.ogrenci.ogrenciAd} ${route.params.ogrenci.ogrenciSoyad}` : 'Öğrenci Detayı',
+            headerRight: () => (
+              <TouchableOpacity
+                onPress={() => navigation.navigate('ogrenciListesi')}
+                style={{ marginRight: 15 }}
+              >
+                <FontAwesome5 name="user-graduate" size={20} color="#aef013ff" />
+              </TouchableOpacity>
+            ),
           })}
           component={OgrenciDetay}
         />

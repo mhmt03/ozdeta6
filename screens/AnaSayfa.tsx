@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
         
     },
     tumunugorbutton: {
-        backgroundColor: '#f1c40f',
+        backgroundColor: '#f10f0fff',
         padding: 8,
         borderRadius: 8,
         marginRight: 10,
