@@ -28,6 +28,7 @@ import {
     kaynakListesi,
     odevKaydet,
     odevGuncelle,
+    odevSil,
     ogrenciOdevleri,
     tekOgrenci
 } from '../utils/database';
@@ -66,6 +67,35 @@ export default function OdevEkle() {
     const [showRaporBitisPicker, setShowRaporBitisPicker] = useState(false);
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
+    // Filtreleme State'leri
+    const [durumFiltresi, setDurumFiltresi] = useState<'hepsi' | 'Yapıldı' | 'Yapılmadı' | 'Bekliyor'>('hepsi');
+    const [tarihSiralamasi, setTarihSiralamasi] = useState<'azalan' | 'artan'>('azalan'); // azalan: yeniden eskiye, artan: eskiden yeniye
+
+    // Filtrelenmiş ve Sıralanmış Ödevler
+    const filtrelenmisOdevler = odevler
+        .filter(odev => {
+            if (durumFiltresi === 'hepsi') return true;
+            return odev.yapilmadurumu === durumFiltresi;
+        })
+        .sort((a, b) => {
+            const timeA = new Date(a.verilmetarihi).getTime();
+            const timeB = new Date(b.verilmetarihi).getTime();
+            return tarihSiralamasi === 'azalan' ? timeB - timeA : timeA - timeB;
+        });
+
+    const durumFiltresiDegistir = () => {
+        const siradaki: Record<string, 'hepsi' | 'Yapıldı' | 'Yapılmadı' | 'Bekliyor'> = {
+            'hepsi': 'Bekliyor',
+            'Bekliyor': 'Yapıldı',
+            'Yapıldı': 'Yapılmadı',
+            'Yapılmadı': 'hepsi'
+        };
+        setDurumFiltresi(siradaki[durumFiltresi]);
+    };
+
+    const tarihSiralamasiDegistir = () => {
+        setTarihSiralamasi(prev => prev === 'azalan' ? 'artan' : 'azalan');
+    };
     useEffect(() => {
         veriAl();
     }, []);
@@ -76,8 +106,12 @@ export default function OdevEkle() {
 
             // Öğrenci bilgilerini al
             const ogrenciResult = await tekOgrenci(ogrenciId);
-            if (ogrenciResult.success) {
-                setOgrenci(ogrenciResult.data ?? null);
+            if (ogrenciResult.success && ogrenciResult.data) {
+                const ogr = ogrenciResult.data;
+                setOgrenci(ogr);
+                navigation.setOptions({
+                    title: `${ogr.ogrenciAd} ${ogr.ogrenciSoyad} Ödevleri`
+                });
             }
 
             // Kaynakları al
@@ -91,6 +125,22 @@ export default function OdevEkle() {
             Alert.alert('Hata', 'Veriler alınamadı');
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Ödev silme fonksiyonu
+    const odevSilKaydet = async (odevId: number) => {
+        try {
+            const result = await odevSil(odevId);
+            if (result.success) {
+                Alert.alert('Başarılı', 'Ödev silindi');
+                await odevleriYenile();
+            } else {
+                Alert.alert('Hata', 'Ödev silinemedi');
+            }
+        } catch (error) {
+            console.error('Ödev silme hatası:', error);
+            Alert.alert('Hata', 'Ödev silinemedi');
         }
     };
 
@@ -314,16 +364,6 @@ export default function OdevEkle() {
 
     return (
         <View style={styles.container}>
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <MaterialIcons name="arrow-back" size={24} color="#333" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>
-                    {ogrenci ? `${ogrenci.ogrenciAd} ${ogrenci.ogrenciSoyad} - Ödev Ver` : 'Ödev Ver'}
-                </Text>
-            </View>
-
             <KeyboardAvoidingView
                 style={styles.keyboardView}
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -338,20 +378,21 @@ export default function OdevEkle() {
                         {/* Üst Kontrol Paneli */}
                         <View style={styles.topControlPanel}>
                             <View style={styles.switchControl}>
-                                <Text style={styles.switchControlLabel}>Ödev Verme Formu</Text>
+                                <Text style={styles.switchControlLabel}>Ödev Formu</Text>
                                 <Switch
                                     value={odevVermeGorunur}
                                     onValueChange={setOdevVermeGorunur}
                                     thumbColor={odevVermeGorunur ? "#4CAF50" : "#f4f3f4"}
                                     trackColor={{ false: "#767577", true: "#81b0ff" }}
+                                    style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
                                 />
                             </View>
                             <TouchableOpacity
                                 style={styles.raporButon}
                                 onPress={() => setRaporModaliGorunur(true)}
                             >
-                                <MaterialIcons name="assessment" size={20} color="white" />
-                                <Text style={styles.raporButonText}>Rapor Al</Text>
+                                <MaterialIcons name="assessment" size={16} color="white" />
+                                <Text style={styles.raporButonText}>Rapor</Text>
                             </TouchableOpacity>
                         </View>
 
@@ -465,17 +506,47 @@ export default function OdevEkle() {
 
                         {/* Ödevler Listesi */}
                         <View style={styles.odevlerContainer}>
-                            <Text style={styles.sectionTitle}>
-                                Verilen Ödevler ({odevler.length})
-                            </Text>
+                            <View style={styles.odevlerHeaderContainer}>
+                                <Text style={styles.sectionTitle}>
+                                    Verilen Ödevler ({filtrelenmisOdevler.length})
+                                </Text>
 
-                            {odevler.length > 0 ? (
+                                {/* Filtreleme Butonları */}
+                                <View style={styles.filtreButonlariGrup}>
+                                    <TouchableOpacity
+                                        style={styles.filtreButon}
+                                        onPress={durumFiltresiDegistir}
+                                    >
+                                        <MaterialIcons name="filter-list" size={14} color="#333" />
+                                        <Text style={styles.filtreButonText}>
+                                            {durumFiltresi === 'hepsi' ? 'Tümü' : durumFiltresi}
+                                        </Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={styles.filtreButon}
+                                        onPress={tarihSiralamasiDegistir}
+                                    >
+                                        <MaterialIcons
+                                            name={tarihSiralamasi === 'azalan' ? "arrow-downward" : "arrow-upward"}
+                                            size={14}
+                                            color="#333"
+                                        />
+                                        <Text style={styles.filtreButonText}>
+                                            {tarihSiralamasi === 'azalan' ? 'En Yeni' : 'En Eski'}
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+
+                            {filtrelenmisOdevler.length > 0 ? (
                                 <FlatList
-                                    data={odevler}
+                                    data={filtrelenmisOdevler}
                                     renderItem={({ item }) => (
                                         <OdevItem
                                             item={item}
                                             onGuncelle={odevGuncelleKaydet}
+                                            onSil={odevSilKaydet}
                                         />
                                     )}
                                     keyExtractor={item => (item.odevId?.toString() || Math.random().toString())}
@@ -484,10 +555,11 @@ export default function OdevEkle() {
                             ) : (
                                 <View style={styles.bosListe}>
                                     <MaterialIcons name="assignment" size={40} color="#ddd" />
-                                    <Text style={styles.bosListeText}>Henüz ödev verilmemiş</Text>
+                                    <Text style={styles.bosListeText}>Ödev bulunamadı</Text>
                                 </View>
                             )}
                         </View>
+
                     </ScrollView>
                 </TouchableWithoutFeedback>
             </KeyboardAvoidingView>
@@ -706,7 +778,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#ced4da',
         borderRadius: 8,
-        backgroundColor: '#fff',
+        backgroundColor: '#f7f59fff',
         overflow: 'hidden',
         justifyContent: 'center',
         elevation: 2,
@@ -762,33 +834,61 @@ const styles = StyleSheet.create({
     odevlerContainer: {
         backgroundColor: 'white',
         borderRadius: 8,
-        padding: 16,
+        padding: 12,
         elevation: 2,
-        marginBottom: 30,
+        marginBottom: 30, // Telefon navigasyon tuşları altında kalmaması için korundu
+    },
+    odevlerHeaderContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 6,
     },
     sectionTitle: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: 'bold',
         color: '#333',
-        marginBottom: 12,
+    },
+    filtreButonlariGrup: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    filtreButon: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f0f2f5',
+        paddingVertical: 4,
+        paddingHorizontal: 18,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#e1e8ed',
+    },
+    filtreButonText: {
+        fontSize: 11,
+        color: '#333',
+        fontWeight: '600',
+        marginLeft: 2,
     },
     bosListe: {
-        padding: 40,
+        padding: 30,
         alignItems: 'center',
     },
     bosListeText: {
         color: '#666',
         fontStyle: 'italic',
         marginTop: 8,
+        fontSize: 13,
     },
     topControlPanel: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         backgroundColor: 'white',
-        padding: 12,
+        paddingVertical: 6,
+        paddingHorizontal: 12,
         borderRadius: 8,
-        marginBottom: 16,
+        marginBottom: 10,
         elevation: 2,
     },
     switchControl: {
@@ -796,24 +896,24 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     switchControlLabel: {
-        fontSize: 14,
+        fontSize: 12,
         fontWeight: 'bold',
         color: '#333',
-        marginRight: 8,
+        marginRight: 4,
     },
     raporButon: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#e67e22',
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 20,
+        paddingVertical: 5,
+        paddingHorizontal: 10,
+        borderRadius: 16,
     },
     raporButonText: {
         color: 'white',
         fontWeight: 'bold',
-        marginLeft: 6,
-        fontSize: 13,
+        marginLeft: 4,
+        fontSize: 11,
     },
     modalOverlay: {
         flex: 1,

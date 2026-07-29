@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Alert } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -8,9 +8,10 @@ import { OdevType } from '../types';
 interface OdevItemProps {
     item: OdevType;
     onGuncelle: (guncelOdev: OdevType) => void;
+    onSil?: (odevId: number) => void;
 }
 
-const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle }) => {
+const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle, onSil }) => {
     const [yapilmaDurumu, setYapilmaDurumu] = useState(item.yapilmadurumu || 'Bekliyor');
     const [verilme, setVerilme] = useState(new Date(item.verilmetarihi));
     const [teslim, setTeslim] = useState(new Date(item.teslimttarihi));
@@ -37,6 +38,18 @@ const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle }) => {
         }
     };
 
+    const silOnayla = () => {
+        if (!item.odevId || !onSil) return;
+        Alert.alert(
+            'Ödev Sil',
+            'Bu ödevi silmek istediğinizden emin misiniz?',
+            [
+                { text: 'İptal', style: 'cancel' },
+                { text: 'Sil', style: 'destructive', onPress: () => onSil(item.odevId!) }
+            ]
+        );
+    };
+
     return (
         <View style={[styles.odevItem, teslimGecmis && { borderColor: 'red', borderWidth: 2 }]}>
             <Text style={styles.odevKonu}>{item.odev}</Text>
@@ -47,7 +60,7 @@ const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle }) => {
                     style={styles.dateButton}
                     onPress={() => setVerilmePickerAcik(true)}
                 >
-                    <MaterialIcons name="date-range" size={20} color="#666" />
+                    <MaterialIcons name="date-range" size={18} color="#666" />
                     <Text style={styles.dateText}>Verildi: {formatTarih(verilme)}</Text>
                 </TouchableOpacity>
 
@@ -55,42 +68,55 @@ const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle }) => {
                     style={styles.dateButton}
                     onPress={() => setTeslimPickerAcik(true)}
                 >
-                    <MaterialIcons name="date-range" size={20} color="#666" />
+                    <MaterialIcons name="date-range" size={18} color="#666" />
                     <Text style={styles.dateText}>Teslim: {formatTarih(teslim)}</Text>
                 </TouchableOpacity>
             </View>
 
-            {/* Durum */}
-            <View style={[styles.durumContainer, { backgroundColor: getDurumRenk(yapilmaDurumu) }]}>
-                <Text style={styles.durumLabel}>Durum:</Text>
-                <Picker
-                    selectedValue={yapilmaDurumu}
-                    onValueChange={(val: string) => setYapilmaDurumu(val)}
-                    style={styles.durumPicker}
-                    dropdownIconColor="white"
-                >
-                    <Picker.Item label="Bekliyor" value="Bekliyor" color={Platform.OS === 'ios' ? 'white' : '#333'} />
-                    <Picker.Item label="Yapıldı" value="Yapıldı" color={Platform.OS === 'ios' ? 'white' : '#333'} />
-                    <Picker.Item label="Yapılmadı" value="Yapılmadı" color={Platform.OS === 'ios' ? 'white' : '#333'} />
-                    <Picker.Item label="Eksik" value="Eksik" color={Platform.OS === 'ios' ? 'white' : '#333'} />
-                </Picker>
-            </View>
+            {/* Durum + Gncll + Sil Aynı Satırda */}
+            <View style={styles.altAksiyonSatiri}>
+                <View style={[styles.durumContainer, { backgroundColor: getDurumRenk(yapilmaDurumu) }]}>
+                    <Picker
+                        selectedValue={yapilmaDurumu}
+                        onValueChange={(val: string) => setYapilmaDurumu(val)}
+                        style={styles.durumPicker}
+                        dropdownIconColor="white"
 
-            {/* Güncelle Butonu */}
-            <TouchableOpacity
-                style={styles.guncelleButon}
-                onPress={() =>
-                    onGuncelle({
-                        ...item,
-                        yapilmadurumu: yapilmaDurumu,
-                        verilmetarihi: verilme.toISOString().split('T')[0],
-                        teslimttarihi: teslim.toISOString().split('T')[0],
-                    })
-                }
-            >
-                <MaterialIcons name="save" size={20} color="white" />
-                <Text style={styles.guncelleText}>Güncelle</Text>
-            </TouchableOpacity>
+                    >
+                        <Picker.Item label="Bekliyor" value="Bekliyor" color={Platform.OS === 'ios' ? 'white' : '#f51212ff'} />
+                        <Picker.Item label="Yapıldı" value="Yapıldı" color={Platform.OS === 'ios' ? 'white' : '#f51212ff'} />
+                        <Picker.Item label="Yapılmadı" value="Yapılmadı" color={Platform.OS === 'ios' ? 'white' : '#f51212ff'} />
+                        <Picker.Item label="Eksik" value="Eksik" color={Platform.OS === 'ios' ? 'white' : '#f51212ff'} />
+                    </Picker>
+                </View>
+
+                {/* Güncelle Butonu */}
+                <TouchableOpacity
+                    style={styles.guncelleButon}
+                    onPress={() =>
+                        onGuncelle({
+                            ...item,
+                            yapilmadurumu: yapilmaDurumu,
+                            verilmetarihi: verilme.toISOString().split('T')[0],
+                            teslimttarihi: teslim.toISOString().split('T')[0],
+                        })
+                    }
+                >
+                    <MaterialIcons name="save" size={16} color="white" />
+                    <Text style={styles.guncelleText}>Gncll</Text>
+                </TouchableOpacity>
+
+                {/* Sil Butonu */}
+                {onSil && (
+                    <TouchableOpacity
+                        style={styles.silButon}
+                        onPress={silOnayla}
+                    >
+                        <MaterialIcons name="delete" size={16} color="white" />
+                        <Text style={styles.silText}>Sil</Text>
+                    </TouchableOpacity>
+                )}
+            </View>
 
             {/* DatePickers */}
             {verilmePickerAcik && (
@@ -121,19 +147,19 @@ const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle }) => {
 
 const styles = StyleSheet.create({
     odevItem: {
-        padding: 12,
-        marginBottom: 12,
+        padding: 10,
+        marginBottom: 10,
         backgroundColor: '#f8f9fa',
         borderRadius: 6,
         borderWidth: 1,
         borderColor: '#e1e8ed',
     },
-    odevKonu: { fontSize: 16, fontWeight: 'bold', marginBottom: 8 },
+    odevKonu: { fontSize: 15, fontWeight: 'bold', marginBottom: 6, color: '#2c3e50' },
     odevTarihler: {
-        flexDirection: 'column',
-        justifyContent: 'flex-start',
-        marginBottom: 12,
-        gap: 8,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 8,
+        gap: 6,
     },
     dateButton: {
         flexDirection: 'row',
@@ -141,37 +167,59 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#ddd',
         borderRadius: 6,
-        padding: 8,
+        paddingVertical: 6,
+        paddingHorizontal: 8,
         backgroundColor: '#fff',
         flex: 1,
     },
-    dateText: { marginLeft: 8, flex: 1, flexWrap: 'wrap' },
-    durumContainer: {
+    dateText: { marginLeft: 4, fontSize: 12, color: '#333' },
+    altAksiyonSatiri: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 10,
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        height: 50,
-        overflow: 'hidden',
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.2,
-        shadowRadius: 2,
+        gap: 6,
+        marginTop: 2,
     },
-    durumLabel: { color: 'white', fontWeight: 'bold', fontSize: 14, marginRight: 5 },
-    durumPicker: { flex: 1, color: 'white', fontWeight: 'bold' },
+    durumContainer: {
+        flex: 1,
+        justifyContent:'flex-start',
+        borderRadius: 16,
+        height: 48,
+        overflow: 'hidden',
+        padding: 0,
+        margin: 0,
+    },
+    durumPicker: {
+        flex: 1,
+        color: '#0c0c0cff',
+        fontWeight: "normal",
+        fontSize: 12,
+        textDecorationColor: "red",
+        padding: 0,
+        
+        marginTop: -10,
+    },
     guncelleButon: {
         flexDirection: 'row',
-        justifyContent: 'center',
         alignItems: 'center',
+        justifyContent: 'center',
         backgroundColor: '#3498db',
-        padding: 10,
+        paddingVertical: 8,
+        paddingHorizontal: 10,
         borderRadius: 6,
-        marginTop: 10,
+        height: 38,
     },
-    guncelleText: { color: 'white', marginLeft: 6, fontWeight: 'bold' },
+    guncelleText: { color: 'white', marginLeft: 1, fontWeight: 'bold', fontSize: 8 },
+    silButon: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#e74c3c',
+        paddingVertical: 8,
+        paddingHorizontal: 10,
+        borderRadius: 6,
+        height: 38,
+    },
+    silText: { color: 'white', marginLeft: 4, fontWeight: 'bold', fontSize: 8 },
 });
 
 export default OdevItem;
