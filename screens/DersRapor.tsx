@@ -409,6 +409,9 @@ export default function DersRapor() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                     <MaterialIcons name="school" size={20} color="#3498db" />
                     <Text style={styles.itemTarih}>{formatTarih(item.tarih)}</Text>
+                    {isGeneralReport && item.ogrenciAdSoyad && (
+                        <Text style={styles.ogrenciEtiket}> ({item.ogrenciAdSoyad})</Text>
+                    )}
                 </View>
                 <View style={styles.itemActions}>
                     {odemeGoster && (<Text style={[styles.itemUcret, { marginRight: 10 }]}>{item.ucret} TL</Text>)}
@@ -439,6 +442,9 @@ export default function DersRapor() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                     <MaterialIcons name="payment" size={20} color="#27ae60" />
                     <Text style={styles.itemTarih}>{formatTarih(item.odemetarih)}</Text>
+                    {isGeneralReport && item.ogrenciAdSoyad && (
+                        <Text style={styles.ogrenciEtiket}> ({item.ogrenciAdSoyad})</Text>
+                    )}
                 </View>
                 <View style={styles.itemActions}>
                     <Text style={[styles.itemUcret, { marginRight: 10 }]}>{item.alinanucret} TL</Text>
@@ -882,8 +888,12 @@ const styles = StyleSheet.create({
     itemTarih: {
         fontSize: 14,
         color: '#666',
-        flex: 1,
         marginLeft: 8,
+    },
+    ogrenciEtiket: {
+        fontSize: 13,
+        fontWeight: 'bold',
+        color: '#2c3e50',
     },
     itemUcret: {
         fontSize: 14,

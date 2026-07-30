@@ -76,7 +76,11 @@ export async function dersiKaydet(dersVerisi: DersType) {
 export async function tumYapilanDersler() {
     try {
         const db = await ensureDatabaseReady();
-        const yapilanDersler = await db.getAllAsync<DersType>(`SELECT * FROM dersler`);
+        const yapilanDersler = await db.getAllAsync<DersType>(
+            `SELECT d.*, (og.ogrenciAd || ' ' || og.ogrenciSoyad) as ogrenciAdSoyad 
+             FROM dersler d 
+             LEFT JOIN ogrenciler og ON d.ogrenciId = og.ogrenciId`
+        );
 
         return { success: true, yapilanDersler: yapilanDersler || [] };
     } catch (error: any) {

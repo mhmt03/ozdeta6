@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
         top: 40,
     },
     headerDate: {
-        fontSize: 16,
+        fontSize: 14,
         color: '#ecf0f1',
         textAlign: 'center',
     },
@@ -510,13 +510,13 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     dersOgrenci: {
-        fontSize: 16,
+        fontSize: 12,
         fontWeight: '600',
         color: '#2c3e50',
         marginBottom: 2,
     },
     dersDetay: {
-        fontSize: 14,
+        fontSize: 9,
         color: '#7f8c8d',
         marginBottom: 2,
     },

@@ -68,7 +68,7 @@ export default function OdevEkle() {
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
     // Filtreleme State'leri
-    const [durumFiltresi, setDurumFiltresi] = useState<'hepsi' | 'Yapıldı' | 'Yapılmadı' | 'Bekliyor'>('hepsi');
+    const [durumFiltresi, setDurumFiltresi] = useState<'hepsi' | 'Yapıldı' | 'Yapılmadı' | 'Eksik' | 'Bekliyor'>('hepsi');
     const [tarihSiralamasi, setTarihSiralamasi] = useState<'azalan' | 'artan'>('azalan'); // azalan: yeniden eskiye, artan: eskiden yeniye
 
     // Filtrelenmiş ve Sıralanmış Ödevler
@@ -84,11 +84,12 @@ export default function OdevEkle() {
         });
 
     const durumFiltresiDegistir = () => {
-        const siradaki: Record<string, 'hepsi' | 'Yapıldı' | 'Yapılmadı' | 'Bekliyor'> = {
+        const siradaki: Record<string, 'hepsi' | 'Yapıldı' | 'Yapılmadı' | 'Eksik' | 'Bekliyor'> = {
             'hepsi': 'Bekliyor',
             'Bekliyor': 'Yapıldı',
             'Yapıldı': 'Yapılmadı',
-            'Yapılmadı': 'hepsi'
+            'Yapılmadı': 'Eksik',
+            'Eksik': 'hepsi'
         };
         setDurumFiltresi(siradaki[durumFiltresi]);
     };
