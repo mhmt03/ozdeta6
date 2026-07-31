@@ -1146,7 +1146,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#f1f8ff', // Hafif mavi tonu
         padding: 2, // Küçültüldü
         borderRadius: 6, // Küçültüldü
-        marginBottom: 4, // Küçültüldü
+        marginBottom: 6, // Küçültüldü
         borderWidth: 1,
         borderColor: '#d0e1f9',
         alignItems: 'center',

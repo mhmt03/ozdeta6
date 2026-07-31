@@ -412,7 +412,8 @@ export default function AjandaKayitEkle() {
                         <MaterialIcons name="access-time" size={24} color="#3498db" />
                         <Text style={styles.timeButtonText}>
                             {/* Date objesinden saat:dakika formatı çıkar */}
-                            {`${selectedTime.getHours().toString().padStart(2, '0')}:${selectedTime.getMinutes().toString().padStart(2, '0')}`}
+                            {"00:00"}
+                            {/*  eğer şu an katif olan saat görünsün istersen bu satırı kullan, üsttekini kaldır: {`${selectedTime.getHours().toString().padStart(2, '0')}:${selectedTime.getMinutes().toString().padStart(2, '0')}`} */}
                         </Text>
                         <MaterialIcons name="chevron-right" size={24} color="#bdc3c7" />
                     </TouchableOpacity>
@@ -589,7 +590,8 @@ const styles = StyleSheet.create({
     },
     scrollView: {
         flex: 1,
-        paddingBottom: 80,
+        paddingBottom: 10,
+        marginBottom:60,
     },
 
     // 📋 Başlık bölümü
@@ -606,13 +608,13 @@ const styles = StyleSheet.create({
         elevation: 3,
     },
     headerTitle: {
-        fontSize: 24,
+        fontSize: 14,
         fontWeight: 'bold',
         color: '#2c3e50',
         textAlign: 'center',
     },
     headerSubtitle: {
-        fontSize: 14,
+        fontSize: 12,
         color: '#7f8c8d',
         textAlign: 'center',
         marginTop: 5,
@@ -846,6 +848,7 @@ const styles = StyleSheet.create({
     // ✅ Kaydet butonu stilleri
     saveButton: {
         backgroundColor: '#2ecc71',
+        marginBottom:10,
     },
     saveButtonText: {
         color: 'white',
