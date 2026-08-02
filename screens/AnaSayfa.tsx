@@ -113,10 +113,11 @@ export default function AnaSayfa() {
 
     const renderRandevuItem = ({ item }: { item: AjandaWithOgrenciType }) => {
         const isCompleted = item.dersYapildiMi === 1 || item.tamamlandiMi === 1 || item.tamamlanma === '1' || item.sutun1 === 'tamamlandı';
+        const isCancelled = item.iptal === 1;
 
         return (
             <TouchableOpacity
-                style={styles.randevuItem}
+                style={[styles.randevuItem, isCancelled && { opacity: 0.5 }]}
                 onPress={async () => {
                     try {
                         const ogrenciResult = await tekOgrenci(item.ogrenciId);
@@ -131,16 +132,16 @@ export default function AnaSayfa() {
                 }}
             >
                 <View style={styles.randevuSaat}>
-                    <Text style={styles.randevuSaatText}>{item.saat}</Text>
+                    <Text style={[styles.randevuSaatText, isCancelled && { textDecorationLine: 'line-through', textDecorationColor: '#e74c3c' }]}>{item.saat}</Text>
                 </View>
                 <View style={styles.randevuBilgi}>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Text style={styles.randevuOgrenci}>{item.ogrAdsoyad}</Text>
+                        <Text style={[styles.randevuOgrenci, isCancelled && { textDecorationLine: 'line-through', textDecorationColor: '#e74c3c' }]}>{item.ogrAdsoyad}</Text>
                         {isCompleted && (
                             <MaterialIcons name="check-circle" size={18} color="#27ae60" style={{ marginLeft: 6 }} />
                         )}
                     </View>
-                    <Text style={styles.randevuDers}>{item.saat}</Text>
+                    <Text style={[styles.randevuDers, isCancelled && { textDecorationLine: 'line-through', textDecorationColor: '#e74c3c' }]}>{item.saat}</Text>
                 </View>
                 <MaterialIcons name="arrow-forward-ios" size={16} color="#666" />
             </TouchableOpacity>

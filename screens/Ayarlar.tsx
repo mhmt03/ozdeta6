@@ -1,5 +1,3 @@
-// Ayarlar.js - DÜZELTİLMİŞ VERSİYON
-
 import React, { useState, useEffect } from 'react';
 import {
     View,
@@ -11,7 +9,8 @@ import {
     FlatList,
     Modal,
     ActivityIndicator,
-    Platform
+    Platform,
+    Switch
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -33,6 +32,7 @@ import {
     ogrenciNotlari
 } from '../utils/database';
 import { ogrenciAjandaGetir } from '../utils/ajandaDatabase';
+import { getSetting, saveSetting } from '../database/settingsOperations';
 
 export default function Ayarlar() {
     const navigation = useNavigation<any>();
@@ -69,9 +69,61 @@ export default function Ayarlar() {
     const [sonOdemelerModalAcik, setSonOdemelerModalAcik] = useState(false);
     const [sonOdemeler, setSonOdemeler] = useState<any[]>([]);
 
+    // Bildirim ayarları state'leri
+    const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+    const [notificationSound, setNotificationSound] = useState(true);
+    const [notificationMinutes, setNotificationMinutes] = useState(15);
+    const [notificationVibrate, setNotificationVibrate] = useState(true);
+    const [dailySummaryEnabled, setDailySummaryEnabled] = useState(false);
+
     useEffect(() => {
         borcluOgrencileriHesapla();
+        loadNotificationSettings();
     }, []);
+
+    const loadNotificationSettings = async () => {
+        try {
+            const enabled = await getSetting('notifications_enabled', '1');
+            const sound = await getSetting('notification_sound', '1');
+            const mins = await getSetting('notification_minutes', '15');
+            const vibrate = await getSetting('notification_vibrate', '1');
+            const daily = await getSetting('daily_summary', '0');
+
+            setNotificationsEnabled(enabled === '1');
+            setNotificationSound(sound === '1');
+            setNotificationMinutes(parseInt(mins) || 15);
+            setNotificationVibrate(vibrate === '1');
+            setDailySummaryEnabled(daily === '1');
+        } catch (error) {
+            console.error('Bildirim ayarları yüklenemedi:', error);
+        }
+    };
+
+    const toggleNotifications = async (val: boolean) => {
+        setNotificationsEnabled(val);
+        await saveSetting('notifications_enabled', val ? '1' : '0');
+    };
+
+    const toggleSound = async (val: boolean) => {
+        setNotificationSound(val);
+        await saveSetting('notification_sound', val ? '1' : '0');
+    };
+
+    const updateMinutes = async (val: number) => {
+        const finalVal = Math.max(1, val);
+        setNotificationMinutes(finalVal);
+        await saveSetting('notification_minutes', finalVal.toString());
+    };
+
+    const toggleVibrate = async (val: boolean) => {
+        setNotificationVibrate(val);
+        await saveSetting('notification_vibrate', val ? '1' : '0');
+    };
+
+    const toggleDailySummary = async (val: boolean) => {
+        setDailySummaryEnabled(val);
+        await saveSetting('daily_summary', val ? '1' : '0');
+    };
 
     /**
      * Detaylı tarih formatı oluşturma
@@ -931,11 +983,6 @@ export default function Ayarlar() {
             )}
 
             <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-                <View style={styles.header}>
-                    <MaterialIcons name="settings" size={32} color="#2196F3" />
-                    <Text style={styles.headerTitle}>İşlemler</Text>
-                </View>
-
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Veritabanı Yönetimi</Text>
 
@@ -1037,6 +1084,88 @@ export default function Ayarlar() {
                             </Text>
                         </View>
                     </TouchableOpacity>
+                </View>
+
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Bildirim Ayarları</Text>
+
+                    <View style={styles.ayarItemRow}>
+                        <View style={styles.ayarTextRow}>
+                            <Text style={styles.ayarBaslik}>Bildirimleri Etkinleştir</Text>
+                            <Text style={styles.ayarAciklama}>Yaklaşan randevular için bildirim gönder</Text>
+                        </View>
+                        <Switch
+                            value={notificationsEnabled}
+                            onValueChange={toggleNotifications}
+                            trackColor={{ false: "#767577", true: "#81b0ff" }}
+                            thumbColor={notificationsEnabled ? "#2196F3" : "#f4f3f4"}
+                        />
+                    </View>
+
+                    {notificationsEnabled && (
+                        <>
+                            <View style={styles.ayarItemRow}>
+                                <View style={styles.ayarTextRow}>
+                                    <Text style={styles.ayarBaslik}>Sesli Bildirim</Text>
+                                    <Text style={styles.ayarAciklama}>Bildirimler sesli çalsın (sessiz/sesli)</Text>
+                                </View>
+                                <Switch
+                                    value={notificationSound}
+                                    onValueChange={toggleSound}
+                                    trackColor={{ false: "#767577", true: "#81b0ff" }}
+                                    thumbColor={notificationSound ? "#2196F3" : "#f4f3f4"}
+                                />
+                            </View>
+
+                            <View style={styles.ayarItemRow}>
+                                <View style={styles.ayarTextRow}>
+                                    <Text style={styles.ayarBaslik}>Titreşim</Text>
+                                    <Text style={styles.ayarAciklama}>Bildirim geldiğinde telefon titresin</Text>
+                                </View>
+                                <Switch
+                                    value={notificationVibrate}
+                                    onValueChange={toggleVibrate}
+                                    trackColor={{ false: "#767577", true: "#81b0ff" }}
+                                    thumbColor={notificationVibrate ? "#2196F3" : "#f4f3f4"}
+                                />
+                            </View>
+
+                            <View style={styles.ayarItemRow}>
+                                <View style={styles.ayarTextRow}>
+                                    <Text style={styles.ayarBaslik}>Günlük Randevu Özeti</Text>
+                                    <Text style={styles.ayarAciklama}>Her sabah o günkü randevuların özetini al</Text>
+                                </View>
+                                <Switch
+                                    value={dailySummaryEnabled}
+                                    onValueChange={toggleDailySummary}
+                                    trackColor={{ false: "#767577", true: "#81b0ff" }}
+                                    thumbColor={dailySummaryEnabled ? "#2196F3" : "#f4f3f4"}
+                                />
+                            </View>
+
+                            <View style={styles.ayarItemSub}>
+                                <View style={styles.ayarText}>
+                                    <Text style={styles.ayarBaslik}>Bildirim Süresi</Text>
+                                    <Text style={styles.ayarAciklama}>Randevudan kaç dakika önce uyarı verilsin?</Text>
+                                </View>
+                                <View style={styles.counterControlsInline}>
+                                    <TouchableOpacity
+                                        style={styles.counterBtn}
+                                        onPress={() => updateMinutes(notificationMinutes - 5)}
+                                    >
+                                        <MaterialIcons name="remove" size={20} color="#F44336" />
+                                    </TouchableOpacity>
+                                    <Text style={styles.counterValText}>{notificationMinutes} dk</Text>
+                                    <TouchableOpacity
+                                        style={styles.counterBtn}
+                                        onPress={() => updateMinutes(notificationMinutes + 5)}
+                                    >
+                                        <MaterialIcons name="add" size={20} color="#4CAF50" />
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        </>
+                    )}
                 </View>
 
                 <View style={styles.section}>
@@ -1769,6 +1898,45 @@ const styles = StyleSheet.create({
         color: '#E65100',
         marginLeft: 8,
         flex: 1,
+    },
+    ayarItemRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+    },
+    ayarTextRow: {
+        flex: 1,
+        marginRight: 10,
+    },
+    ayarItemSub: {
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+    },
+    counterControlsInline: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 10,
+        alignSelf: 'flex-start',
+    },
+    counterBtn: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: '#f0f0f0',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginHorizontal: 10,
+    },
+    counterValText: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#333',
+        minWidth: 50,
+        textAlign: 'center',
     },
 });
 

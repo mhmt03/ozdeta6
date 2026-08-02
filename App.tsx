@@ -220,7 +220,7 @@ export default function App() {
         />
         <Stack.Screen
           name='Ayarlar'
-          options={{ title: 'Uygulama Ayarları' }}
+          options={{ title: 'İşlemler' }}
           component={Ayarlar}
         />
         <Stack.Screen

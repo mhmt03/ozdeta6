@@ -56,7 +56,11 @@ export default function AjandaKayitEkle() {
 
     // 📅 Tarih ve saat state'leri
     const [selectedDate, setSelectedDate] = useState(initialDate);
-    const [selectedTime, setSelectedTime] = useState(new Date());
+    const [selectedTime, setSelectedTime] = useState(() => {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        return d;
+    });
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showTimePicker, setShowTimePicker] = useState(false);
 
@@ -411,9 +415,7 @@ export default function AjandaKayitEkle() {
                     >
                         <MaterialIcons name="access-time" size={24} color="#3498db" />
                         <Text style={styles.timeButtonText}>
-                            {/* Date objesinden saat:dakika formatı çıkar */}
-                            {"00:00"}
-                            {/*  eğer şu an katif olan saat görünsün istersen bu satırı kullan, üsttekini kaldır: {`${selectedTime.getHours().toString().padStart(2, '0')}:${selectedTime.getMinutes().toString().padStart(2, '0')}`} */}
+                            {`${selectedTime.getHours().toString().padStart(2, '0')}:${selectedTime.getMinutes().toString().padStart(2, '0')}`}
                         </Text>
                         <MaterialIcons name="chevron-right" size={24} color="#bdc3c7" />
                     </TouchableOpacity>
