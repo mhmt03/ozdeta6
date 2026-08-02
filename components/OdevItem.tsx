@@ -53,7 +53,7 @@ const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle, onSil }) => {
     return (
         <View style={[styles.odevItem, teslimGecmis && { borderColor: 'red', borderWidth: 2 }]}>
             <Text style={styles.odevKonu}>{item.odev}</Text>
-
+            <Text style={styles.odevKaynak}>{item.kaynak}</Text>
             {/* Tarih Seçiciler */}
             <View style={styles.odevTarihler}>
                 <TouchableOpacity
@@ -155,6 +155,7 @@ const styles = StyleSheet.create({
         borderColor: '#e1e8ed',
     },
     odevKonu: { fontSize: 15, fontWeight: 'bold', marginBottom: 6, color: '#2c3e50' },
+    odevKaynak: { fontSize: 12, fontWeight: 'normal', marginBottom: 6, color: '#5da7f1ff' },
     odevTarihler: {
         flexDirection: 'row',
         justifyContent: 'space-between',
