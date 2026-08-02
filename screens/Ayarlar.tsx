@@ -19,6 +19,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useNavigation } from '@react-navigation/native';
 import * as Sharing from 'expo-sharing';
 import * as XLSX from 'xlsx';
+import * as Notifications from 'expo-notifications';
 
 // Veritabanı fonksiyonları
 import {
@@ -99,7 +100,38 @@ export default function Ayarlar() {
         }
     };
 
+    const requestNotificationPermission = async () => {
+        try {
+            const { status: existingStatus } = await Notifications.getPermissionsAsync();
+            let finalStatus = existingStatus;
+            if (existingStatus !== 'granted') {
+                const { status } = await Notifications.requestPermissionsAsync();
+                finalStatus = status;
+            }
+            if (finalStatus !== 'granted') {
+                Alert.alert(
+                    'İzin Gerekli',
+                    'Randevu bildirimlerini alabilmek için lütfen cihazınızın bildirim ayarlarına giderek Özdeta uygulamasına bildirim izni verin.',
+                    [{ text: 'Tamam' }]
+                );
+                return false;
+            }
+            return true;
+        } catch (error) {
+            console.error('Bildirim izni alınırken hata:', error);
+            return false;
+        }
+    };
+
     const toggleNotifications = async (val: boolean) => {
+        if (val) {
+            const granted = await requestNotificationPermission();
+            if (!granted) {
+                setNotificationsEnabled(false);
+                await saveSetting('notifications_enabled', '0');
+                return;
+            }
+        }
         setNotificationsEnabled(val);
         await saveSetting('notifications_enabled', val ? '1' : '0');
     };
