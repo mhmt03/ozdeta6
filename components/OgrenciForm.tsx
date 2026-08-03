@@ -1,6 +1,8 @@
 import React, { Dispatch, SetStateAction } from 'react';
 import { View, Switch, Text, TextInput, Keyboard, TouchableWithoutFeedback, StyleSheet, TouchableOpacity, ScrollView, Alert } from "react-native";
 import { OgrenciType } from '../types';
+import * as Contacts from 'expo-contacts';
+import { MaterialIcons } from '@expo/vector-icons';
 
 type OgrenciFormProps = {
     ogrenci: OgrenciType;
@@ -18,6 +20,39 @@ export default function OgrenciForm({ ogrenci, setOgrenci, onSave, onCancel }: O
         const numerik = deger.replace(/[^0-9]/g, '');
         metinDegisti(bolge, numerik === '' ? 0 : parseInt(numerik, 10));
     }
+
+    const rehberdenSec = async (bolge: 'ogrenciTel' | 'veliTel') => {
+        try {
+            const { status } = await Contacts.requestPermissionsAsync();
+            if (status === 'granted') {
+                const contact = await Contacts.presentContactPickerAsync();
+                if (contact) {
+                    const phone = contact.phoneNumbers && contact.phoneNumbers.length > 0 
+                        ? contact.phoneNumbers[0].number 
+                        : null;
+                    if (phone) {
+                        // Telefon numarasını temizle
+                        let cleanPhone = phone.replace(/\s+/g, '').replace(/[-\(\)]/g, '');
+                        if (cleanPhone.startsWith('+90')) {
+                            cleanPhone = cleanPhone.slice(3);
+                        } else if (cleanPhone.startsWith('90')) {
+                            cleanPhone = cleanPhone.slice(2);
+                        } else if (cleanPhone.startsWith('0')) {
+                            cleanPhone = cleanPhone.slice(1);
+                        }
+                        metinDegisti(bolge, cleanPhone);
+                    } else {
+                        Alert.alert('Hata', 'Seçilen kişinin kayıtlı telefon numarası bulunamadı.');
+                    }
+                }
+            } else {
+                Alert.alert('İzin Reddedildi', 'Rehbere erişim izni verilmedi. Lütfen ayarlardan izin verin.');
+            }
+        } catch (error) {
+            console.error('Rehber hatası:', error);
+            Alert.alert('Hata', 'Rehberden kişi seçilemedi.');
+        }
+    };
 
     const handleSave = () => {
         if (!ogrenci.ogrenciAd || !ogrenci.ogrenciSoyad) {
@@ -75,13 +110,18 @@ export default function OgrenciForm({ ogrenci, setOgrenci, onSave, onCancel }: O
 
                     <View style={styles.inputGroup}>
                         <Text style={styles.label}>Öğrenci Telefon</Text>
-                        <TextInput
-                            value={(ogrenci.ogrenciTel ?? '').toString()}
-                            onChangeText={text => metinDegisti('ogrenciTel', text)}
-                            style={styles.input}
-                            keyboardType="phone-pad"
-                            placeholder="5XX XXX XX XX"
-                        />
+                        <View style={styles.inputRow}>
+                            <TextInput
+                                value={(ogrenci.ogrenciTel ?? '').toString()}
+                                onChangeText={text => metinDegisti('ogrenciTel', text)}
+                                style={styles.inputWithButton}
+                                keyboardType="phone-pad"
+                                placeholder="5XX XXX XX XX"
+                            />
+                            <TouchableOpacity style={styles.pickerButton} onPress={() => rehberdenSec('ogrenciTel')}>
+                                <MaterialIcons name="contact-phone" size={24} color="white" />
+                            </TouchableOpacity>
+                        </View>
                     </View>
 
                     <Text style={styles.sectionTitle}>Veli Bilgileri</Text>
@@ -98,13 +138,18 @@ export default function OgrenciForm({ ogrenci, setOgrenci, onSave, onCancel }: O
 
                     <View style={styles.inputGroup}>
                         <Text style={styles.label}>Veli Telefon</Text>
-                        <TextInput
-                            value={(ogrenci.veliTel ?? '').toString()}
-                            onChangeText={text => metinDegisti('veliTel', text)}
-                            style={styles.input}
-                            keyboardType="phone-pad"
-                            placeholder="5XX XXX XX XX"
-                        />
+                        <View style={styles.inputRow}>
+                            <TextInput
+                                value={(ogrenci.veliTel ?? '').toString()}
+                                onChangeText={text => metinDegisti('veliTel', text)}
+                                style={styles.inputWithButton}
+                                keyboardType="phone-pad"
+                                placeholder="5XX XXX XX XX"
+                            />
+                            <TouchableOpacity style={styles.pickerButton} onPress={() => rehberdenSec('veliTel')}>
+                                <MaterialIcons name="contact-phone" size={24} color="white" />
+                            </TouchableOpacity>
+                        </View>
                     </View>
 
                     <View style={styles.inputGroup}>
@@ -163,6 +208,9 @@ const styles = StyleSheet.create({
     inputGroup: { marginBottom: 15 },
     label: { fontSize: 16, marginBottom: 5, fontWeight: '600', color: '#34495e' },
     input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, backgroundColor: '#fff', fontSize: 16 },
+    inputRow: { flexDirection: 'row', alignItems: 'center' },
+    inputWithButton: { flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, backgroundColor: '#fff', fontSize: 16 },
+    pickerButton: { marginLeft: 10, padding: 12, backgroundColor: '#3498db', borderRadius: 8, justifyContent: 'center', alignItems: 'center', height: 48, width: 48 },
     multilineInput: { minHeight: 100, textAlignVertical: 'top' },
     switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginVertical: 20, padding: 15, backgroundColor: '#fff', borderRadius: 8, borderWidth: 1, borderColor: '#ddd' },
     switchLabel: { fontSize: 16, fontWeight: '600', color: '#34495e' },

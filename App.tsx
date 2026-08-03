@@ -21,6 +21,7 @@ import KaynakYonetimi from './screens/KaynakYonetimi';
 import GlobalKaynakYonetimi from './screens/GlobalKaynakYonetimi';
 import Ayarlar from './screens/Ayarlar';
 import Denemeler from './screens/Denemeler';
+import { setupNotificationHandler, rescheduleAllRandevuNotifications } from './utils/notifications';
 
 export type RootStackParamList = {
   ogrenciListesi: undefined;
@@ -72,6 +73,8 @@ export default function App() {
 
         await initDatabase();
         setDbInitialized(true);
+        setupNotificationHandler();
+        await rescheduleAllRandevuNotifications();
 
       } catch (error) {
         console.error('Uygulama başlatma hatası:', error);

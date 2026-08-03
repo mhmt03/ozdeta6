@@ -1,5 +1,6 @@
 import { ensureDatabaseReady } from './init';
 import { AjandaType, OgrenciType } from '../types';
+import { scheduleRandevuNotification, cancelRandevuNotification, rescheduleAllRandevuNotifications } from '../utils/notifications';
 
 export type AjandaWithOgrenciType = AjandaType & {
     ogrenciAd?: string;
@@ -29,6 +30,9 @@ export async function ajandaKayitEkle(kayit: AjandaType) {
                 kayit.sutun2 || ''
             ]
         );
+        if (result.lastInsertRowId) {
+            await scheduleRandevuNotification(result.lastInsertRowId, kayit.tarih, kayit.saat, kayit.ogrAdsoyad);
+        }
         return { success: true, insertId: result.lastInsertRowId };
     } catch (error: any) {
         console.error("ajandaDatabase_Ajanda kaydı eklenemedi:", error);
@@ -102,6 +106,14 @@ export async function ajandaGuncelle(ajandaId: number, kayit: AjandaType) {
                 ajandaId
             ]
         );
+        if (result.changes > 0) {
+            const isInactive = kayit.tamamlandiMi === 1 || kayit.tamamlanma === '1' || kayit.sutun1 === 'tamamlandı';
+            if (isInactive) {
+                await cancelRandevuNotification(ajandaId);
+            } else {
+                await scheduleRandevuNotification(ajandaId, kayit.tarih, kayit.saat, kayit.ogrAdsoyad);
+            }
+        }
         return { success: result.changes > 0 };
     } catch (error: any) {
         console.error("[agendaOperations.ts] ajandaGuncelle error:", error);
@@ -142,6 +154,9 @@ export async function randevuIptal(ajandaId: number) {
             `UPDATE ajanda SET iptal=1 WHERE ajandaId=?`,
             [ajandaId]
         );
+        if (result.changes > 0) {
+            await cancelRandevuNotification(ajandaId);
+        }
         return { success: result.changes > 0 };
     } catch (error: any) {
         console.error("Randevu iptal edilemedi:", error);
@@ -156,6 +171,9 @@ export async function ajandaSil(ajandaId: number) {
             `DELETE FROM ajanda WHERE ajandaId = ?`,
             [ajandaId]
         );
+        if (result.changes > 0) {
+            await cancelRandevuNotification(ajandaId);
+        }
         return { success: result.changes > 0 };
     } catch (error: any) {
         console.error("Ajanda kaydı silinemedi:", error);
@@ -170,6 +188,9 @@ export async function ajandaGrupSil(olusmaAni: string) {
             `DELETE FROM ajanda WHERE olusmaAni = ?`,
             [olusmaAni]
         );
+        if (result.changes > 0) {
+            await rescheduleAllRandevuNotifications();
+        }
         return { success: true, deletedCount: result.changes };
     } catch (error: any) {
         console.error("Ajanda grubu silinemedi:", error);
@@ -184,6 +205,9 @@ export async function ajandaSiradakiKayitlariSil(olusmaAni: string, tarih: strin
             `DELETE FROM ajanda WHERE olusmaAni = ? AND tarih >= ?`,
             [olusmaAni, tarih]
         );
+        if (result.changes > 0) {
+            await rescheduleAllRandevuNotifications();
+        }
         return { success: true, deletedCount: result.changes };
     } catch (error: any) {
         console.error("Sıradaki ajanda kayıtları silinemedi:", error);
@@ -269,6 +293,7 @@ export async function ajandaGrupGuncelle(olusmaAni: string, seciliTarih: string,
             );
         }
 
+        await rescheduleAllRandevuNotifications();
         return { success: true };
     } catch (error: any) {
         console.error("[agendaOperations.ts] Ajanda grup güncellemesi başarısız:", error);
@@ -283,6 +308,9 @@ export async function ajandaTamamlanmaDurumuGuncelle(ajandaId: number, durum: st
             `UPDATE ajanda SET tamamlanma = ? WHERE ajandaId = ?`,
             [durum, ajandaId]
         );
+        if (result.changes > 0) {
+            await rescheduleAllRandevuNotifications();
+        }
         return { success: result.changes > 0 };
     } catch (error: any) {
         console.error("Tamamlanma durumu güncellenemedi:", error);
@@ -298,6 +326,9 @@ export async function ajandaTamamla(ogrenciId: number, tarih: string, tamamlandi
             `UPDATE ajanda SET tamamlandiMi = ? WHERE ogrenciId = ? AND tarih = ?`,
             [status, ogrenciId, tarih]
         );
+        if (result.changes > 0) {
+            await rescheduleAllRandevuNotifications();
+        }
         return { success: true, changes: result.changes };
     } catch (error: any) {
         console.error("ajandaTamamla hatası:", error);

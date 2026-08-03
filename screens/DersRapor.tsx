@@ -59,6 +59,17 @@ export default function DersRapor() {
     const [showTimePicker, setShowTimePicker] = useState(false);
     const [odemeGoster, setOdemeGoster] = useState(false); // default kapalı
 
+    // PDF Rapor Ayarları State'leri
+    const [pdfType, setPdfType] = useState<'ders' | 'odeme'>('ders');
+    const [pdfModalVisible, setPdfModalVisible] = useState(false);
+    const [pdfStartDate, setPdfStartDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+    const [pdfEndDate, setPdfEndDate] = useState(new Date());
+    const [pdfAllDates, setPdfAllDates] = useState(true);
+    const [pdfShowPrice, setPdfShowPrice] = useState(true);
+    const [showPdfStartPicker, setShowPdfStartPicker] = useState(false);
+    const [showPdfEndPicker, setShowPdfEndPicker] = useState(false);
+
+
     useEffect(() => {
         veriAl();
     }, []);
@@ -112,13 +123,32 @@ export default function DersRapor() {
             const title = type === 'ders' ? 'Ders Raporu' : 'Ödeme Raporu';
             const studentName = ogrenci ? `${ogrenci.ogrenciAd} ${ogrenci.ogrenciSoyad}` : 'Tüm Öğrenciler';
 
+            let targetDersler = dersler;
+            if (type === 'ders' && !pdfAllDates) {
+                const startStr = pdfStartDate.toISOString().split('T')[0];
+                const endStr = pdfEndDate.toISOString().split('T')[0];
+                targetDersler = dersler.filter(d => d.tarih >= startStr && d.tarih <= endStr);
+            }
+
+            let targetOdemeler = odemeler;
+            if (type === 'odeme' && !pdfAllDates) {
+                const startStr = pdfStartDate.toISOString().split('T')[0];
+                const endStr = pdfEndDate.toISOString().split('T')[0];
+                targetOdemeler = odemeler.filter(o => o.odemetarih >= startStr && o.odemetarih <= endStr);
+            }
+
+            const dateRangeText = pdfAllDates 
+                ? 'Tüm Tarihler' 
+                : `${formatTarih(pdfStartDate.toISOString())} - ${formatTarih(pdfEndDate.toISOString())}`;
+
             let htmlContent = `
                 <html>
                 <head>
                     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
                     <style>
                         body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; color: #333; }
-                        h1 { color: #2c3e50; text-align: center; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+                        h1 { color: #2c3e50; text-align: center; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-bottom: 5px; }
+                        .subtitle { text-align: center; color: #7f8c8d; font-size: 14px; margin-bottom: 20px; }
                         .info { margin-bottom: 20px; font-size: 14px; }
                         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
                         th { background-color: #3498db; color: white; padding: 10px; text-align: left; font-size: 12px; }
@@ -129,6 +159,7 @@ export default function DersRapor() {
                 </head>
                 <body>
                     <h1>${title}</h1>
+                    <div class="subtitle">${dateRangeText}</div>
                     <div class="info">
                         <p><strong>Öğrenci:</strong> ${studentName}</p>
                         <p><strong>Rapor Tarihi:</strong> ${new Date().toLocaleDateString('tr-TR')}</p>
@@ -137,23 +168,23 @@ export default function DersRapor() {
                         <thead>
                             <tr>
                                 ${type === 'ders'
-                    ? '<th>Tarih</th><th>Saat</th>' + (isGeneralReport ? '<th>Öğrenci</th>' : '') + '<th>Konu</th><th>Ücret</th>'
-                    : '<th>Tarih</th>' + (isGeneralReport ? '<th>Öğrenci</th>' : '') + '<th>Tür</th><th>Açıklama</th><th>Miktar</th>'
+                    ? `<th>Tarih</th><th>Saat</th>${isGeneralReport ? '<th>Öğrenci</th>' : ''}<th>Konu</th>${pdfShowPrice ? '<th>Ücret</th>' : ''}`
+                    : `<th>Tarih</th>${isGeneralReport ? '<th>Öğrenci</th>' : ''}<th>Tür</th><th>Açıklama</th><th>Miktar</th>`
                 }
                             </tr>
                         </thead>
                         <tbody>
                             ${type === 'ders'
-                    ? dersler.map(d => `
+                    ? targetDersler.map(d => `
                                     <tr>
                                         <td>${formatTarih(d.tarih)}</td>
                                         <td>${d.saat}</td>
                                         ${isGeneralReport ? `<td>${d.ogrenciAdSoyad || '-'}</td>` : ''}
                                         <td>${d.konu || '-'}</td>
-                                        <td>${d.ucret} TL</td>
+                                        ${pdfShowPrice ? `<td>${d.ucret} TL</td>` : ''}
                                     </tr>
                                 `).join('')
-                    : odemeler.map(o => `
+                    : targetOdemeler.map(o => `
                                     <tr>
                                         <td>${formatTarih(o.odemetarih)}</td>
                                         ${isGeneralReport ? `<td>${o.ogrenciAdSoyad || '-'}</td>` : ''}
@@ -166,7 +197,12 @@ export default function DersRapor() {
                         </tbody>
                     </table>
                     <div class="total">
-                        Toplam ${type === 'ders' ? 'Ders Ücreti' : 'Tahsilat'}: ${type === 'ders' ? toplamDersUcreti() : toplamOdeme()} TL
+                        ${type === 'ders'
+                    ? (pdfShowPrice
+                        ? `Toplam Ders Ücreti: ${targetDersler.reduce((toplam, d) => toplam + (parseInt(d.ucret) || 0), 0)} TL`
+                        : `Toplam Ders Sayısı: ${targetDersler.length}`)
+                    : `Toplam Tahsilat: ${targetOdemeler.reduce((toplam, o) => toplam + (parseInt(o.alinanucret) || 0), 0)} TL`
+                }
                     </div>
                     <div class="footer">
                         Özdeta Öğretmen Takip Sistemi tarafından oluşturulmuştur.
@@ -496,14 +532,20 @@ export default function DersRapor() {
                 </View>
                 <TouchableOpacity
                     style={[styles.pdfButton, { backgroundColor: '#e67e22' }]}
-                    onPress={() => generatePDF('ders')}
+                    onPress={() => {
+                        setPdfType('ders');
+                        setPdfModalVisible(true);
+                    }}
                 >
                     <MaterialCommunityIcons name="file-pdf-box" size={20} color="white" />
                     <Text style={styles.pdfButtonText}>Ders PDF</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={[styles.pdfButton, { backgroundColor: '#27ae60' }]}
-                    onPress={() => generatePDF('odeme')}
+                    onPress={() => {
+                        setPdfType('odeme');
+                        setPdfModalVisible(true);
+                    }}
                 >
                     <MaterialCommunityIcons name="file-pdf-box" size={20} color="white" />
                     <Text style={styles.pdfButtonText}>Ödeme PDF</Text>
@@ -753,6 +795,129 @@ export default function DersRapor() {
                         onChange={(event, selectedTime) => {
                             setShowTimePicker(false);
                             if (selectedTime) setFormSaat(selectedTime);
+                        }}
+                    />
+                )}
+            </Modal>
+            
+            {/* PDF Ayarları Modalı */}
+            <Modal
+                visible={pdfModalVisible}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={() => setPdfModalVisible(false)}
+            >
+                <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setPdfModalVisible(false)}
+                >
+                    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                        <View style={styles.modalContent}>
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalBaslik}>
+                                    {pdfType === 'ders' ? 'Ders PDF Rapor Ayarları' : 'Ödeme PDF Rapor Ayarları'}
+                                </Text>
+                                <TouchableOpacity onPress={() => setPdfModalVisible(false)}>
+                                    <MaterialIcons name="close" size={24} color="#666" />
+                                </TouchableOpacity>
+                            </View>
+
+                            <ScrollView style={styles.modalBody}>
+                                {/* Tüm Tarihler Switch */}
+                                <View style={[styles.switchContainer, { justifyContent: 'space-between', marginBottom: 20 }]}>
+                                    <Text style={[styles.inputLabel, { marginBottom: 0 }]}>Tüm Tarihleri Raporla</Text>
+                                    <Switch
+                                        value={pdfAllDates}
+                                        onValueChange={setPdfAllDates}
+                                        trackColor={{ false: '#ccc', true: '#3498db' }}
+                                        thumbColor={'#fff'}
+                                    />
+                                </View>
+
+                                {/* Tarih Seçiciler (Eğer Tüm Tarihler kapalıysa) */}
+                                {!pdfAllDates && (
+                                    <View style={{ marginBottom: 20 }}>
+                                        {/* Başlangıç Tarihi */}
+                                        <View style={styles.inputContainer}>
+                                            <Text style={styles.inputLabel}>Başlangıç Tarihi</Text>
+                                            <TouchableOpacity
+                                                style={styles.dateTimeButton}
+                                                onPress={() => setShowPdfStartPicker(true)}
+                                            >
+                                                <MaterialIcons name="date-range" size={20} color="#666" />
+                                                <Text style={styles.dateTimeText}>{formatTarih(pdfStartDate.toISOString())}</Text>
+                                            </TouchableOpacity>
+                                        </View>
+
+                                        {/* Bitiş Tarihi */}
+                                        <View style={styles.inputContainer}>
+                                            <Text style={styles.inputLabel}>Bitiş Tarihi</Text>
+                                            <TouchableOpacity
+                                                style={styles.dateTimeButton}
+                                                onPress={() => setShowPdfEndPicker(true)}
+                                            >
+                                                <MaterialIcons name="date-range" size={20} color="#666" />
+                                                <Text style={styles.dateTimeText}>{formatTarih(pdfEndDate.toISOString())}</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                )}
+
+                                {/* Ücret Gösterilsin mi Switch (Yalnızca Ders Raporlarında) */}
+                                {pdfType === 'ders' && (
+                                    <View style={[styles.switchContainer, { justifyContent: 'space-between', marginBottom: 20 }]}>
+                                        <Text style={[styles.inputLabel, { marginBottom: 0 }]}>Ücret Sütunu Gösterilsin mi?</Text>
+                                        <Switch
+                                            value={pdfShowPrice}
+                                            onValueChange={setPdfShowPrice}
+                                            trackColor={{ false: '#ccc', true: '#3498db' }}
+                                            thumbColor={'#fff'}
+                                        />
+                                    </View>
+                                )}
+                            </ScrollView>
+
+                            <View style={styles.modalFooter}>
+                                <TouchableOpacity
+                                    style={[styles.modalButon, styles.vazgecButon]}
+                                    onPress={() => setPdfModalVisible(false)}
+                                >
+                                    <Text style={styles.vazgecButonText}>Vazgeç</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.modalButon, { backgroundColor: pdfType === 'ders' ? '#e67e22' : '#27ae60' }]}
+                                    onPress={() => {
+                                        setPdfModalVisible(false);
+                                        generatePDF(pdfType);
+                                    }}
+                                >
+                                    <Text style={styles.kaydetButonText}>Rapor Oluştur</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </TouchableWithoutFeedback>
+                </TouchableOpacity>
+
+                {showPdfStartPicker && (
+                    <DateTimePicker
+                        value={pdfStartDate}
+                        mode="date"
+                        display="default"
+                        onChange={(event, selectedDate) => {
+                            setShowPdfStartPicker(false);
+                            if (selectedDate) setPdfStartDate(selectedDate);
+                        }}
+                    />
+                )}
+                {showPdfEndPicker && (
+                    <DateTimePicker
+                        value={pdfEndDate}
+                        mode="date"
+                        display="default"
+                        onChange={(event, selectedDate) => {
+                            setShowPdfEndPicker(false);
+                            if (selectedDate) setPdfEndDate(selectedDate);
                         }}
                     />
                 )}

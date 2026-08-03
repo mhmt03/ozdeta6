@@ -135,13 +135,18 @@ export default function AnaSayfa() {
                     <Text style={[styles.randevuSaatText, isCancelled && { textDecorationLine: 'line-through', textDecorationColor: '#e74c3c' }]}>{item.saat}</Text>
                 </View>
                 <View style={styles.randevuBilgi}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Text style={[styles.randevuOgrenci, isCancelled && { textDecorationLine: 'line-through', textDecorationColor: '#e74c3c' }]}>{item.ogrAdsoyad}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' ,flex:1}}>
+                        <Text
+                            style={[styles.randevuOgrenci, isCancelled && { textDecorationLine: 'line-through', textDecorationColor: '#e74c3c' }]}
+                        >
+                            {item.ogrAdsoyad}
+                        </Text>
                         {isCompleted && (
-                            <MaterialIcons name="check-circle" size={18} color="#27ae60" style={{ marginLeft: 6 }} />
+                            <MaterialIcons name="check-circle" size={18} color="#27ae60"
+                                style={{ marginLeft: "auto" }} />
                         )}
                     </View>
-                    <Text style={[styles.randevuDers, isCancelled && { textDecorationLine: 'line-through', textDecorationColor: '#e74c3c' }]}>{item.saat}</Text>
+                    {/* <Text style={[styles.randevuDers, isCancelled && { textDecorationLine: 'line-through', textDecorationColor: '#e74c3c' }]}>{item.saat}</Text> */}
                 </View>
                 <MaterialIcons name="arrow-forward-ios" size={16} color="#666" />
             </TouchableOpacity>
@@ -192,7 +197,7 @@ export default function AnaSayfa() {
                     <View style={styles.sectionHeader}>
                         <Text style={styles.sectionTitle}>Randevular</Text>
                         <View style={styles.headerbuttonsrow}>
-                            <TouchableOpacity onPress={() => navigation.navigate('Ajanda')} style={styles.tumunuGorButton}>
+                            <TouchableOpacity onPress={() => navigation.navigate('Ajanda')} >
                                 <Text style={styles.tumunuGor}>Tümünü Gör</Text>
                             </TouchableOpacity>
                             {/* <TouchableOpacity onPress={openNotlarModal} style={styles.tumunuGorButton}>
@@ -208,7 +213,18 @@ export default function AnaSayfa() {
                         </TouchableOpacity>
 
                         <View style={styles.tarihContainer}>
-                            <Text style={styles.tarihText}>{formatTarih(aktifTarih)}</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <Text style={styles.tarihText}>{formatTarih(aktifTarih)}</Text>
+                                {!tarihleriKarsilastir(aktifTarih, new Date()) && (
+                                    <TouchableOpacity
+                                        onPress={() => setAktifTarih(new Date())}
+                                        style={{ marginLeft: 6, padding: 2 }}
+                                        activeOpacity={0.7}
+                                    >
+                                        <MaterialIcons name="today" size={30} color="#3498db" />
+                                    </TouchableOpacity>
+                                )}
+                            </View>
                             <Text style={styles.tarihGunText}>
                                 {aktifTarih.toLocaleDateString('tr-TR', { weekday: 'long' })}
                             </Text>
@@ -309,12 +325,12 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'flex-end',
         alignItems: 'center',
-        marginTop: 10,
+        marginTop: 2,
         
     },
     tumunugorbutton: {
         backgroundColor: '#f10f0fff',
-        padding: 8,
+        padding: 4,
         borderRadius: 8,
         marginRight: 10,
     },
@@ -330,11 +346,11 @@ const styles = StyleSheet.create({
     },
     header: {
         backgroundColor: '#2c3e50',
-        padding: 20,
+        padding:10,
         paddingTop: 40,
         borderBottomLeftRadius: 20,
         borderBottomRightRadius: 20,
-        marginBottom: 20,
+        marginBottom: 2,
         position: 'relative',
         flexDirection: 'row',
         justifyContent: 'center',
@@ -351,13 +367,13 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     randevularContainer: {
-        backgroundColor: 'white',
+        backgroundColor: '#f8f9fa',
         borderRadius: 15,
-        padding: 15,
+        padding: 10,
         marginBottom: 20,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
         shadowRadius: 4,
         elevation: 3,
     },
@@ -375,6 +391,8 @@ const styles = StyleSheet.create({
     tumunuGor: {
         color: '#3498db',
         fontWeight: '600',
+        borderBottomWidth: 1,
+        borderBottomColor: '#3498db',
     },
     tarihNavigasyon: {
         flexDirection: 'row',
@@ -428,13 +446,13 @@ const styles = StyleSheet.create({
     randevuSaatText: {
         color: 'white',
         fontWeight: 'bold',
-        fontSize: 14,
+        fontSize: 12,
     },
     randevuBilgi: {
         flex: 1,
     },
     randevuOgrenci: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '600',
         color: '#2c3e50',
         marginBottom: 2,

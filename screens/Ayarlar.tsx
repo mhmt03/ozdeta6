@@ -34,6 +34,7 @@ import {
 } from '../utils/database';
 import { ogrenciAjandaGetir } from '../utils/ajandaDatabase';
 import { getSetting, saveSetting } from '../database/settingsOperations';
+import { rescheduleAllRandevuNotifications } from '../utils/notifications';
 
 export default function Ayarlar() {
     const navigation = useNavigation<any>();
@@ -129,27 +130,32 @@ export default function Ayarlar() {
             if (!granted) {
                 setNotificationsEnabled(false);
                 await saveSetting('notifications_enabled', '0');
+                await rescheduleAllRandevuNotifications();
                 return;
             }
         }
         setNotificationsEnabled(val);
         await saveSetting('notifications_enabled', val ? '1' : '0');
+        await rescheduleAllRandevuNotifications();
     };
 
     const toggleSound = async (val: boolean) => {
         setNotificationSound(val);
         await saveSetting('notification_sound', val ? '1' : '0');
+        await rescheduleAllRandevuNotifications();
     };
 
     const updateMinutes = async (val: number) => {
         const finalVal = Math.max(1, val);
         setNotificationMinutes(finalVal);
         await saveSetting('notification_minutes', finalVal.toString());
+        await rescheduleAllRandevuNotifications();
     };
 
     const toggleVibrate = async (val: boolean) => {
         setNotificationVibrate(val);
         await saveSetting('notification_vibrate', val ? '1' : '0');
+        await rescheduleAllRandevuNotifications();
     };
 
     const toggleDailySummary = async (val: boolean) => {
