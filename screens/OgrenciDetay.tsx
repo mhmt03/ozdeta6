@@ -212,7 +212,7 @@ export default function OgrenciDetay() {
                 alinanucret: odemeUcret,
                 odemetarih: odemeTarih.toISOString().split('T')[0], // YYYY-MM-DD formatı
                 odemeturu: 'Nakit', // Varsayılan değer
-                aciklama: `${formatTarih(odemeTarih)} ${formatSaat(odemeSaat)} tarihinde alınan ödeme`,
+                aciklama: 'Alınan Ödeme',
                 sutun1: dersSaat.toTimeString().split(' ')[0] // Saat bilgisi
             };
 

@@ -31,14 +31,13 @@ export default function OgrenciForm({ ogrenci, setOgrenci, onSave, onCancel }: O
                         ? contact.phoneNumbers[0].number 
                         : null;
                     if (phone) {
-                        // Telefon numarasını temizle
-                        let cleanPhone = phone.replace(/\s+/g, '').replace(/[-\(\)]/g, '');
-                        if (cleanPhone.startsWith('+90')) {
-                            cleanPhone = cleanPhone.slice(3);
-                        } else if (cleanPhone.startsWith('90')) {
+                        // Telefon numarasını temizle ve 05XXXXXXXXX formatına getir
+                        let cleanPhone = phone.replace(/\s+/g, '').replace(/[-\(\)\+]/g, '');
+                        if (cleanPhone.startsWith('90')) {
                             cleanPhone = cleanPhone.slice(2);
-                        } else if (cleanPhone.startsWith('0')) {
-                            cleanPhone = cleanPhone.slice(1);
+                        }
+                        if (!cleanPhone.startsWith('0')) {
+                            cleanPhone = '0' + cleanPhone;
                         }
                         metinDegisti(bolge, cleanPhone);
                     } else {

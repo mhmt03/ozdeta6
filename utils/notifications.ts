@@ -1,9 +1,10 @@
 import * as Notifications from 'expo-notifications';
 import { getSetting } from '../database/settingsOperations';
 import { ensureDatabaseReady } from '../database/init';
+import { Platform } from 'react-native';
 
 // Global bildirim yöneticisi kurulumu
-export function setupNotificationHandler() {
+export async function setupNotificationHandler() {
     Notifications.setNotificationHandler({
         handleNotification: async () => {
             const sound = await getSetting('notification_sound', '1');
@@ -14,6 +15,17 @@ export function setupNotificationHandler() {
             };
         },
     });
+
+    if (Platform.OS === 'android') {
+        const sound = await getSetting('notification_sound', '1');
+        await Notifications.setNotificationChannelAsync('default', {
+            name: 'default',
+            importance: Notifications.AndroidImportance.MAX,
+            vibrationPattern: [0, 250, 250, 250],
+            lightColor: '#FF231F7C',
+            sound: sound === '1' ? 'default' : undefined,
+        });
+    }
 }
 
 // Belirli bir randevu için bildirim planla
@@ -56,6 +68,9 @@ export async function scheduleRandevuNotification(
                 sound: sound,
                 vibrate: vibrate ? [0, 250, 250, 250] : undefined,
                 data: { ajandaId },
+                android: {
+                    channelId: 'default',
+                }
             },
             trigger: triggerDate,
         });

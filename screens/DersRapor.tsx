@@ -445,9 +445,7 @@ export default function DersRapor() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                     <MaterialIcons name="school" size={20} color="#3498db" />
                     <Text style={styles.itemTarih}>{formatTarih(item.tarih)}</Text>
-                    {isGeneralReport && item.ogrenciAdSoyad && (
-                        <Text style={styles.ogrenciEtiket}> ({item.ogrenciAdSoyad})</Text>
-                    )}
+                    <Text style={styles.itemSaat}>__Saat: {item.saat}</Text>
                 </View>
                 <View style={styles.itemActions}>
                     {odemeGoster && (<Text style={[styles.itemUcret, { marginRight: 10 }]}>{item.ucret} TL</Text>)}
@@ -460,8 +458,11 @@ export default function DersRapor() {
                     </TouchableOpacity>
                 </View>
             </View>
+            {isGeneralReport && item.ogrenciAdSoyad && (
+                <Text style={[styles.ogrenciEtiket, { marginBottom: 4 }]}>Öğrenci: {item.ogrenciAdSoyad}</Text>
+            )}
             <Text style={styles.itemKonu}>{item.konu || 'Konu belirtilmemiş'}</Text>
-            <Text style={styles.itemSaat}>Saat: {item.saat}</Text>
+            
         </View>
     );
 
@@ -477,13 +478,13 @@ export default function DersRapor() {
             <View style={styles.itemHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                     <MaterialIcons name="payment" size={20} color="#27ae60" />
-                    <Text style={styles.itemTarih}>{formatTarih(item.odemetarih)}</Text>
-                    {isGeneralReport && item.ogrenciAdSoyad && (
-                        <Text style={styles.ogrenciEtiket}> ({item.ogrenciAdSoyad})</Text>
+                     <Text style={styles.itemTarih}>{formatTarih(item.odemetarih)}</Text> 
+                    {item.odemesaati && (
+                        <Text style={styles.itemSaat}>__Saat: {item.odemesaati}</Text>
                     )}
                 </View>
                 <View style={styles.itemActions}>
-                    <Text style={[styles.itemUcret, { marginRight: 10 }]}>{item.alinanucret} TL</Text>
+                    <Text style={[styles.itemUcret, { marginRight: 5 }]}>{item.alinanucret} TL</Text>
                     <TouchableOpacity onPress={() => duzenleOdemeAc(item)} style={styles.actionIcon}>
                         <MaterialIcons name="edit" size={20} color="#3498db" />
                     </TouchableOpacity>
@@ -492,10 +493,12 @@ export default function DersRapor() {
                     </TouchableOpacity>
                 </View>
             </View>
-            <Text style={styles.itemAciklama}>{item.aciklama || 'Açıklama yok'}</Text>
-            <Text style={styles.itemSaat}>
-                {item.odemesaati ? `Saat: ${item.odemesaati}` : ''}
-            </Text>
+            {isGeneralReport && item.ogrenciAdSoyad && (
+                <Text style={[styles.ogrenciEtiket, { marginBottom: 4 }]}>Öğrenci: {item.ogrenciAdSoyad}</Text>
+            )}
+            {item.aciklama && !item.aciklama.includes('tarihinde alınan ödeme') && item.aciklama !== 'Alınan Ödeme' && (
+                <Text style={styles.itemAciklama}>{item.aciklama}</Text>
+            )}
         </TouchableOpacity>
     );
 
@@ -1051,32 +1054,32 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     itemTarih: {
-        fontSize: 14,
+        fontSize: 12,
         color: '#666',
         marginLeft: 8,
     },
     ogrenciEtiket: {
-        fontSize: 13,
+        fontSize: 10,
         fontWeight: 'bold',
         color: '#2c3e50',
     },
     itemUcret: {
-        fontSize: 14,
+        fontSize: 12,
         fontWeight: 'bold',
         color: '#333',
     },
     itemKonu: {
-        fontSize: 14,
+        fontSize: 10,
         color: '#333',
         marginBottom: 2,
     },
     itemAciklama: {
-        fontSize: 14,
+        fontSize: 10,
         color: '#333',
         marginBottom: 2,
     },
     itemSaat: {
-        fontSize: 12,
+        fontSize: 10,
         color: '#666',
     },
     bosListe: {
