@@ -769,7 +769,7 @@ export default function OgrenciDetay() {
                         {/* Kalan Ücret Bilgisi */}
                         <View style={styles.kalanUcretContainer}>
                             <Text style={styles.kalanUcretText}>
-                                Kalan Ücret: <Text style={styles.kalanUcretMiktar}>{kalanUcret} TL</Text>
+                                Kalan Ücret: <Text style={styles.kalanUcretMiktar}>{kalanUcret} TL ( { kalanUcret / ogrenci.ucret })</Text>
                             </Text>
                         </View>
 
