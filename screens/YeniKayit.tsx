@@ -23,7 +23,8 @@ export default function YeniKayit({ route, navigation }: Props) {
         aktifmi: 1,
         aciklama1: '',
         aciklama2: '',
-        sinif: ''
+        sinif: '',
+        veli_odev_istiyor_mu: 0
     });
 
     useEffect(() => {

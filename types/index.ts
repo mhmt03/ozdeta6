@@ -13,6 +13,7 @@ export interface OgrenciType {
     ogrenciTel: string;
     veliTel: string;
     aktifmi: number; // 0 or 1
+    veli_odev_istiyor_mu?: number; // 0 or 1
 }
 
 export interface DersType {

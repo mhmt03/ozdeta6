@@ -1032,7 +1032,7 @@ export default function Ayarlar() {
                         <View style={styles.ayarText}>
                             <Text style={styles.ayarBaslik}>Veritabanını Yedekle (.db)</Text>
                             <Text style={styles.ayarAciklama}>
-                                SQLite veritabanını .db dosyası olarak uygulama klasörüne kaydet
+                                veritabanınıuygulama klasörüne kaydet
                             </Text>
                         </View>
                     </TouchableOpacity>
@@ -1045,7 +1045,7 @@ export default function Ayarlar() {
                         <View style={styles.ayarText}>
                             <Text style={styles.ayarBaslik}>Veritabanını Geri Yükle</Text>
                             <Text style={styles.ayarAciklama}>
-                                .db yedek dosyasını geri yükle (tüm veriler değişir)
+                                yedek dosyasını geri yükle (tüm veriler değişir)
                             </Text>
                         </View>
                     </TouchableOpacity>

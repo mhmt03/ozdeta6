@@ -6,7 +6,7 @@ const DATABASE_NAME = 'ozdeta.db';
 const DB_PASSWORD: string = '';
 
 // Yeni sütun/tablo ekleyince sadece bu sayıyı artırın
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 5;
 
 // ─── TABLOLAR (mevcut son hal) ────────────────────────────────────────────────
 
@@ -24,7 +24,8 @@ CREATE TABLE IF NOT EXISTS ogrenciler (
     ucret            INTEGER DEFAULT 0,
     ogrenciTel       TEXT    DEFAULT '-',
     veliTel          TEXT    DEFAULT '-',
-    aktifmi          INTEGER DEFAULT 1
+    aktifmi          INTEGER DEFAULT 1,
+    veli_odev_istiyor_mu INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS dersler (
@@ -120,7 +121,15 @@ CREATE TABLE IF NOT EXISTS settings (
 
 CREATE TABLE IF NOT EXISTS tum_kaynaklar (
     id               INTEGER PRIMARY KEY AUTOINCREMENT,
-    ad               TEXT UNIQUE NOT NULL
+    ad               TEXT NOT NULL,
+    tur              TEXT DEFAULT 'Diğer'
+);
+
+CREATE TABLE IF NOT EXISTS kaynak_icerikleri (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    kaynakId         INTEGER NOT NULL,
+    icerik           TEXT NOT NULL,
+    FOREIGN KEY (kaynakId) REFERENCES tum_kaynaklar(id)
 );
 
 CREATE TABLE IF NOT EXISTS sinav_turleri (
@@ -146,6 +155,11 @@ CREATE TABLE IF NOT EXISTS global_notlar (
     tarih_saat       TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS kaynak_turleri (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    ad               TEXT UNIQUE NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS database_version (
     id               INTEGER PRIMARY KEY,
     version          INTEGER NOT NULL,
@@ -163,7 +177,47 @@ CREATE TABLE IF NOT EXISTS database_version (
 // Örnek — yeni tablo:   async (db) => { await db.execAsync(`CREATE TABLE IF NOT EXISTS ...`); }
 
 const migrations: Array<(db: SQLite.SQLiteDatabase) => Promise<void>> = [
-    // v1 → v2 : (henüz boş — ilk değişikliğinizi buraya ekleyin)
+    // v1 → v2 : tum_kaynaklar tablosuna tur sütunu eklendi
+    async (database) => {
+        await kolonEkle(database, 'tum_kaynaklar', 'tur', "TEXT DEFAULT 'Diğer'");
+    },
+    // v2 → v3 : kaynak_icerikleri tablosu oluşturuldu
+    async (database) => {
+        await database.execAsync(`
+            CREATE TABLE IF NOT EXISTS kaynak_icerikleri (
+                id       INTEGER PRIMARY KEY AUTOINCREMENT,
+                kaynakId INTEGER NOT NULL,
+                icerik   TEXT NOT NULL,
+                FOREIGN KEY (kaynakId) REFERENCES tum_kaynaklar(id)
+            );
+        `);
+    },
+    // v3 → v4 : önceki migration'larda başarısız kalabilecek adımlar onarılıyor (idempotent)
+    async (database) => {
+        await kolonEkle(database, 'tum_kaynaklar', 'tur', "TEXT DEFAULT 'Diğer'");
+        await database.execAsync(`
+            CREATE TABLE IF NOT EXISTS kaynak_icerikleri (
+                id       INTEGER PRIMARY KEY AUTOINCREMENT,
+                kaynakId INTEGER NOT NULL,
+                icerik   TEXT NOT NULL,
+                FOREIGN KEY (kaynakId) REFERENCES tum_kaynaklar(id)
+            );
+        `);
+    },
+    // v4 → v5 : kaynak_turleri tablosu eklendi, varsayılan türler seed'lendi
+    async (database) => {
+        await database.execAsync(`
+            CREATE TABLE IF NOT EXISTS kaynak_turleri (
+                id   INTEGER PRIMARY KEY AUTOINCREMENT,
+                ad   TEXT UNIQUE NOT NULL
+            );
+        `);
+        // Varsayılan türleri ekle (zaten varsa INSERT OR IGNORE atlar)
+        const varsayilanTurler = ['TYT', 'AYT', '9. Sınıf', '10. Sınıf', '11. Sınıf', '12. Sınıf', 'Diğer'];
+        for (const tur of varsayilanTurler) {
+            await database.runAsync(`INSERT OR IGNORE INTO kaynak_turleri (ad) VALUES (?)`, [tur]);
+        }
+    },
 ];
 
 // ─── YARDIMCI: GÜVENLİ SÜTUN EKLEME ─────────────────────────────────────────
@@ -181,10 +235,44 @@ async function kolonEkle(
     }
 }
 
+// ─── ŞEMA GARANTİSİ (migration'dan bağımsız, her başlatmada çalışır) ──────────
+// Migration versiyonu ne olursa olsun bu adımlar her seferinde çalışır.
+// kolonEkle ve CREATE IF NOT EXISTS idempotent olduğu için güvenlidir.
+
+async function ensureSchema(database: SQLite.SQLiteDatabase): Promise<void> {
+    // ogrenciler.veli_odev_istiyor_mu
+    await kolonEkle(database, 'ogrenciler', 'veli_odev_istiyor_mu', "INTEGER DEFAULT 0");
+    // tum_kaynaklar.tur sütunu
+    await kolonEkle(database, 'tum_kaynaklar', 'tur', "TEXT DEFAULT 'Diğer'");
+    // kaynak_icerikleri tablosu
+    await database.execAsync(`
+        CREATE TABLE IF NOT EXISTS kaynak_icerikleri (
+            id       INTEGER PRIMARY KEY AUTOINCREMENT,
+            kaynakId INTEGER NOT NULL,
+            icerik   TEXT NOT NULL,
+            FOREIGN KEY (kaynakId) REFERENCES tum_kaynaklar(id)
+        );
+    `);
+    // kaynak_turleri tablosu + varsayılan seed
+    await database.execAsync(`
+        CREATE TABLE IF NOT EXISTS kaynak_turleri (
+            id   INTEGER PRIMARY KEY AUTOINCREMENT,
+            ad   TEXT UNIQUE NOT NULL
+        );
+    `);
+    const varsayilanTurler = ['TYT', 'AYT', '9. Sınıf', '10. Sınıf', '11. Sınıf', '12. Sınıf', 'Diğer'];
+    for (const tur of varsayilanTurler) {
+        await database.runAsync(`INSERT OR IGNORE INTO kaynak_turleri (ad) VALUES (?)`, [tur]);
+    }
+}
+
 // ─── MIGRATION MOTORU ─────────────────────────────────────────────────────────
 
 async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
     await database.execAsync(TABLO_OLUSTUR);
+
+    // Versiyon kontrolünden önce şema garantisini çalıştır
+    await ensureSchema(database);
 
     const row = await database.getFirstAsync<{ version: number }>(
         'SELECT version FROM database_version ORDER BY id DESC LIMIT 1'

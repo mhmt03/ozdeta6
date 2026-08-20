@@ -195,6 +195,16 @@ export default function OgrenciForm({ ogrenci, setOgrenci, onSave, onCancel }: O
                             trackColor={{ false: "#767577", true: "#81b0ff" }}
                         />
                     </View>
+
+                    <View style={styles.switchRow}>
+                        <Text style={styles.switchLabel}>Veli Ödev Bilgisi İstiyor mu?</Text>
+                        <Switch
+                            value={ogrenci.veli_odev_istiyor_mu === 1}
+                            onValueChange={value => metinDegisti('veli_odev_istiyor_mu', value ? 1 : 0)}
+                            thumbColor={ogrenci.veli_odev_istiyor_mu === 1 ? "#4CAF50" : "#f4f3f4"}
+                            trackColor={{ false: "#767577", true: "#81b0ff" }}
+                        />
+                    </View>
                 </ScrollView>
             </View>
         </TouchableWithoutFeedback>

@@ -5,6 +5,7 @@ import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import GlobalNotlarModal from '../components/GlobalNotlarModal';
 import { ogrencininOdemeleri, tekOgrenci, tumYapilanDersler } from '../utils/database';
 import { tarihAraligiAjandaGetir } from '../utils/ajandaDatabase';
+import { checkAutomaticBackup } from '../utils/backup';
 
 import { AjandaType } from '../types';
 import { AjandaWithOgrenciType } from '../utils/ajandaDatabase';
@@ -23,6 +24,11 @@ export default function AnaSayfa() {
     const openNotlarModal = () => {
         setGlobalNotlarVisible(true);
     };
+
+    useEffect(() => {
+        // Uygulama açılışında yedekleme kontrolü (sadece 1 kez)
+        checkAutomaticBackup();
+    }, []);
 
     // Tarih formatı (gün.ay.yıl)
     const formatTarih = (tarih: Date) => {

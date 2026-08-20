@@ -32,6 +32,10 @@ export async function veritabaniTemizle(tarih: string, seciliTablolar: string[])
             await db.runAsync('DELETE FROM ajanda WHERE tarih < ?', [tarih]);
         }
         
+        if (seciliTablolar.includes('denemeler')) {
+            await db.runAsync('DELETE FROM denemeler WHERE tarih < ?', [tarih]);
+        }
+        
         if (seciliTablolar.includes('ogrenciler')) {
             // Önce öğrencileri sil (tarihle karşılaştırırken CURRENT_TIMESTAMP formatı 'YYYY-MM-DD HH:MM:SS' olduğu için direkt string karşılaştırması çalışır)
             await db.runAsync('DELETE FROM ogrenciler WHERE kayitTarihi < ?', [tarih]);
@@ -43,6 +47,7 @@ export async function veritabaniTemizle(tarih: string, seciliTablolar: string[])
             await db.runAsync('DELETE FROM notlarim WHERE ogrenciId NOT IN (SELECT ogrenciId FROM ogrenciler)');
             await db.runAsync('DELETE FROM ajanda WHERE ogrenciId NOT IN (SELECT ogrenciId FROM ogrenciler)');
             await db.runAsync('DELETE FROM kaynaklar WHERE ogrenciId NOT IN (SELECT ogrenciId FROM ogrenciler)');
+            await db.runAsync('DELETE FROM denemeler WHERE ogrenciId NOT IN (SELECT ogrenciId FROM ogrenciler)');
         }
 
         // Veritabanı dosyasını fiziksel olarak küçült

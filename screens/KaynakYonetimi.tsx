@@ -31,7 +31,7 @@ export default function KaynakYonetimi() {
 
     const [ogrenci, setOgrenci] = useState<OgrenciType | null>(null);
     const [kaynaklar, setKaynaklar] = useState<KaynakType[]>([]);
-    const [tumKaynaklar, setTumKaynaklar] = useState<{ id: number; ad: string }[]>([]);
+    const [tumKaynaklar, setTumKaynaklar] = useState<{ id: number; ad: string; tur: string }[]>([]);
     const [secilenKaynak, setSecilenKaynak] = useState('');
     const [loading, setLoading] = useState(true);
     const [yeniKaynak, setYeniKaynak] = useState(''); // Keep for backward compatibility if needed, but we'll use secilenKaynak
@@ -201,7 +201,7 @@ export default function KaynakYonetimi() {
                                     >
                                         <Picker.Item label="Kaynak Seçiniz..." value="0" />
                                         {tumKaynaklar.map((k) => (
-                                            <Picker.Item key={k.id} label={k.ad} value={k.id.toString()} />
+                                            <Picker.Item key={k.id} label={`${k.ad}  (${k.tur})`} value={k.id.toString()} />
                                         ))}
                                     </Picker>
                                 </View>
