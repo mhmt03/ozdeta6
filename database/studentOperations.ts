@@ -49,11 +49,21 @@ export async function ogrenciSil(ogrenciId: number) {
     try {
         const db = await ensureDatabaseReady();
 
-        const result = await db.runAsync(`
-            DELETE FROM ogrenciler WHERE ogrenciId=?`,
-            [ogrenciId]
-        );
-        return { success: result.changes > 0 };
+        await db.withTransactionAsync(async () => {
+            // Bağlı tüm kayıtları (child records) sil
+            await db.runAsync(`DELETE FROM dersler WHERE ogrenciId=?`, [ogrenciId]);
+            await db.runAsync(`DELETE FROM kaynaklar WHERE ogrenciId=?`, [ogrenciId]);
+            await db.runAsync(`DELETE FROM odevler WHERE ogrenciId=?`, [ogrenciId]);
+            await db.runAsync(`DELETE FROM notlarim WHERE ogrenciId=?`, [ogrenciId]);
+            await db.runAsync(`DELETE FROM odemeler WHERE ogrenciId=?`, [ogrenciId]);
+            await db.runAsync(`DELETE FROM ajanda WHERE ogrenciId=?`, [ogrenciId]);
+            await db.runAsync(`DELETE FROM denemeler WHERE ogrenciId=?`, [ogrenciId]);
+
+            // En son ana öğrenci kaydını sil
+            await db.runAsync(`DELETE FROM ogrenciler WHERE ogrenciId=?`, [ogrenciId]);
+        });
+
+        return { success: true };
     } catch (error: any) {
         console.error("Öğrenci silinemedi:", error);
         return { success: false, error: error.message };

@@ -17,6 +17,9 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
+import * as XLSX from 'xlsx';
 import {
     tumKaynakEkle,
     tumKaynakGuncelle,
@@ -197,6 +200,69 @@ export default function GlobalKaynakYonetimi() {
             await iceriklerYukle(seciliKaynak.id);
         } else {
             Alert.alert('Hata', 'İçerik eklenemedi');
+        }
+    };
+
+    const handleExcelIcerikEkle = async () => {
+        if (!seciliKaynak) return;
+
+        try {
+            const res = await DocumentPicker.getDocumentAsync({
+                type: ['application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv'],
+                copyToCacheDirectory: true,
+            });
+
+            if (res.canceled) return;
+            const file = res.assets[0];
+
+            setIcerikYukleniyor(true);
+
+            // Read file as Base64 using FileSystem
+            const fileBase64 = await FileSystem.readAsStringAsync(file.uri, {
+                encoding: 'base64',
+            });
+
+            // Parse with XLSX
+            const workbook = XLSX.read(fileBase64, { type: 'base64' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+
+            // Convert to JSON array of arrays
+            const data = XLSX.utils.sheet_to_json<any[]>(worksheet, { header: 1 });
+
+            // Extract contents from first column (A)
+            const eklenenIcerikler: string[] = [];
+            for (let i = 0; i < data.length; i++) {
+                const row = data[i];
+                if (row && row.length > 0) {
+                    const cellValue = row[0];
+                    if (cellValue && String(cellValue).trim() !== '') {
+                        eklenenIcerikler.push(String(cellValue).trim());
+                    }
+                }
+            }
+
+            if (eklenenIcerikler.length === 0) {
+                Alert.alert('Uyarı', 'Excel dosyasının ilk sütununda (A Sütunu) okunabilir bir içerik bulunamadı.');
+                setIcerikYukleniyor(false);
+                return;
+            }
+
+            // Insert each content to database
+            let basariliS = 0;
+            for (const icerik of eklenenIcerikler) {
+                const r = await kaynakIcerikEkle(seciliKaynak.id, icerik);
+                if (r.success) basariliS++;
+            }
+
+            Alert.alert('Tamamlandı', `${basariliS} içerik başarıyla eklendi!`);
+            await iceriklerYukle(seciliKaynak.id);
+            
+        } catch (error) {
+            console.error('Excel Yükleme Hatası:', error);
+            Alert.alert('Hata', 'Excel dosyası okunurken bir sorun oluştu. Lütfen dosya formatını kontrol edin.');
+        } finally {
+            setIcerikYukleniyor(false);
         }
     };
 
@@ -552,6 +618,9 @@ export default function GlobalKaynakYonetimi() {
                                         />
                                         <TouchableOpacity style={styles.icerikEkleBtn} onPress={handleIcerikEkle}>
                                             <MaterialIcons name="add" size={22} color="white" />
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={[styles.icerikEkleBtn, { backgroundColor: '#27ae60', marginLeft: 6 }]} onPress={handleExcelIcerikEkle}>
+                                            <MaterialIcons name="file-upload" size={22} color="white" />
                                         </TouchableOpacity>
                                     </View>
 

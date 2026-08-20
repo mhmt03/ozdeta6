@@ -1,4 +1,4 @@
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Modal } from "react-native";
 import { FAB } from 'react-native-paper'
 import { useEffect, useState, useLayoutEffect } from "react";
 import { useNavigation } from "@react-navigation/native";
@@ -16,6 +16,10 @@ export default function OgrenciListesi({ navigation: propNavigation }: Props) {
     const [pasifGor, setPasifGor] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(true);
     const [refreshing, setRefreshing] = useState<boolean>(false);
+    
+    // Custom action sheet state
+    const [actionModalVisible, setActionModalVisible] = useState(false);
+    const [selectedOgrenci, setSelectedOgrenci] = useState<OgrenciType | null>(null);
 
     const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
 
@@ -79,10 +83,10 @@ export default function OgrenciListesi({ navigation: propNavigation }: Props) {
         navigation.navigate('yeniKayit', { ogrenci });
     };
 
-    const handleDelete = (ogrenciId: number) => {
+    const handleDelete = (ogrenci: OgrenciType) => {
         Alert.alert(
             "Öğrenci Silme Onayı",
-            "Bu öğrenciyi silmek istediğinize emin misiniz?",
+            `"${ogrenci.ogrenciAd} ${ogrenci.ogrenciSoyad}" adlı öğrenciyi silmek istediğinize emin misiniz?`,
             [
                 { text: "Hayır", style: "cancel" },
                 {
@@ -90,7 +94,7 @@ export default function OgrenciListesi({ navigation: propNavigation }: Props) {
                     style: "destructive",
                     onPress: async () => {
                         try {
-                            await ogrenciSil(ogrenciId);
+                            await ogrenciSil(ogrenci.ogrenciId!);
                             verileriYenile();
                         } catch (error) {
                             Alert.alert("Hata", "Öğrenci silinirken bir hata oluştu");
@@ -99,6 +103,11 @@ export default function OgrenciListesi({ navigation: propNavigation }: Props) {
                 }
             ]
         );
+    };
+
+    const handleLongPress = (ogrenci: OgrenciType) => {
+        setSelectedOgrenci(ogrenci);
+        setActionModalVisible(true);
     };
 
     return (
@@ -111,6 +120,14 @@ export default function OgrenciListesi({ navigation: propNavigation }: Props) {
                     <Text style={styles.toggleButtonText}>
                         {pasifGor ? 'Pasif Öğrenciler' : 'Aktif Öğrenciler'}
                     </Text>
+                </TouchableOpacity>
+
+                <Text style={{ fontSize: 10, color: '#aaa', fontStyle: 'italic', flex: 1, textAlign: 'center' }}>
+                    düzenlemek için basılı tutun
+                </Text>
+
+                <TouchableOpacity style={styles.headerHomeBtn} onPress={() => navigation.navigate('AnaSayfa')}>
+                    <MaterialIcons name="home" size={24} color="#ec7819ff" />
                 </TouchableOpacity>
             </View>
 
@@ -132,9 +149,8 @@ export default function OgrenciListesi({ navigation: propNavigation }: Props) {
                     renderItem={({ item }) => (
                         <OgrenciListItem
                             ogrenci={item}
-                            onEdit={handleEdit}
-                            onDelete={handleDelete}
                             onPress={() => navigation.navigate('ogrenciDetay', { ogrenci: item })}
+                            onLongPress={() => handleLongPress(item)}
                         />
                     )}
                     refreshing={refreshing}
@@ -149,9 +165,52 @@ export default function OgrenciListesi({ navigation: propNavigation }: Props) {
                 onPress={() => navigation.navigate('yeniKayit', {})}
                 color="white"
             />
-            <TouchableOpacity style={styles.tabButton} onPress={() => navigation.navigate('AnaSayfa')}>
-                <MaterialIcons name="home" size={24} color="#ec7819ff" />
-            </TouchableOpacity>
+            
+            {/* Custom Action Modal for Long Press */}
+            <Modal
+                visible={actionModalVisible}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setActionModalVisible(false)}
+            >
+                <TouchableOpacity 
+                    style={styles.modalOverlay} 
+                    activeOpacity={1} 
+                    onPress={() => setActionModalVisible(false)}
+                >
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeaderLine} />
+                        <Text style={styles.modalTitle}>{selectedOgrenci?.ogrenciAd} {selectedOgrenci?.ogrenciSoyad}</Text>
+                        <Text style={styles.modalSubtitle}>Bu öğrenci için bir işlem seçin</Text>
+                        
+                        <TouchableOpacity 
+                            style={styles.modalActionBtn}
+                            onPress={() => {
+                                setActionModalVisible(false);
+                                if (selectedOgrenci) handleEdit(selectedOgrenci);
+                            }}
+                        >
+                            <View style={[styles.modalIconBg, { backgroundColor: '#e3f2fd' }]}>
+                                <MaterialIcons name="edit" size={22} color="#1976d2" />
+                            </View>
+                            <Text style={styles.modalActionText}>Düzenle</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity 
+                            style={styles.modalActionBtn}
+                            onPress={() => {
+                                setActionModalVisible(false);
+                                if (selectedOgrenci) handleDelete(selectedOgrenci);
+                            }}
+                        >
+                            <View style={[styles.modalIconBg, { backgroundColor: '#ffebee' }]}>
+                                <MaterialIcons name="delete" size={22} color="#d32f2f" />
+                            </View>
+                            <Text style={[styles.modalActionText, { color: '#d32f2f' }]}>Sil</Text>
+                        </TouchableOpacity>
+                    </View>
+                </TouchableOpacity>
+            </Modal>
         </View>
     );
 }
@@ -172,19 +231,68 @@ const styles = StyleSheet.create({
     emptySubText: { fontSize: 14, color: '#888', marginBottom: 20, textAlign: 'center' },
     addButton: { backgroundColor: '#f01394ff', padding: 15, borderRadius: 8, marginTop: 0, marginBottom: 50 },
     addButtonText: { color: 'blue', fontWeight: 'bold', fontSize: 26 },
-    tabButton: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        backgroundColor: 'white',
-        alignItems: 'center',
+    headerHomeBtn: {
+        padding: 6,
+        backgroundColor: '#f9f9f9',
+        borderRadius: 20,
+        elevation: 2,
+    },
+    fab: { position: 'absolute', margin: 16, right: 0, bottom: 50, backgroundColor: '#2196F3' },
+    
+    // Modal Styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'center',
-        elevation: 4,
+        paddingHorizontal: 20,
+    },
+    modalContent: {
+        backgroundColor: 'white',
+        borderRadius: 24,
+        padding: 24,
+        alignItems: 'center',
+        elevation: 5,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        marginBottom: 50,
+        shadowRadius: 4,
     },
-    fab: { position: 'absolute', margin: 16, right: 0, bottom: 50, backgroundColor: '#2196F3' }
+    modalHeaderLine: {
+        width: 40,
+        height: 4,
+        backgroundColor: '#e0e0e0',
+        borderRadius: 2,
+        marginBottom: 16,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#333',
+        marginBottom: 4,
+    },
+    modalSubtitle: {
+        fontSize: 14,
+        color: '#666',
+        marginBottom: 24,
+    },
+    modalActionBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        width: '100%',
+        paddingVertical: 12,
+        marginBottom: 8,
+    },
+    modalIconBg: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 16,
+    },
+    modalActionText: {
+        fontSize: 16,
+        color: '#333',
+        fontWeight: '500',
+    }
 });

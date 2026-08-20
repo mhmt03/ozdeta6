@@ -33,6 +33,7 @@ import {
     ogrenciOdevleri,
     tekOgrenci
 } from '../utils/database';
+import { ogrencininSonTamamlananDersTarihi } from '../database/agendaOperations';
 import {
     getKaynakIdByAd,
     getKaynakIcerikleri,
@@ -107,7 +108,7 @@ export default function OdevEkle() {
     const [raporTipi, setRaporTipi] = useState<'odevler' | 'kapsamli' | 'kapsamli_detay'>('odevler');
     const [seciliRaporKaynak, setSeciliRaporKaynak] = useState<KaynakRaporItem | null>(null);
 
-    // ── ÖDEV BİLGİ YOLLA MODAL STATE ──
+    // 🔵 ÖDEV BİLGİ YOLLA MODAL STATE 🔵
     const [bilgiModalGorunur, setBilgiModalGorunur] = useState(false);
     const [bilgiBaslangic, setBilgiBaslangic] = useState<Date>(new Date());
     const [bilgiBitis, setBilgiBitis] = useState<Date>(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
@@ -115,6 +116,16 @@ export default function OdevEkle() {
     const [bilgiVeliSecili, setBilgiVeliSecili] = useState(false);
     const [showBilgiBaslangic, setShowBilgiBaslangic] = useState(false);
     const [showBilgiBitis, setShowBilgiBitis] = useState(false);
+
+    // 🔵 ÖDEV DURUM YOLLA MODAL STATE 🔵
+    const [durumModalGorunur, setDurumModalGorunur] = useState(false);
+    const [durumBaslangic, setDurumBaslangic] = useState<Date>(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+    const [durumBitis, setDurumBitis] = useState<Date>(new Date());
+    const [durumOgrenciSecili, setDurumOgrenciSecili] = useState(false);
+    const [durumVeliSecili, setDurumVeliSecili] = useState(true);
+    const [showDurumBaslangic, setShowDurumBaslangic] = useState(false);
+    const [showDurumBitis, setShowDurumBitis] = useState(false);
+
     const [kaynakRaporVerisi, setKaynakRaporVerisi] = useState<KaynakRaporItem[]>([]);
     const [kaynakRaporYukleniyor, setKaynakRaporYukleniyor] = useState(false);
     const [genisletilmisKaynak, setGenisletilmisKaynak] = useState<string | null>(null);
@@ -166,6 +177,12 @@ export default function OdevEkle() {
                 navigation.setOptions({
                     title: `${ogr.ogrenciAd} ${ogr.ogrenciSoyad} Ödevleri`
                 });
+
+                // Varsayılan Ödev Durum Yolla başlangıç tarihini son ders olarak ayarla
+                const sonDersResult = await ogrencininSonTamamlananDersTarihi(ogrenciId);
+                if (sonDersResult.success && sonDersResult.tarih) {
+                    setDurumBaslangic(new Date(sonDersResult.tarih));
+                }
             }
 
             // Kaynakları al
@@ -572,6 +589,66 @@ export default function OdevEkle() {
         setBilgiModalGorunur(false);
     };
 
+    // 🔵 WHATSAPP ÖDEV DURUM YOLLA 🔵
+    const whatsappOdevDurumYolla = () => {
+        if (!ogrenci) return;
+        if (!durumOgrenciSecili && !durumVeliSecili) {
+            Alert.alert("Uyarı", "Lütfen en az bir alıcı (öğrenci veya veli) seçin.");
+            return;
+        }
+
+        const filteredOdevler = odevler.filter(o => {
+            const oDate = new Date(o.verilmetarihi);
+            const basDate = new Date(durumBaslangic);
+            basDate.setHours(0, 0, 0, 0);
+            const bitDate = new Date(durumBitis);
+            bitDate.setHours(23, 59, 59, 999);
+            return oDate.getTime() >= basDate.getTime() && oDate.getTime() <= bitDate.getTime();
+        });
+
+        if (filteredOdevler.length === 0) {
+            Alert.alert("Uyarı", "Seçilen tarih aralığında verilmiş ödev bulunamadı.");
+            return;
+        }
+
+        const formatla = (isim: string) => {
+            let text = `Sayın ${isim}, ${formatTarih(durumBaslangic.toISOString())} - ${formatTarih(durumBitis.toISOString())} tarihleri arasında ${ogrenci.ogrenciAd} ${ogrenci.ogrenciSoyad}'e ait ödev yapılma durumu şu şekildedir bilginize.\n\n`;
+            
+            filteredOdevler.forEach(o => {
+                text += `Kaynak: ${o.kaynak}\nİçerik: ${o.odev}\n`;
+                if (o.aciklama) text += `Konu/Açıklama: ${o.aciklama}\n`;
+                text += `Durum: ${o.yapilmadurumu}\n\n`;
+            });
+            return encodeURIComponent(text);
+        };
+
+        const yollaKisi = (tel: string, metin: string) => {
+            let formatedTel = tel.replace(/[^0-9]/g, '');
+            if (formatedTel.startsWith('0')) formatedTel = '9' + formatedTel;
+            else if (!formatedTel.startsWith('90')) formatedTel = '90' + formatedTel;
+            const url = `whatsapp://send?phone=${formatedTel}&text=${metin}`;
+            Linking.openURL(url).catch(() => {
+                Alert.alert("Hata", "WhatsApp uygulaması bulunamadı veya açılamadı.");
+            });
+        };
+
+        if (durumOgrenciSecili && ogrenci.ogrenciTel) {
+            yollaKisi(ogrenci.ogrenciTel, formatla(`${ogrenci.ogrenciAd} ${ogrenci.ogrenciSoyad}`));
+        } else if (durumOgrenciSecili) {
+            Alert.alert("Uyarı", "Öğrenci numarası kayıtlı değil.");
+        }
+
+        if (durumVeliSecili && ogrenci.veliTel) {
+            setTimeout(() => {
+                yollaKisi(ogrenci.veliTel, formatla(ogrenci.veliAd || 'Veli'));
+            }, durumOgrenciSecili ? 1500 : 0);
+        } else if (durumVeliSecili) {
+            Alert.alert("Uyarı", "Veli numarası kayıtlı değil.");
+        }
+
+        setDurumModalGorunur(false);
+    };
+
     // ── KAPSAMLI PDF ──
     const kapsamliPdfOlustur = async () => {
         if (!ogrenci || kaynakRaporVerisi.length === 0) return;
@@ -649,7 +726,14 @@ export default function OdevEkle() {
                                     onPress={() => setBilgiModalGorunur(true)}
                                 >
                                     <MaterialIcons name="send" size={16} color="white" />
-                                    <Text style={styles.raporButonText}>Ödev Bilgi Yolla</Text>
+                                    <Text style={styles.raporButonText}>Ödev Bilgi</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.raporButon, { backgroundColor: '#2980b9' }]}
+                                    onPress={() => setDurumModalGorunur(true)}
+                                >
+                                    <MaterialIcons name="analytics" size={16} color="white" />
+                                    <Text style={styles.raporButonText}>Durum</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     style={styles.raporButon}
@@ -905,7 +989,99 @@ export default function OdevEkle() {
 
                     </ScrollView>
                 </TouchableWithoutFeedback>
-            </KeyboardAvoidingView>
+                {/* 🔵 ÖDEV DURUM YOLLA MODALI 🔵 */}
+            <Modal visible={durumModalGorunur} animationType="fade" transparent={true} onRequestClose={() => setDurumModalGorunur(false)}>
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.reportModalContent, { height: 'auto', padding: 20 }]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Ödev Durumu Yolla (WhatsApp)</Text>
+                            <TouchableOpacity onPress={() => setDurumModalGorunur(false)}>
+                                <MaterialIcons name="close" size={24} color="#555" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text style={{ marginTop: 10, marginBottom: 5, fontWeight: 'bold' }}>Tarih Aralığı Seçin</Text>
+                        <View style={styles.dateRangeContainer}>
+                            <TouchableOpacity style={styles.reportDateButton} onPress={() => setShowDurumBaslangic(true)}>
+                                <MaterialIcons name="date-range" size={16} color="#666" />
+                                <Text style={styles.reportDateText}>{formatTarih(durumBaslangic.toISOString())}</Text>
+                            </TouchableOpacity>
+                            <Text style={{ color: '#aaa', marginHorizontal: 4, alignSelf: 'center' }}>-</Text>
+                            <TouchableOpacity style={styles.reportDateButton} onPress={() => setShowDurumBitis(true)}>
+                                <MaterialIcons name="date-range" size={16} color="#666" />
+                                <Text style={styles.reportDateText}>{formatTarih(durumBitis.toISOString())}</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text style={{ marginTop: 15, marginBottom: 5, fontWeight: 'bold' }}>Alıcı Seçin</Text>
+                        <View style={{ flexDirection: 'row', gap: 20, marginBottom: 20 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <Switch
+                                    value={durumOgrenciSecili}
+                                    onValueChange={setDurumOgrenciSecili}
+                                />
+                                <Text style={{ marginLeft: 8 }}>Öğrenci</Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <Switch
+                                    value={durumVeliSecili}
+                                    onValueChange={setDurumVeliSecili}
+                                />
+                                <Text style={{ marginLeft: 8 }}>Veli</Text>
+                            </View>
+                        </View>
+
+                        <Text style={{ marginTop: 5, marginBottom: 5, fontWeight: 'bold' }}>Gönderilecek Durum (Önizleme):</Text>
+                        <ScrollView style={{ maxHeight: 150, backgroundColor: '#f9f9f9', padding: 10, borderRadius: 8, marginBottom: 15, borderWidth: 1, borderColor: '#eee' }}>
+                            {(() => {
+                                const onizlemeDurum = odevler.filter(o => {
+                                    const oDate = new Date(o.verilmetarihi);
+                                    const basDate = new Date(durumBaslangic);
+                                    basDate.setHours(0, 0, 0, 0);
+                                    const bitDate = new Date(durumBitis);
+                                    bitDate.setHours(23, 59, 59, 999);
+                                    return oDate.getTime() >= basDate.getTime() && oDate.getTime() <= bitDate.getTime();
+                                });
+                                if (onizlemeDurum.length === 0) return <Text style={{ color: '#888', fontStyle: 'italic', fontSize: 12 }}>Bu tarih aralığında ödev bulunamadı.</Text>;
+                                return onizlemeDurum.map((o, idx) => {
+                                    const renk = o.yapilmadurumu === 'Yapıldı' ? '#27ae60' : (o.yapilmadurumu === 'Eksik' ? '#e67e22' : '#e74c3c');
+                                    return (
+                                        <View key={idx} style={{ marginBottom: 8, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: '#eee' }}>
+                                            <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#333' }}>{o.kaynak}</Text>
+                                            <Text style={{ fontSize: 11, color: '#666' }}>{o.odev} {o.aciklama ? `(${o.aciklama})` : ''}</Text>
+                                            <Text style={{ fontSize: 12, fontWeight: 'bold', color: renk }}>Durum: {o.yapilmadurumu}</Text>
+                                        </View>
+                                    );
+                                });
+                            })()}
+                        </ScrollView>
+
+                        <TouchableOpacity style={[styles.raporPdfBtn, { backgroundColor: '#25D366', marginBottom: 0 }]} onPress={whatsappOdevDurumYolla}>
+                            <MaterialIcons name="send" size={18} color="white" />
+                            <Text style={styles.raporPdfBtnText}>WhatsApp ile Yolla</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {showDurumBaslangic && (
+                    <DateTimePicker
+                        value={durumBaslangic}
+                        mode="date"
+                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                        onChange={(event, date) => { setShowDurumBaslangic(false); if (date) setDurumBaslangic(date); }}
+                    />
+                )}
+                {showDurumBitis && (
+                    <DateTimePicker
+                        value={durumBitis}
+                        mode="date"
+                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                        onChange={(event, date) => { setShowDurumBitis(false); if (date) setDurumBitis(date); }}
+                    />
+                )}
+            </Modal>
+
+        </KeyboardAvoidingView>
 
             {/* Date Pickers */}
             {verilmeTarihPickerAcik && (
@@ -1298,6 +1474,28 @@ export default function OdevEkle() {
                                 <Text style={{ marginLeft: 8 }}>Veli</Text>
                             </View>
                         </View>
+
+                        <Text style={{ marginTop: 5, marginBottom: 5, fontWeight: 'bold' }}>Gönderilecek Ödevler (Önizleme):</Text>
+                        <ScrollView style={{ maxHeight: 150, backgroundColor: '#f9f9f9', padding: 10, borderRadius: 8, marginBottom: 15, borderWidth: 1, borderColor: '#eee' }}>
+                            {(() => {
+                                const onizlemeOdevler = odevler.filter(o => {
+                                    if (!o.teslimttarihi) return false;
+                                    const t = new Date(o.teslimttarihi).getTime();
+                                    const basDate = new Date(bilgiBaslangic);
+                                    basDate.setHours(0, 0, 0, 0);
+                                    const bitDate = new Date(bilgiBitis);
+                                    bitDate.setHours(23, 59, 59, 999);
+                                    return t >= basDate.getTime() && t <= bitDate.getTime();
+                                });
+                                if (onizlemeOdevler.length === 0) return <Text style={{ color: '#888', fontStyle: 'italic', fontSize: 12 }}>Bu tarih aralığında ödev bulunamadı.</Text>;
+                                return onizlemeOdevler.map((o, idx) => (
+                                    <View key={idx} style={{ marginBottom: 8, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: '#eee' }}>
+                                        <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#333' }}>{o.kaynak}</Text>
+                                        <Text style={{ fontSize: 11, color: '#666' }}>{o.odev} {o.aciklama ? `(${o.aciklama})` : ''}</Text>
+                                    </View>
+                                ));
+                            })()}
+                        </ScrollView>
 
                         <TouchableOpacity style={[styles.raporPdfBtn, { backgroundColor: '#25D366', marginBottom: 0 }]} onPress={whatsappOdevBilgiYolla}>
                             <MaterialIcons name="send" size={18} color="white" />

@@ -359,3 +359,29 @@ export async function tarihAraligiAjandaGetir(baslangicTarihi: string, bitisTari
         return { success: false, error: error.message };
     }
 }
+
+export async function ogrencininSonTamamlananDersTarihi(ogrenciId: number) {
+    try {
+        const db = await ensureDatabaseReady();
+        const bugunStr = new Date().toISOString().split('T')[0];
+        
+        // Geçmişteki ve tamamlanmış olan en son dersi bul
+        const kayitlar = await db.getAllAsync(
+            `SELECT tarih FROM ajanda 
+             WHERE ogrenciId = ? 
+             AND tarih <= ? 
+             AND (dersYapildiMi = 1 OR tamamlandiMi = 1 OR tamamlanma = '1' OR sutun1 = 'tamamlandı')
+             ORDER BY tarih DESC 
+             LIMIT 1`,
+            [ogrenciId, bugunStr]
+        );
+        
+        if (kayitlar && kayitlar.length > 0) {
+            return { success: true, tarih: (kayitlar[0] as any).tarih };
+        }
+        return { success: false, message: "Tamamlanmış ders bulunamadı." };
+    } catch (error: any) {
+        console.error('Son ders tarihi alma hatası:', error);
+        return { success: false, error: error.message };
+    }
+}

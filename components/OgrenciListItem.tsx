@@ -5,27 +5,15 @@ import { OgrenciType } from "../types";
 interface OgrenciListItemProps {
     ogrenci: OgrenciType;
     onPress: () => void;
-    onEdit: (ogrenci: OgrenciType) => void;
-    onDelete: (id: number) => void;
+    onLongPress: () => void;
 }
 
-const OgrenciListItem: React.FC<OgrenciListItemProps> = ({ ogrenci, onPress, onEdit, onDelete }) => {
-    const handleLongPress = () => {
-        Alert.alert(
-            "Öğrenci İşlemleri",
-            `${ogrenci.ogrenciAd} için işlem seçin`,
-            [
-                { text: "Düzenle", onPress: () => onEdit(ogrenci) },
-                { text: "Sil", onPress: () => onDelete(ogrenci.ogrenciId!), style: "destructive" },
-                { text: "İptal", style: "cancel" }
-            ]
-        );
-    };
+const OgrenciListItem: React.FC<OgrenciListItemProps> = ({ ogrenci, onPress, onLongPress }) => {
 
     return (
         <TouchableOpacity
             onPress={onPress}
-            onLongPress={handleLongPress}
+            onLongPress={onLongPress}
             style={styles.item}
         >
             <Text style={styles.text}>{ogrenci.ogrenciAd} {ogrenci.ogrenciSoyad}</Text>
