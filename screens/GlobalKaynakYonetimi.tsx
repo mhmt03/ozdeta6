@@ -88,6 +88,30 @@ export default function GlobalKaynakYonetimi() {
         verileriYukle();
     }, []);
 
+    React.useLayoutEffect(() => {
+        navigation.setOptions({
+            headerRight: () => (
+                <TouchableOpacity
+                    style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: 'rgba(255,255,255,0.1)',
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: 'rgba(255,255,255,0.2)',
+                        marginRight: 15,
+                    }}
+                    onPress={() => { setTurModalGorunur(true); turYukle(); }}
+                >
+                    <MaterialIcons name="label" size={16} color="#aef013ff" />
+                    <Text style={{ marginLeft: 6, color: '#aef013ff', fontWeight: 'bold', fontSize: 13 }}>Türleri Yönet</Text>
+                </TouchableOpacity>
+            ),
+        });
+    }, [navigation]);
+
     const verileriYukle = async () => {
         try {
             setLoading(true);
@@ -448,29 +472,13 @@ export default function GlobalKaynakYonetimi() {
 
     return (
         <View style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <MaterialIcons name="arrow-back" size={24} color="#333" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Global Kaynak Yönetimi</Text>
-            </View>
-
             <KeyboardAvoidingView
                 style={styles.keyboardView}
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
             >
-                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                    <View style={styles.content}>
-                        {/* Kaynak Türleri Yönetim Butonu */}
-                        <TouchableOpacity
-                            style={styles.turYonetimBtn}
-                            onPress={() => { setTurModalGorunur(true); turYukle(); }}
-                        >
-                            <MaterialIcons name="label" size={18} color="#8e44ad" />
-                            <Text style={styles.turYonetimBtnText}>Kaynak Türleri Yönet</Text>
-                            <MaterialIcons name="chevron-right" size={18} color="#8e44ad" />
-                        </TouchableOpacity>
+                <View style={styles.content}>
+
 
                         {/* Yeni Kaynak Ekleme Formu */}
                         <View style={styles.form}>
@@ -520,10 +528,11 @@ export default function GlobalKaynakYonetimi() {
                                 keyExtractor={item => item.id.toString()}
                                 showsVerticalScrollIndicator={false}
                                 contentContainerStyle={{ paddingBottom: 20 }}
+                                keyboardShouldPersistTaps="handled"
+                                keyboardDismissMode="on-drag"
                             />
                         </View>
                     </View>
-                </TouchableWithoutFeedback>
             </KeyboardAvoidingView>
 
             {/* ─── DÜZENLEME MODALI ─── */}
@@ -647,9 +656,9 @@ export default function GlobalKaynakYonetimi() {
             </Modal>
 
             {/* ─── KAYNAK TÜRLERİ MODALI ─── */}
-            <Modal visible={turModalGorunur} transparent animationType="slide" onRequestClose={() => setTurModalGorunur(false)}>
-                <View style={styles.modalOverlay}>
-                    <View style={[styles.modalBox, { maxHeight: '80%' }]}>
+            <Modal visible={turModalGorunur} transparent animationType="fade" onRequestClose={() => setTurModalGorunur(false)}>
+                <View style={styles.modalOverlayCenter}>
+                    <View style={styles.modalBoxCenter}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>Kaynak Türleri</Text>
                             <TouchableOpacity onPress={() => setTurModalGorunur(false)}>
@@ -776,6 +785,7 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'space-between',
         padding: 16,
         backgroundColor: 'white',
         borderBottomWidth: 1,
@@ -784,6 +794,22 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     headerTitle: { fontSize: 18, fontWeight: 'bold', marginLeft: 16, color: '#333' },
+    headerTurYonetimBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f4f1fa',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#e2d5f8',
+    },
+    headerTurYonetimBtnText: {
+        marginLeft: 6,
+        color: '#8e44ad',
+        fontWeight: 'bold',
+        fontSize: 13,
+    },
     keyboardView: { flex: 1 },
     content: { flex: 1, padding: 16 },
 
@@ -853,6 +879,12 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'flex-end',
     },
+    modalOverlayCenter: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        padding: 20,
+    },
     modalKAV: { flex: 0 },
     modalBox: {
         backgroundColor: 'white',
@@ -860,6 +892,12 @@ const styles = StyleSheet.create({
         borderTopRightRadius: 20,
         maxHeight: '90%',
         paddingBottom: Platform.OS === 'ios' ? 34 : 16,
+    },
+    modalBoxCenter: {
+        backgroundColor: 'white',
+        borderRadius: 20,
+        maxHeight: '80%',
+        paddingBottom: 16,
     },
     modalHeader: {
         flexDirection: 'row',
