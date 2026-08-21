@@ -1551,7 +1551,7 @@ const styles = StyleSheet.create({
     content: {
         flex: 1,
         padding: 16,
-        paddingBottom: 80,
+        paddingBottom: 40,
     },
     formContainer: {
         backgroundColor: 'white',
@@ -1578,7 +1578,7 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     inputLabel: {
-        fontSize: 14,
+        fontSize: 10,
         fontWeight: 'bold',
         color: '#333',
         marginBottom: 6,
@@ -1616,10 +1616,10 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: 16,
+        marginBottom: 6,
     },
     switchLabel: {
-        fontSize: 14,
+        fontSize: 10,
         fontWeight: 'bold',
         color: '#333',
     },
@@ -1707,9 +1707,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: 'white',
         paddingVertical: 6,
-        paddingHorizontal: 12,
+        paddingHorizontal: 1,
         borderRadius: 8,
-        marginBottom: 10,
+        marginBottom: 5,
         elevation: 2,
     },
     switchControl: {
@@ -1717,24 +1717,24 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     switchControlLabel: {
-        fontSize: 12,
+        fontSize: 8,
         fontWeight: 'bold',
         color: '#333',
-        marginRight: 4,
+        marginRight: 1,
     },
     raporButon: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#e67e22',
         paddingVertical: 5,
-        paddingHorizontal: 10,
+        paddingHorizontal: 5,
         borderRadius: 16,
     },
     raporButonText: {
         color: 'white',
         fontWeight: 'bold',
         marginLeft: 4,
-        fontSize: 11,
+        fontSize: 9,
     },
     modalOverlay: {
         flex: 1,

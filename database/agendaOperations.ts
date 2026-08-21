@@ -366,11 +366,22 @@ export async function ogrencininSonTamamlananDersTarihi(ogrenciId: number) {
         const bugunStr = new Date().toISOString().split('T')[0];
         
         // Geçmişteki ve tamamlanmış olan en son dersi bul
+        // Not: dersYapildiMi ajanda tablosunda fiziksel bir kolon değil, hesaplanan bir alandır.
+        // WHERE içinde kullanılamaz; bunun yerine bileşen koşullar doğrudan yazılır.
         const kayitlar = await db.getAllAsync(
             `SELECT tarih FROM ajanda 
              WHERE ogrenciId = ? 
              AND tarih <= ? 
-             AND (dersYapildiMi = 1 OR tamamlandiMi = 1 OR tamamlanma = '1' OR sutun1 = 'tamamlandı')
+             AND (
+                 tamamlandiMi = 1
+                 OR tamamlanma = '1'
+                 OR sutun1 = 'tamamlandı'
+                 OR EXISTS (
+                     SELECT 1 FROM dersler d
+                     WHERE d.ogrenciId = ajanda.ogrenciId
+                     AND d.tarih = ajanda.tarih
+                 )
+             )
              ORDER BY tarih DESC 
              LIMIT 1`,
             [ogrenciId, bugunStr]
