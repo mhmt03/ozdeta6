@@ -25,6 +25,7 @@ import {
     TouchableWithoutFeedback,
     KeyboardAvoidingView,
     Platform,
+    Switch,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
@@ -32,6 +33,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { ogrencileriListele } from '../utils/database';
 import { ajandaKayitEkle } from '../utils/ajandaDatabase';
 import { OgrenciType, AjandaType } from '../types';
+import { getSetting } from '../database/settingsOperations';
 
 // 🎯 Ana Component Tanımı
 export default function AjandaKayitEkle() {
@@ -79,12 +81,31 @@ export default function AjandaKayitEkle() {
     const [loading, setLoading] = useState(false);
     const [ogrenciLoading, setOgrenciLoading] = useState(true);
 
-    // 🔄 useEffect Hook: Sayfa açıldığında öğrenci listesini çek
-    // useEffect(fonksiyon, bağımlılıkDizisi)
-    // [] boş dizi: sadece component mount olduğunda çalıştır
+    // 🔔 Bildirim state'leri
+    const [globalBildirimAcik, setGlobalBildirimAcik] = useState(true); // Ayarlar.tsx'ten gelen global ayar
+    const [randevuBildirimIste, setRandevuBildirimIste] = useState(false); // Bu kayıt için bildirim?
+    const [bildirimDakika, setBildirimDakika] = useState(15); // Kaç dakika önce
+    const [bildirimSesli, setBildirimSesli] = useState(true); // Sesli mi?
+
+    // 🔄 useEffect Hook: Sayfa açıldığında öğrenci listesini ve bildirim ayarlarını çek
     useEffect(() => {
         fetchOgrenciler();
+        loadGlobalBildirimAyari();
     }, []);
+
+    // 🔔 Global bildirim ayarını oku
+    const loadGlobalBildirimAyari = async () => {
+        try {
+            const enabled = await getSetting('notifications_enabled', '1');
+            const mins = await getSetting('notification_minutes', '15');
+            const sound = await getSetting('notification_sound', '1');
+            setGlobalBildirimAcik(enabled === '1');
+            setBildirimDakika(parseInt(mins) || 15);
+            setBildirimSesli(sound === '1');
+        } catch (error) {
+            console.error('Global bildirim ayarı okunamadı:', error);
+        }
+    };
 
     // 🔍 Öğrenci listesi çekme fonksiyonu
     // async function: asenkron fonksiyon tanımlama
@@ -215,6 +236,10 @@ export default function AjandaKayitEkle() {
             // Saat formatını hazırla
             const saatStr = `${selectedTime.getHours().toString().padStart(2, '0')}:${selectedTime.getMinutes().toString().padStart(2, '0')}`;
 
+            // Bildirim ayarlarını belirle
+            // Global kapalıysa ya da kullanıcı 'Hayır' dediyse bildirim planlanmaz
+            const bildirimGonder = globalBildirimAcik && randevuBildirimIste;
+
             // selectedDate.setDate(selectedDate.getDate() + 1); // Bu satır kaldırıldı çünkü getDate() 1'den başlar, tarihin kaymasına neden oluyordu.
             // Periyodik kayıtları oluşturma döngüsü
             for (let i = 0; i < tekrarSayisi; i++) {
@@ -241,8 +266,13 @@ export default function AjandaKayitEkle() {
                     sutun2: ''
                 };
 
-                // Veritabanına kaydet
-                const result = await ajandaKayitEkle(record);
+                // Veritabanına kaydet (bildirim ayarlarıyla birlikte)
+                const result = await ajandaKayitEkle(
+                    record,
+                    bildirimGonder,
+                    bildirimGonder ? bildirimDakika : undefined,
+                    bildirimGonder ? bildirimSesli : undefined
+                );
 
                 if (!result.success) {
                     throw new Error(result.error);
@@ -256,9 +286,12 @@ export default function AjandaKayitEkle() {
             }, 500);
             
             // Toast benzeri mesaj göster (Alert yerine)
+            const bildirimMesaji = bildirimGonder
+                ? `\n🔔 ${bildirimDakika} dk önce ${bildirimSesli ? 'sesli ' : ''}bildirim planlandı.`
+                : '';
             Alert.alert(
                 'Başarılı',
-                `${tekrarSayisi} adet randevu kaydedildi`,
+                `${tekrarSayisi} adet randevu kaydedildi.${bildirimMesaji}`,
                 [
                     {
                         text: 'Tamam',
@@ -478,6 +511,106 @@ export default function AjandaKayitEkle() {
                             Toplam {tekrarSayisi} randevu oluşturulacak
                         </Text>
                     </View>
+                </View>
+
+                {/* 🔔 BİLDİRİM AYARI BÖLÜMÜ */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>🔔 Bildirim Ayarı</Text>
+
+                    {/* Global bildirim kapalıysa uyarı göster */}
+                    {!globalBildirimAcik && (
+                        <View style={styles.bildirimUyariBox}>
+                            <MaterialIcons name="notifications-off" size={18} color="#e67e22" />
+                            <Text style={styles.bildirimUyariText}>
+                                Bildirimler Ayarlar'dan kapalı. Bildirim almak için önce Ayarlar'dan açın.
+                            </Text>
+                        </View>
+                    )}
+
+                    {/* Randevudan önce bildirim gelsin mi? */}
+                    <View style={styles.bildirimToggleRow}>
+                        <View style={styles.bildirimToggleLabelWrap}>
+                            <Text style={[
+                                styles.bildirimToggleLabel,
+                                !globalBildirimAcik && styles.disabledText
+                            ]}>
+                                Randevudan önce bildirim gelsin mi?
+                            </Text>
+                        </View>
+                        <Switch
+                            value={randevuBildirimIste}
+                            onValueChange={(val) => setRandevuBildirimIste(val)}
+                            disabled={!globalBildirimAcik}
+                            trackColor={{ false: '#ccc', true: '#3498db' }}
+                            thumbColor={randevuBildirimIste ? '#2980b9' : '#f4f3f4'}
+                        />
+                    </View>
+
+                    {/* Bildirim detayları (sadece Evet seçiliyse ve global açıksa) */}
+                    {randevuBildirimIste && globalBildirimAcik && (
+                        <View style={styles.bildirimDetayBox}>
+                            {/* Kaç dakika önce */}
+                            <View style={styles.counterContainer}>
+                                <Text style={styles.counterLabel}>Kaç dakika önce:</Text>
+                                <View style={styles.counterControls}>
+                                    <TouchableOpacity
+                                        style={styles.counterButton}
+                                        onPress={() => setBildirimDakika(prev => Math.max(1, prev - 5))}
+                                    >
+                                        <MaterialIcons name="remove" size={20} color="#e74c3c" />
+                                    </TouchableOpacity>
+                                    <Text style={styles.counterValue}>{bildirimDakika}</Text>
+                                    <TouchableOpacity
+                                        style={styles.counterButton}
+                                        onPress={() => setBildirimDakika(prev => prev + 5)}
+                                    >
+                                        <MaterialIcons name="add" size={20} color="#2ecc71" />
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+
+                            {/* Sesli mi? */}
+                            <View style={[styles.bildirimToggleRow, { marginTop: 12 }]}>
+                                <Text style={styles.bildirimToggleLabel}>Bildirim türü:</Text>
+                                <View style={styles.bildirimSesSecenekler}>
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.bildirimSesButon,
+                                            bildirimSesli && styles.bildirimSesButonAktif
+                                        ]}
+                                        onPress={() => setBildirimSesli(true)}
+                                    >
+                                        <MaterialIcons
+                                            name="volume-up"
+                                            size={18}
+                                            color={bildirimSesli ? 'white' : '#7f8c8d'}
+                                        />
+                                        <Text style={[
+                                            styles.bildirimSesButonText,
+                                            bildirimSesli && styles.bildirimSesButonTextAktif
+                                        ]}>Sesli</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.bildirimSesButon,
+                                            !bildirimSesli && styles.bildirimSesButonAktif
+                                        ]}
+                                        onPress={() => setBildirimSesli(false)}
+                                    >
+                                        <MaterialIcons
+                                            name="notifications-none"
+                                            size={18}
+                                            color={!bildirimSesli ? 'white' : '#7f8c8d'}
+                                        />
+                                        <Text style={[
+                                            styles.bildirimSesButonText,
+                                            !bildirimSesli && styles.bildirimSesButonTextAktif
+                                        ]}>Sessiz</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        </View>
+                    )}
                 </View>
 
                 {/* 🎛️ AKSIYON BUTONLARI */}
@@ -789,6 +922,76 @@ const styles = StyleSheet.create({
         color: '#2c3e50',
         minWidth: 30,
         textAlign: 'center',
+    },
+
+    // 🔔 Bildirim stilleri
+    bildirimUyariBox: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fef9e7',
+        borderRadius: 8,
+        padding: 10,
+        marginBottom: 12,
+        borderLeftWidth: 3,
+        borderLeftColor: '#e67e22',
+        gap: 8,
+    },
+    bildirimUyariText: {
+        flex: 1,
+        fontSize: 12,
+        color: '#e67e22',
+        lineHeight: 17,
+    },
+    bildirimToggleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 6,
+    },
+    bildirimToggleLabelWrap: {
+        flex: 1,
+        marginRight: 10,
+    },
+    bildirimToggleLabel: {
+        fontSize: 14,
+        color: '#2c3e50',
+        fontWeight: '500',
+    },
+    disabledText: {
+        color: '#bdc3c7',
+    },
+    bildirimDetayBox: {
+        marginTop: 10,
+        borderTopWidth: 1,
+        borderTopColor: '#ecf0f1',
+        paddingTop: 10,
+    },
+    bildirimSesSecenekler: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    bildirimSesButon: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 7,
+        paddingHorizontal: 14,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#bdc3c7',
+        gap: 5,
+        backgroundColor: '#f4f6f7',
+    },
+    bildirimSesButonAktif: {
+        backgroundColor: '#3498db',
+        borderColor: '#3498db',
+    },
+    bildirimSesButonText: {
+        fontSize: 13,
+        color: '#7f8c8d',
+        fontWeight: '500',
+    },
+    bildirimSesButonTextAktif: {
+        color: 'white',
     },
 
     // 📋 Özet bilgisi stilleri

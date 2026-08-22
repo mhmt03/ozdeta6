@@ -231,10 +231,9 @@ export async function tumKaynakEkle(ad: string, tur: string) {
 export async function tumKaynakSil(id: number) {
     try {
         const db = await ensureDatabaseReady();
-        const result = await db.runAsync(
-            `DELETE FROM tum_kaynaklar WHERE id=?`,
-            [id]
-        );
+        // Önce bu kaynağa ait tüm içerikleri sil, sonra kaynağı sil
+        await db.runAsync(`DELETE FROM kaynak_icerikleri WHERE kaynakId=?`, [id]);
+        const result = await db.runAsync(`DELETE FROM tum_kaynaklar WHERE id=?`, [id]);
         return { success: result.changes > 0 };
     } catch (error: any) {
         console.error("Global kaynak silme hatası:", error);
@@ -246,7 +245,7 @@ export async function getTumKaynaklar() {
     try {
         const db = await ensureDatabaseReady();
         const result = await db.getAllAsync<{ id: number; ad: string; tur: string }>(
-            `SELECT * FROM tum_kaynaklar ORDER BY tur ASC, ad ASC`
+            `SELECT * FROM tum_kaynaklar ORDER BY ad ASC`
         );
         return { success: true, data: result || [] };
     } catch (error: any) {
@@ -324,6 +323,20 @@ export async function kaynakIcerikSil(id: number) {
     } catch (error: any) {
         console.error("Kaynak içerik silme hatası:", error);
         return { success: false, error: error.message };
+    }
+}
+
+export async function kaynakTumIcerikleriniSil(kaynakId: number) {
+    try {
+        const db = await ensureDatabaseReady();
+        const result = await db.runAsync(
+            `DELETE FROM kaynak_icerikleri WHERE kaynakId=?`,
+            [kaynakId]
+        );
+        return { success: true, silinenSayi: result.changes };
+    } catch (error: any) {
+        console.error("Kaynak tüm içerik silme hatası:", error);
+        return { success: false, silinenSayi: 0, error: error.message };
     }
 }
 

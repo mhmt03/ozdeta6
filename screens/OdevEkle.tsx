@@ -1521,8 +1521,9 @@ export default function OdevEkle() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f8f9fa',
-        paddingTop: 16,
+        backgroundColor: '#e2effcff',
+        paddingTop: 0,
+        padding:2,
     },
     loadingContainer: {
         flex: 1,
@@ -1532,14 +1533,14 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 16,
+        padding: 6,
         backgroundColor: 'white',
         borderBottomWidth: 1,
         borderBottomColor: '#e1e8ed',
         elevation: 2,
     },
     headerTitle: {
-        fontSize: 18,
+        fontSize: 10,
         fontWeight: 'bold',
         marginLeft: 16,
         color: '#333',
@@ -1550,13 +1551,13 @@ const styles = StyleSheet.create({
     },
     content: {
         flex: 1,
-        padding: 16,
+        padding: 2,
         paddingBottom: 40,
     },
     formContainer: {
-        backgroundColor: 'white',
+        backgroundColor: '#bedffaff',
         borderRadius: 8,
-        padding: 16,
+        padding: 6,
         marginBottom: 16,
         elevation: 2,
     },
@@ -1616,7 +1617,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: 6,
+        marginBottom: 3,
     },
     switchLabel: {
         fontSize: 10,
@@ -1629,12 +1630,12 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#ddd',
         borderRadius: 6,
-        padding: 12,
+        padding: 8,
         backgroundColor: '#fff',
     },
     dateText: {
         marginLeft: 8,
-        fontSize: 16,
+        fontSize: 10,
         color: '#333',
     },
     odevVerButon: {
@@ -1642,7 +1643,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#27ae60',
-        padding: 14,
+        padding: 10,
         borderRadius: 6,
         marginTop: 8,
     },
@@ -1650,7 +1651,7 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: 'bold',
         marginLeft: 6,
-        fontSize: 16,
+        fontSize: 12,
     },
     odevlerContainer: {
         backgroundColor: 'white',

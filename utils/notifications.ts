@@ -29,11 +29,14 @@ export async function setupNotificationHandler() {
 }
 
 // Belirli bir randevu için bildirim planla
+// overrideDakika ve overrideSes verilirse global ayarlar yerine bunlar kullanılır
 export async function scheduleRandevuNotification(
     ajandaId: number,
     tarih: string,
     saat: string,
-    ogrAdsoyad: string
+    ogrAdsoyad: string,
+    overrideDakika?: number,
+    overrideSes?: boolean
 ) {
     try {
         const enabled = await getSetting('notifications_enabled', '1');
@@ -46,7 +49,10 @@ export async function scheduleRandevuNotification(
         // Randevu zamanını oluştur (Yerel saat diliminde)
         const appointmentDate = new Date(year, month - 1, day, hour, minute);
         
-        const minsBefore = parseInt(await getSetting('notification_minutes', '15')) || 15;
+        // Override varsa onu kullan, yoksa global ayardan oku
+        const minsBefore = overrideDakika !== undefined
+            ? overrideDakika
+            : (parseInt(await getSetting('notification_minutes', '15')) || 15);
         const triggerDate = new Date(appointmentDate.getTime() - minsBefore * 60 * 1000);
 
         // Eğer bildirim zamanı geçmişte ise planlama yapma
@@ -58,7 +64,10 @@ export async function scheduleRandevuNotification(
         await cancelRandevuNotification(ajandaId);
 
         const vibrate = (await getSetting('notification_vibrate', '1')) === '1';
-        const sound = (await getSetting('notification_sound', '1')) === '1';
+        // Override varsa onu kullan, yoksa global ayardan oku
+        const sound = overrideSes !== undefined
+            ? overrideSes
+            : (await getSetting('notification_sound', '1')) === '1';
 
         const identifier = await Notifications.scheduleNotificationAsync({
             identifier: `randevu-${ajandaId}`,
@@ -72,7 +81,10 @@ export async function scheduleRandevuNotification(
                     channelId: 'default',
                 }
             },
-            trigger: triggerDate,
+            trigger: {
+                type: Notifications.SchedulableTriggerInputTypes.DATE,
+                date: triggerDate,
+            },
         });
 
         return identifier;

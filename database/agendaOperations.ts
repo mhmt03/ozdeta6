@@ -9,7 +9,12 @@ export type AjandaWithOgrenciType = AjandaType & {
     aktifmi?: number;
 };
 
-export async function ajandaKayitEkle(kayit: AjandaType) {
+export async function ajandaKayitEkle(
+    kayit: AjandaType,
+    bildirimIste: boolean = true,
+    overrideDakika?: number,
+    overrideSes?: boolean
+) {
     try {
         const db = await ensureDatabaseReady();
 
@@ -30,8 +35,15 @@ export async function ajandaKayitEkle(kayit: AjandaType) {
                 kayit.sutun2 || ''
             ]
         );
-        if (result.lastInsertRowId) {
-            await scheduleRandevuNotification(result.lastInsertRowId, kayit.tarih, kayit.saat, kayit.ogrAdsoyad);
+        if (result.lastInsertRowId && bildirimIste) {
+            await scheduleRandevuNotification(
+                result.lastInsertRowId,
+                kayit.tarih,
+                kayit.saat,
+                kayit.ogrAdsoyad,
+                overrideDakika,
+                overrideSes
+            );
         }
         return { success: true, insertId: result.lastInsertRowId };
     } catch (error: any) {
@@ -39,6 +51,7 @@ export async function ajandaKayitEkle(kayit: AjandaType) {
         return { success: false, error: error.message };
     }
 }
+
 
 export async function tumAjandaKayitlariniGetir() {
     try {

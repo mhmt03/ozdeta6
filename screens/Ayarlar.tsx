@@ -74,7 +74,6 @@ export default function Ayarlar() {
     // Bildirim ayarları state'leri
     const [notificationsEnabled, setNotificationsEnabled] = useState(true);
     const [notificationSound, setNotificationSound] = useState(true);
-    const [notificationMinutes, setNotificationMinutes] = useState(15);
     const [notificationVibrate, setNotificationVibrate] = useState(true);
     const [dailySummaryEnabled, setDailySummaryEnabled] = useState(false);
 
@@ -87,13 +86,11 @@ export default function Ayarlar() {
         try {
             const enabled = await getSetting('notifications_enabled', '1');
             const sound = await getSetting('notification_sound', '1');
-            const mins = await getSetting('notification_minutes', '15');
             const vibrate = await getSetting('notification_vibrate', '1');
             const daily = await getSetting('daily_summary', '0');
 
             setNotificationsEnabled(enabled === '1');
             setNotificationSound(sound === '1');
-            setNotificationMinutes(parseInt(mins) || 15);
             setNotificationVibrate(vibrate === '1');
             setDailySummaryEnabled(daily === '1');
         } catch (error) {
@@ -142,13 +139,6 @@ export default function Ayarlar() {
     const toggleSound = async (val: boolean) => {
         setNotificationSound(val);
         await saveSetting('notification_sound', val ? '1' : '0');
-        await rescheduleAllRandevuNotifications();
-    };
-
-    const updateMinutes = async (val: number) => {
-        const finalVal = Math.max(1, val);
-        setNotificationMinutes(finalVal);
-        await saveSetting('notification_minutes', finalVal.toString());
         await rescheduleAllRandevuNotifications();
     };
 
@@ -350,7 +340,7 @@ export default function Ayarlar() {
 
             Alert.alert(
                 'Veritabanı Yedekle',
-                'SQLite veritabanı .db dosyası olarak yedeklenecek. Devam edilsin mi?',
+                'SQLite veritabanı olarak yedeklenecek. Devam edilsin mi?',
                 [
                     { text: 'İptal', style: 'cancel' },
                     {
@@ -1030,9 +1020,9 @@ export default function Ayarlar() {
                     >
                         <MaterialIcons name="backup" size={24} color="#4CAF50" />
                         <View style={styles.ayarText}>
-                            <Text style={styles.ayarBaslik}>Veritabanını Yedekle (.db)</Text>
+                            <Text style={styles.ayarBaslik}>Veritabanını Yedekle </Text>
                             <Text style={styles.ayarAciklama}>
-                                veritabanınıuygulama klasörüne kaydet
+                                veritabanını uygulama klasörüne kaydet
                             </Text>
                         </View>
                     </TouchableOpacity>
@@ -1181,27 +1171,6 @@ export default function Ayarlar() {
                                 />
                             </View>
 
-                            <View style={styles.ayarItemSub}>
-                                <View style={styles.ayarText}>
-                                    <Text style={styles.ayarBaslik}>Bildirim Süresi</Text>
-                                    <Text style={styles.ayarAciklama}>Randevudan kaç dakika önce uyarı verilsin?</Text>
-                                </View>
-                                <View style={styles.counterControlsInline}>
-                                    <TouchableOpacity
-                                        style={styles.counterBtn}
-                                        onPress={() => updateMinutes(notificationMinutes - 5)}
-                                    >
-                                        <MaterialIcons name="remove" size={20} color="#F44336" />
-                                    </TouchableOpacity>
-                                    <Text style={styles.counterValText}>{notificationMinutes} dk</Text>
-                                    <TouchableOpacity
-                                        style={styles.counterBtn}
-                                        onPress={() => updateMinutes(notificationMinutes + 5)}
-                                    >
-                                        <MaterialIcons name="add" size={20} color="#4CAF50" />
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
                         </>
                     )}
                 </View>

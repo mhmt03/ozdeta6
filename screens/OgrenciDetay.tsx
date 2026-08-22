@@ -289,12 +289,14 @@ export default function OgrenciDetay() {
     // Üst menü butonları
     const menuButonlari = [
         { id: 3, text: 'Ana Sayfa', icon: 'home', sayfa: 'AnaSayfa' },
-        { id: 2, text: 'Ödeme Al', icon: 'payment', action: odemePopupAc },
-        { id: 4, text: 'Not Yaz', icon: 'note', sayfa: 'NotEkle', parametre: { ogrenciId: ogrenci.ogrenciId } },
-        { id: 5, text: 'Ödevler', icon: 'assignment', sayfa: 'OdevEkle', parametre: { ogrenciId: ogrenci.ogrenciId } },
-        { id: 6, text: 'Ders Rapor', icon: 'assessment', sayfa: 'DersRapor', parametre: { ogrenciId: ogrenci.ogrenciId } },
         { id: 7, text: 'Kaynaklar', icon: 'book', sayfa: 'KaynakYonetimi', parametre: { ogrenciId: ogrenci.ogrenciId, ogrenciAd: ogrenci.ogrenciAd, ogrenciSoyad: ogrenci.ogrenciSoyad } },
         { id: 8, text: 'Denemeler', icon: 'assessment', sayfa: 'Denemeler', parametre: { ogrenciId: ogrenci.ogrenciId } },
+        { id: 5, text: 'Ödevler', icon: 'assignment', sayfa: 'OdevEkle', parametre: { ogrenciId: ogrenci.ogrenciId } },
+        { id: 2, text: 'Ödeme Al', icon: 'payment', action: odemePopupAc },
+        { id: 4, text: 'Not Yaz', icon: 'note', sayfa: 'NotEkle', parametre: { ogrenciId: ogrenci.ogrenciId } },
+        
+        { id: 6, text: 'Ders Rapor', icon: 'assessment', sayfa: 'DersRapor', parametre: { ogrenciId: ogrenci.ogrenciId } },
+         
         { id: 1, text: 'Ders Yap', icon: 'school', action: dersPopupAc },
     ];
 
@@ -329,7 +331,7 @@ export default function OgrenciDetay() {
                 {/* Öğrenci Bilgileri */}
                 <View style={styles.baslikBolumu}>
                     <Text style={styles.ogrenciAdi}>
-                        {ogrenci.ogrenciAd} {ogrenci.ogrenciSoyad}
+                        {ogrenci.ogrenciAd.toUpperCase()} {ogrenci.ogrenciSoyad.toUpperCase()}
                     </Text>
                     <Text style={styles.okul}>{ogrenci.okul}</Text>
                     {sonDers && (
@@ -492,13 +494,15 @@ export default function OgrenciDetay() {
 
                 {/* Ajanda Kayıtları Kartı */}
                 <View style={styles.switchContainer}>
-                    <Text style={styles.switchLabel}>Ajanda Kayıtları</Text>
-                    <Switch
-                        value={ajandaSwitch}
-                        onValueChange={setAjandaSwitch}
-                        trackColor={{ false: '#767577', true: '#81b0ff' }}
-                        thumbColor={ajandaSwitch ? '#2196F3' : '#f4f3f4'}
-                    />
+                    <View style={styles.switchRow}>
+                        <Text style={styles.switchLabel}>Ajanda Kayıtları</Text>
+                        <Switch
+                            value={ajandaSwitch}
+                            onValueChange={setAjandaSwitch}
+                            trackColor={{ false: '#767577', true: '#81b0ff' }}
+                            thumbColor={ajandaSwitch ? '#2196F3' : '#f4f3f4'}
+                        />
+                    </View>
                 </View>
 
                 {ajandaSwitch && (
@@ -871,17 +875,17 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f5f5f5',
-        paddingTop: 16,
+        paddingTop: 1,
     },
     scrollContent: {
-        padding: 16,
-        paddingBottom: 80,
+        padding: 6,
+        paddingBottom: 10,
     },
     ustMenu: {
         flexDirection: 'row',
         flexWrap: 'wrap', // İki sıra olmasını sağlar
         justifyContent: 'flex-start',
-        padding: 5,
+        padding: 1,
         backgroundColor: 'white',
         borderBottomWidth: 1,
         borderBottomColor: '#ddd',
@@ -1110,9 +1114,9 @@ const styles = StyleSheet.create({
     // Mevcut stiller
     baslikBolumu: {
         backgroundColor: 'white',
-        padding: 20,
+        padding: 2,
         borderRadius: 10,
-        marginBottom: 15,
+        marginBottom: 10,
         alignItems: 'center',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
@@ -1124,10 +1128,10 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: 'bold',
         color: '#2c3e50',
-        marginBottom: 5,
+        marginBottom: 1,
     },
     okul: {
-        fontSize: 16,
+        fontSize: 10,
         color: '#7f8c8d',
     },
     switchContainer: {

@@ -11,16 +11,19 @@ import {
     Platform,
     Keyboard,
     TouchableWithoutFeedback,
-    Linking, // Added Linking for SMS/WhatsApp
+    Linking,
+    Switch,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { MaterialIcons, FontAwesome5, Entypo } from '@expo/vector-icons';
 import RNPickerSelect from 'react-native-picker-select';
 import { sendSMS, sendWhatsApp } from '../utils/messaging';
-import { ogrencileriListele, ajandaGuncelle, randevuIptal, ajandaGrupGuncelle, ajandaSil, ajandaSiradakiKayitlariSil } from '../utils/database'; // Added randevuIptal, ajandaSil, ajandaSiradakiKayitlariSil
+import { ogrencileriListele, ajandaGuncelle, randevuIptal, ajandaGrupGuncelle, ajandaSil, ajandaSiradakiKayitlariSil } from '../utils/database';
 import { OgrenciType, AjandaType } from '../types';
-import { tekOgrenci } from '../utils/database'; // Assuming tekOgrenci is also in utils/database or similar
+import { tekOgrenci } from '../utils/database';
+import { getSetting } from '../database/settingsOperations';
+import { scheduleRandevuNotification, cancelRandevuNotification } from '../utils/notifications';
 
 export default function AjandaRandevuDuzenle({ route, navigation }: any) {
     const { randevu } = route.params;
@@ -41,12 +44,35 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
     const [degisiklikTipi, setDegisiklikTipi] = useState('sadeceBu'); // sadeceBu / tumKayitlar
     const [mesajHedef, setMesajHedef] = useState<'veli' | 'ogrenci'>('ogrenci');
 
+    // 🔔 Bildirim state'leri
+    const [globalBildirimAcik, setGlobalBildirimAcik] = useState(true);
+    const [randevuBildirimIste, setRandevuBildirimIste] = useState(false);
+    const [bildirimDakika, setBildirimDakika] = useState(15);
+    const [bildirimSesli, setBildirimSesli] = useState(true);
+
     useEffect(() => {
-        fetchOgrenciler(); // Fetch the list of students for the dropdown
+        fetchOgrenciler();
         if (randevu.ogrenciId) {
             fetchOgrenciDetay(randevu.ogrenciId);
         }
+        loadBildirimAyarlari();
     }, []);
+
+    // Global bildirim ayarları + bu randevu için varsayılan değerleri yükle
+    const loadBildirimAyarlari = async () => {
+        try {
+            const enabled = await getSetting('notifications_enabled', '1');
+            const mins = await getSetting('notification_minutes', '15');
+            const sound = await getSetting('notification_sound', '1');
+            setGlobalBildirimAcik(enabled === '1');
+            setBildirimDakika(parseInt(mins) || 15);
+            setBildirimSesli(sound === '1');
+            // Eğer global açıksa, bu randevu için de bildirimi varsayılan açık yap
+            setRandevuBildirimIste(enabled === '1');
+        } catch (error) {
+            console.error('Bildirim ayarları okunamadı:', error);
+        }
+    };
 
     const fetchOgrenciler = async () => {
         const result = await ogrencileriListele(false);
@@ -79,11 +105,29 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
                 tamamlandiMi: randevu.tamamlandiMi || 0
             };
 
+            // ajandaGuncelle zaten bildirim planlar, biz önce onu çağırıp sonra override edeceğiz
             await ajandaGuncelle(randevu.ajandaId!, updatedRandevu);
 
-            // 2. Eğer tüm kayıtları etkileyecekse grubu güncelliyoruz
+            // Bildirim ayarına göre yeniden düzenle
+            if (randevu.ajandaId) {
+                const bildirimGonder = globalBildirimAcik && randevuBildirimIste;
+                if (bildirimGonder) {
+                    await scheduleRandevuNotification(
+                        randevu.ajandaId,
+                        yerelTarihString,
+                        saatStr,
+                        updatedRandevu.ogrAdsoyad,
+                        bildirimDakika,
+                        bildirimSesli
+                    );
+                } else {
+                    // Kullanıcı bildirimi istemedi → planlanmış bildirimi iptal et
+                    await cancelRandevuNotification(randevu.ajandaId);
+                }
+            }
+
+            // Tüm kayıtları etkileyecekse grubu güncelle
             if (degisiklikTipi === 'tumKayitlar' && randevu.olusmaAni) {
-                // yerelTarihString, grup güncellemesinin "seciliTarih" parametresi olur
                 const guncelleResult = await ajandaGrupGuncelle(randevu.olusmaAni, yerelTarihString, kalanTekrar, saatStr, periyot);
                 if (!guncelleResult.success) {
                     throw new Error(guncelleResult.error);
@@ -356,6 +400,86 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
                     </TouchableOpacity>
                 </View>
 
+                {/* 🔔 BİLDİRİM AYARI BÖLÜMÜ */}
+                <View style={styles.bildirimSection}>
+                    <Text style={styles.label}>🔔 Bildirim Ayarı</Text>
+
+                    {/* Global bildirim kapalıysa uyarı */}
+                    {!globalBildirimAcik && (
+                        <View style={styles.bildirimUyariBox}>
+                            <MaterialIcons name="notifications-off" size={16} color="#e67e22" />
+                            <Text style={styles.bildirimUyariText}>
+                                Bildirimler Ayarlar'dan kapalı.
+                            </Text>
+                        </View>
+                    )}
+
+                    {/* Açık/Kapalı toggle */}
+                    <View style={styles.bildirimToggleRow}>
+                        <Text style={[
+                            styles.bildirimToggleLabel,
+                            !globalBildirimAcik && styles.disabledText
+                        ]}>
+                            Bu randevu için bildirim
+                        </Text>
+                        <Switch
+                            value={randevuBildirimIste}
+                            onValueChange={(val) => setRandevuBildirimIste(val)}
+                            disabled={!globalBildirimAcik}
+                            trackColor={{ false: '#ccc', true: '#3498db' }}
+                            thumbColor={randevuBildirimIste ? '#2980b9' : '#f4f3f4'}
+                        />
+                    </View>
+
+                    {/* Detaylar (sadece açıksa ve global açıksa) */}
+                    {randevuBildirimIste && globalBildirimAcik && (
+                        <View style={styles.bildirimDetayBox}>
+                            {/* Dakika sayacı */}
+                            <View style={styles.dakikaRow}>
+                                <Text style={styles.bildirimToggleLabel}>Kaç dakika önce:</Text>
+                                <View style={styles.dakikaControls}>
+                                    <TouchableOpacity
+                                        style={styles.dakikaBtn}
+                                        onPress={() => setBildirimDakika(prev => Math.max(1, prev - 5))}
+                                    >
+                                        <MaterialIcons name="remove" size={18} color="#e74c3c" />
+                                    </TouchableOpacity>
+                                    <Text style={styles.dakikaValue}>{bildirimDakika}</Text>
+                                    <TouchableOpacity
+                                        style={styles.dakikaBtn}
+                                        onPress={() => setBildirimDakika(prev => prev + 5)}
+                                    >
+                                        <MaterialIcons name="add" size={18} color="#2ecc71" />
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+
+                            {/* Ses seçimi */}
+                            <View style={styles.bildirimToggleRow}>
+                                <Text style={styles.bildirimToggleLabel}>Bildirim türü:</Text>
+                                <View style={styles.sesSecenekler}>
+                                    <TouchableOpacity
+                                        style={[styles.sesButon, bildirimSesli && styles.sesButonAktif]}
+                                        onPress={() => setBildirimSesli(true)}
+                                    >
+                                        <MaterialIcons name="volume-up" size={16}
+                                            color={bildirimSesli ? 'white' : '#7f8c8d'} />
+                                        <Text style={[styles.sesButonText, bildirimSesli && styles.sesButonTextAktif]}>Sesli</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[styles.sesButon, !bildirimSesli && styles.sesButonAktif]}
+                                        onPress={() => setBildirimSesli(false)}
+                                    >
+                                        <MaterialIcons name="notifications-none" size={16}
+                                            color={!bildirimSesli ? 'white' : '#7f8c8d'} />
+                                        <Text style={[styles.sesButonText, !bildirimSesli && styles.sesButonTextAktif]}>Sessiz</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        </View>
+                    )}
+                </View>
+
                 <View style={styles.buttonGrid}>
                     <TouchableOpacity style={[styles.buttonSmall, { backgroundColor: '#3498db' }]} onPress={handleKaydet}>
                         <MaterialIcons name="save" size={18} color="white" />
@@ -514,5 +638,105 @@ const styles = StyleSheet.create({
         borderColor: '#ccc',
         alignItems: 'center',
         justifyContent: 'center'
-    }
+    },
+
+    // 🔔 Bildirim stilleri
+    bildirimSection: {
+        marginTop: 20,
+        backgroundColor: 'white',
+        borderRadius: 10,
+        padding: 14,
+        borderWidth: 1,
+        borderColor: '#ecf0f1',
+        elevation: 1,
+    },
+    bildirimUyariBox: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fef9e7',
+        borderRadius: 6,
+        padding: 8,
+        marginTop: 6,
+        marginBottom: 8,
+        gap: 6,
+        borderLeftWidth: 3,
+        borderLeftColor: '#e67e22',
+    },
+    bildirimUyariText: {
+        flex: 1,
+        fontSize: 12,
+        color: '#e67e22',
+    },
+    bildirimToggleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginTop: 10,
+    },
+    bildirimToggleLabel: {
+        fontSize: 14,
+        color: '#2c3e50',
+        fontWeight: '500',
+    },
+    disabledText: {
+        color: '#bdc3c7',
+    },
+    bildirimDetayBox: {
+        marginTop: 12,
+        borderTopWidth: 1,
+        borderTopColor: '#ecf0f1',
+        paddingTop: 10,
+    },
+    dakikaRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    dakikaControls: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    dakikaBtn: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#ecf0f1',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginHorizontal: 8,
+    },
+    dakikaValue: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#2c3e50',
+        minWidth: 28,
+        textAlign: 'center',
+    },
+    sesSecenekler: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    sesButon: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#bdc3c7',
+        gap: 4,
+        backgroundColor: '#f4f6f7',
+    },
+    sesButonAktif: {
+        backgroundColor: '#3498db',
+        borderColor: '#3498db',
+    },
+    sesButonText: {
+        fontSize: 12,
+        color: '#7f8c8d',
+        fontWeight: '500',
+    },
+    sesButonTextAktif: {
+        color: 'white',
+    },
 });

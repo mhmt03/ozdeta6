@@ -16,7 +16,7 @@ const OgrenciListItem: React.FC<OgrenciListItemProps> = ({ ogrenci, onPress, onL
             onLongPress={onLongPress}
             style={styles.item}
         >
-            <Text style={styles.text}>{ogrenci.ogrenciAd} {ogrenci.ogrenciSoyad}</Text>
+            <Text style={styles.text}>{ogrenci.ogrenciAd.toUpperCase()} {ogrenci.ogrenciSoyad.toUpperCase()}</Text>
         </TouchableOpacity>
     );
 };

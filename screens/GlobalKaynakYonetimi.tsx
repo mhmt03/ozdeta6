@@ -18,7 +18,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as XLSX from 'xlsx';
 import {
     tumKaynakEkle,
@@ -29,6 +29,7 @@ import {
     getKaynakIcerikleri,
     kaynakIcerikGuncelle,
     kaynakIcerikSil,
+    kaynakTumIcerikleriniSil,
     getTumKaynakTurleri,
     kaynakTuruEkle,
     kaynakTuruGuncelle,
@@ -90,23 +91,26 @@ export default function GlobalKaynakYonetimi() {
 
     React.useLayoutEffect(() => {
         navigation.setOptions({
+            headerTitle: () => (
+                <Text style={{ fontSize: 14, fontWeight: '600', color: 'white' }}>Global Kaynak Yönetimi</Text>
+            ),
+            headerTitleAlign: 'left',
             headerRight: () => (
                 <TouchableOpacity
                     style={{
                         flexDirection: 'row',
                         alignItems: 'center',
                         backgroundColor: 'rgba(255,255,255,0.1)',
-                        paddingHorizontal: 12,
-                        paddingVertical: 6,
+                        paddingHorizontal: 10,
+                        paddingVertical: 5,
                         borderRadius: 8,
                         borderWidth: 1,
                         borderColor: 'rgba(255,255,255,0.2)',
-                        marginRight: 15,
+                        marginRight: 12,
                     }}
                     onPress={() => { setTurModalGorunur(true); turYukle(); }}
                 >
-                    <MaterialIcons name="label" size={16} color="#aef013ff" />
-                    <Text style={{ marginLeft: 6, color: '#aef013ff', fontWeight: 'bold', fontSize: 13 }}>Türleri Yönet</Text>
+                    <Text style={{ color: '#aef013ff', fontWeight: 'bold', fontSize: 12 }}>Türleri Yönet</Text>
                 </TouchableOpacity>
             ),
         });
@@ -413,6 +417,32 @@ export default function GlobalKaynakYonetimi() {
         }
     };
 
+    const handleTumIceriklerSil = () => {
+        if (!seciliKaynak || icerikler.length === 0) return;
+        Alert.alert(
+            'Tüm İçerikleri Sil',
+            `"${seciliKaynak.ad}" kaynağına ait ${icerikler.length} içeriğin tamamı silinecek. Bu işlem geri alınamaz!`,
+            [
+                { text: 'Vazgeç', style: 'cancel' },
+                {
+                    text: 'Evet, Hepsini Sil',
+                    style: 'destructive',
+                    onPress: async () => {
+                        setIcerikYukleniyor(true);
+                        const r = await kaynakTumIcerikleriniSil(seciliKaynak.id);
+                        setIcerikYukleniyor(false);
+                        if (r.success) {
+                            Alert.alert('Tamam', `${r.silinenSayi} içerik silindi.`);
+                            await iceriklerYukle(seciliKaynak.id);
+                        } else {
+                            Alert.alert('Hata', 'Silme işlemi başarısız.');
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
     const renderItem = ({ item, index }: { item: GlobalKaynak; index: number }) => (
         <View style={styles.item}>
             <View style={styles.itemInfo}>
@@ -477,9 +507,13 @@ export default function GlobalKaynakYonetimi() {
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
             >
-                <View style={styles.content}>
-
-
+                <ScrollView 
+                    style={styles.keyboardView}
+                    contentContainerStyle={{ padding: 8, paddingBottom: 24 }}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="on-drag"
+                >
                         {/* Yeni Kaynak Ekleme Formu */}
                         <View style={styles.form}>
                             <Text style={styles.formTitle}>Yeni Ortak Kaynak Ekle</Text>
@@ -522,17 +556,20 @@ export default function GlobalKaynakYonetimi() {
                         {/* Kaynaklar Listesi */}
                         <View style={styles.listeContainer}>
                             <Text style={styles.listeTitle}>Sistemdeki Kaynaklar ({kaynaklar.length})</Text>
-                            <FlatList
-                                data={kaynaklar}
-                                renderItem={renderItem}
-                                keyExtractor={item => item.id.toString()}
-                                showsVerticalScrollIndicator={false}
-                                contentContainerStyle={{ paddingBottom: 20 }}
-                                keyboardShouldPersistTaps="handled"
-                                keyboardDismissMode="on-drag"
-                            />
+                            {kaynaklar.length === 0 ? (
+                                <View style={styles.bosIcerik}>
+                                    <MaterialIcons name="list" size={32} color="#ddd" />
+                                    <Text style={styles.bosIcerikText}>Henüz kaynak eklenmemiş</Text>
+                                </View>
+                            ) : (
+                                kaynaklar.map((item, index) => (
+                                    <View key={item.id.toString()}>
+                                        {renderItem({ item, index })}
+                                    </View>
+                                ))
+                            )}
                         </View>
-                    </View>
+                </ScrollView>
             </KeyboardAvoidingView>
 
             {/* ─── DÜZENLEME MODALI ─── */}
@@ -607,14 +644,25 @@ export default function GlobalKaynakYonetimi() {
                                         Ödev verirken bu listeden konu seçilebilecek.
                                     </Text>
 
-                                    {/* İçerik Kopyala Butonu */}
-                                    <TouchableOpacity
-                                        style={styles.kopyalaBtn}
-                                        onPress={() => setKopyalaModalGorunur(true)}
-                                    >
-                                        <MaterialIcons name="content-copy" size={16} color="#8e44ad" />
-                                        <Text style={styles.kopyalaBtnText}>Başka Kaynaktan İçerik Kopyala</Text>
-                                    </TouchableOpacity>
+                                    {/* Kopyala + Tüm Sil butonları yan yana */}
+                                    <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
+                                        <TouchableOpacity
+                                            style={[styles.kopyalaBtn, { flex: 1, marginBottom: 0 }]}
+                                            onPress={() => setKopyalaModalGorunur(true)}
+                                        >
+                                            <MaterialIcons name="content-copy" size={15} color="#8e44ad" />
+                                            <Text style={styles.kopyalaBtnText}>Kaynaktan Kopyala</Text>
+                                        </TouchableOpacity>
+
+                                        <TouchableOpacity
+                                            style={[styles.tumSilBtn, { flex: 1, marginBottom: 0, opacity: icerikler.length === 0 ? 0.4 : 1 }]}
+                                            onPress={handleTumIceriklerSil}
+                                            disabled={icerikler.length === 0}
+                                        >
+                                            <MaterialIcons name="delete-sweep" size={15} color="#e74c3c" />
+                                            <Text style={styles.tumSilBtnText}>Tümünü Sil{icerikler.length > 0 ? ` (${icerikler.length})` : ''}</Text>
+                                        </TouchableOpacity>
+                                    </View>
 
                                     {/* Yeni İçerik Ekleme */}
                                     <View style={styles.icerikEkleRow}>
@@ -775,43 +823,48 @@ export default function GlobalKaynakYonetimi() {
     );
 }
 
-const styles = StyleSheet.create({
+const styles: StyleSheet.NamedStyles<any> = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f8f9fa',
-        paddingTop: 16,
         paddingBottom: 80,
     },
     header: {
-        flexDirection: 'row',
+    flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: 16,
+        padding: 12,
         backgroundColor: 'white',
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
         elevation: 2,
-        marginBottom: 16,
+        marginBottom: 6,
     },
-    headerTitle: { fontSize: 18, fontWeight: 'bold', marginLeft: 16, color: '#333' },
+    headerTitle: 
+    { fontSize: 13, 
+        fontWeight: '600', 
+        marginLeft: 4, 
+        color: '#333' ,
+    },
     headerTurYonetimBtn: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#f4f1fa',
-        paddingHorizontal: 12,
+        paddingHorizontal: 2,
         paddingVertical: 8,
         borderRadius: 8,
         borderWidth: 1,
         borderColor: '#e2d5f8',
     },
     headerTurYonetimBtnText: {
-        marginLeft: 6,
+        marginLeft: 1,
         color: '#8e44ad',
-        fontWeight: 'bold',
-        fontSize: 13,
+        fontWeight: 'normal',
+        fontSize: 7,
     },
     keyboardView: { flex: 1 },
-    content: { flex: 1, padding: 16 },
+    content: { flex: 1, padding: 8 
+        },
 
     // Form
     form: {
@@ -853,10 +906,9 @@ const styles = StyleSheet.create({
     aciklama: { fontSize: 12, color: '#7f8c8d', marginTop: 12, fontStyle: 'italic' },
 
     // Liste
-    listeContainer: { flex: 1, backgroundColor: 'white', padding: 16, borderRadius: 12, elevation: 2 },
-    listeTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 12, color: '#2c3e50' },
-    item: {
-        flexDirection: 'row',
+    listeContainer: { backgroundColor: 'white', padding: 6, borderRadius: 12, elevation: 2, marginBottom: 20 },
+    listeTitle: { fontSize: 14, fontWeight: 'bold', marginBottom: 12, color: '#2c3e50' },
+    item: { flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingVertical: 12,
@@ -907,30 +959,30 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
     },
-    modalTitle: { fontSize: 17, fontWeight: 'bold', color: '#2c3e50' },
-    modalSection: { padding: 16 },
-    modalSectionTitle: { fontSize: 15, fontWeight: 'bold', color: '#2c3e50', marginBottom: 4 },
-    modalSectionAciklama: { fontSize: 12, color: '#7f8c8d', marginBottom: 12, fontStyle: 'italic' },
-    fieldLabel: { fontSize: 13, fontWeight: '600', color: '#555', marginBottom: 6, marginTop: 10 },
+    modalTitle: { fontSize: 15, fontWeight: 'bold', color: '#2c3e50' },
+    modalSection: { padding: 10 },
+    modalSectionTitle: { fontSize: 13, fontWeight: 'bold', color: '#2c3e50', marginBottom: 2 },
+    modalSectionAciklama: { fontSize: 11, color: '#7f8c8d', marginBottom: 8, fontStyle: 'italic' },
+    fieldLabel: { fontSize: 12, fontWeight: '600', color: '#555', marginBottom: 4, marginTop: 6 },
     modalInput: {
         borderWidth: 1,
         borderColor: '#ddd',
         borderRadius: 8,
-        padding: 12,
+        padding: 8,
         backgroundColor: '#f9f9f9',
-        fontSize: 15,
+        fontSize: 13,
     },
     kaydetBtn: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#27ae60',
-        padding: 12,
+        padding: 9,
         borderRadius: 8,
-        marginTop: 14,
-        gap: 6,
+        marginTop: 8,
+        gap: 5,
     },
-    kaydetBtnText: { color: 'white', fontWeight: 'bold', fontSize: 14 },
+    kaydetBtnText: { color: 'white', fontWeight: 'bold', fontSize: 13 },
     divider: { height: 8, backgroundColor: '#f4f6f8' },
 
     // İçerik
@@ -958,11 +1010,11 @@ const styles = StyleSheet.create({
     icerikGosterRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 8,
+        paddingVertical: 5,
         borderBottomWidth: 1,
         borderBottomColor: '#f1f1f1',
     },
-    icerikText: { flex: 1, fontSize: 14, color: '#333' },
+    icerikText: { flex: 1, fontSize: 13, color: '#333' },
     icerikBtnGrup: { flexDirection: 'row', gap: 4 },
     icerikEditBtn: { padding: 5, backgroundColor: '#eaf4fc', borderRadius: 5 },
     icerikSilBtn: { padding: 5, backgroundColor: '#fff5f5', borderRadius: 5 },
@@ -1063,17 +1115,34 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#f4f1fa',
-        padding: 10,
+        padding: 8,
         borderRadius: 8,
-        marginBottom: 16,
+        marginBottom: 10,
         borderWidth: 1,
         borderColor: '#e2d5f8',
     },
     kopyalaBtnText: {
         color: '#8e44ad',
         fontWeight: 'bold',
-        marginLeft: 8,
-        fontSize: 13,
+        marginLeft: 6,
+        fontSize: 12,
+    },
+    tumSilBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#fff5f5',
+        padding: 8,
+        borderRadius: 8,
+        marginBottom: 10,
+        borderWidth: 1,
+        borderColor: '#ffc5c5',
+    },
+    tumSilBtnText: {
+        color: '#e74c3c',
+        fontWeight: 'bold',
+        marginLeft: 6,
+        fontSize: 12,
     },
     kopyalaKaynakItem: {
         flexDirection: 'row',
@@ -1098,5 +1167,5 @@ const styles = StyleSheet.create({
         fontSize: 11,
         color: '#7f8c8d',
         marginTop: 2,
-    },
-});
+    }
+})
