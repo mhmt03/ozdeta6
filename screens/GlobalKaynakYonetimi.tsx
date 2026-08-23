@@ -37,6 +37,7 @@ import {
     kaynakTuruSil,
     kaynakTuruKullanimSayisi,
     kaynakIcerikleriniKopyala,
+    kaynakIcerikSiraGuncelle,
     type KaynakTuru,
 } from '../database/homeworkOperations';
 
@@ -464,8 +465,10 @@ export default function GlobalKaynakYonetimi() {
         </View>
     );
 
-    const renderIcerikItem = ({ item }: { item: IcerikItem }) => {
+    const renderIcerikItem = ({ item, index }: { item: IcerikItem; index: number }) => {
         const duzenlemede = duzIcerikId === item.id;
+        const isFirst = index === 0;
+        const isLast = index === icerikler.length - 1;
         return (
             <View style={styles.icerikItem}>
                 {duzenlemede ? (
@@ -488,6 +491,23 @@ export default function GlobalKaynakYonetimi() {
                         <MaterialIcons name="fiber-manual-record" size={8} color="#95a5a6" style={{ marginRight: 8, marginTop: 2 }} />
                         <Text style={styles.icerikText}>{item.icerik}</Text>
                         <View style={styles.icerikBtnGrup}>
+                            {/* Yukarı Taşı */}
+                            <TouchableOpacity
+                                onPress={() => handleIcerikSiraDegistir(item, 'yukari')}
+                                style={[styles.icerikEditBtn, isFirst && { opacity: 0.3 }]}
+                                disabled={isFirst}
+                            >
+                                <MaterialIcons name="arrow-upward" size={15} color={isFirst ? '#ccc' : '#3498db'} />
+                            </TouchableOpacity>
+                            {/* Aşağı Taşı */}
+                            <TouchableOpacity
+                                onPress={() => handleIcerikSiraDegistir(item, 'asagi')}
+                                style={[styles.icerikEditBtn, isLast && { opacity: 0.3 }]}
+                                disabled={isLast}
+                            >
+                                <MaterialIcons name="arrow-downward" size={15} color={isLast ? '#ccc' : '#3498db'} />
+                            </TouchableOpacity>
+
                             <TouchableOpacity onPress={() => handleIcerikDuzenlemeBaslat(item)} style={styles.icerikEditBtn}>
                                 <MaterialIcons name="edit" size={15} color="#3498db" />
                             </TouchableOpacity>
@@ -499,6 +519,40 @@ export default function GlobalKaynakYonetimi() {
                 )}
             </View>
         );
+    };
+
+    const handleIcerikSiraDegistir = async (item: IcerikItem, yon: 'yukari' | 'asagi') => {
+        const index = icerikler.findIndex(ic => ic.id === item.id);
+        if (index === -1) return;
+
+        const hedefIndex = yon === 'yukari' ? index - 1 : index + 1;
+        if (hedefIndex < 0 || hedefIndex >= icerikler.length) return;
+
+        try {
+            setIcerikYukleniyor(true);
+
+            const yeniDizi = [...icerikler];
+            const temp = yeniDizi[index];
+            yeniDizi[index] = yeniDizi[hedefIndex];
+            yeniDizi[hedefIndex] = temp;
+
+            const guncellenecekler = yeniDizi.map((ic, i) => ({
+                id: ic.id,
+                sira: i,
+            }));
+
+            const r = await kaynakIcerikSiraGuncelle(guncellenecekler);
+            if (r.success) {
+                if (seciliKaynak) await iceriklerYukle(seciliKaynak.id);
+            } else {
+                Alert.alert('Hata', 'Sıralama güncellenemedi');
+            }
+        } catch (error) {
+            console.error('Sıralama Hatası:', error);
+            Alert.alert('Hata', 'Sıralama değiştirilemedi');
+        } finally {
+            setIcerikYukleniyor(false);
+        }
     };
 
     const handleExcelGlobalKaynakImport = async () => {
@@ -929,9 +983,9 @@ export default function GlobalKaynakYonetimi() {
                                             <Text style={styles.bosIcerikText}>Henüz içerik eklenmemiş</Text>
                                         </View>
                                     ) : (
-                                        icerikler.map(item => (
+                                        icerikler.map((item, index) => (
                                             <View key={item.id}>
-                                                {renderIcerikItem({ item })}
+                                                {renderIcerikItem({ item, index })}
                                             </View>
                                         ))
                                     )}

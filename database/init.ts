@@ -23,7 +23,7 @@ const DB_PASSWORD: string = '';
  * Tablolara yeni sütunlar veya tablolar eklendiğinde bu değer 1 artırılmalıdır.
  * Migration motoru bu değere göre eksik adımları otomatik çalıştırır.
  */
-const DATABASE_VERSION = 5;
+const DATABASE_VERSION = 6;
 
 // ─── ŞEMA TANIMLARI (SQL) ────────────────────────────────────────────────────
 /**
@@ -253,6 +253,10 @@ const migrations: Array<(db: SQLite.SQLiteDatabase) => Promise<void>> = [
             await database.runAsync(`INSERT OR IGNORE INTO kaynak_turleri (ad) VALUES (?)`, [tur]);
         }
     },
+    // 5. ADIM (v5 -> v6): `kaynak_icerikleri` tablosuna `sira` (sıralama) sütunu eklenmesi.
+    async (database) => {
+        await kolonEkle(database, 'kaynak_icerikleri', 'sira', "INTEGER DEFAULT 0");
+    },
 ];
 
 // ─── YARDIMCI METOTLAR ───────────────────────────────────────────────────────
@@ -300,9 +304,11 @@ async function ensureSchema(database: SQLite.SQLiteDatabase): Promise<void> {
             id       INTEGER PRIMARY KEY AUTOINCREMENT,
             kaynakId INTEGER NOT NULL,
             icerik   TEXT NOT NULL,
+            sira     INTEGER DEFAULT 0,
             FOREIGN KEY (kaynakId) REFERENCES tum_kaynaklar(id) ON DELETE CASCADE
         );
     `);
+    await kolonEkle(database, 'kaynak_icerikleri', 'sira', "INTEGER DEFAULT 0");
 
     // 4. Kaynak türleri tablosunun varlığının kesinleştirilmesi ve temel değerlerin seed edilmesi
     await database.execAsync(`

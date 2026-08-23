@@ -273,9 +273,15 @@ export async function tumKaynakGuncelle(id: number, ad: string, tur: string) {
 export async function kaynakIcerikEkle(kaynakId: number, icerik: string) {
     try {
         const db = await ensureDatabaseReady();
+        const maxRow = await db.getFirstAsync<{ maxSira: number }>(
+            `SELECT MAX(sira) as maxSira FROM kaynak_icerikleri WHERE kaynakId=?`,
+            [kaynakId]
+        );
+        const yeniSira = (maxRow?.maxSira ?? 0) + 1;
+
         const result = await db.runAsync(
-            `INSERT INTO kaynak_icerikleri (kaynakId, icerik) VALUES (?, ?)`,
-            [kaynakId, icerik]
+            `INSERT INTO kaynak_icerikleri (kaynakId, icerik, sira) VALUES (?, ?, ?)`,
+            [kaynakId, icerik, yeniSira]
         );
         return { success: true, id: result.lastInsertRowId };
     } catch (error: any) {
@@ -287,14 +293,30 @@ export async function kaynakIcerikEkle(kaynakId: number, icerik: string) {
 export async function getKaynakIcerikleri(kaynakId: number) {
     try {
         const db = await ensureDatabaseReady();
-        const result = await db.getAllAsync<{ id: number; kaynakId: number; icerik: string }>(
-            `SELECT * FROM kaynak_icerikleri WHERE kaynakId=? ORDER BY id ASC`,
+        const result = await db.getAllAsync<{ id: number; kaynakId: number; icerik: string; sira?: number }>(
+            `SELECT * FROM kaynak_icerikleri WHERE kaynakId=? ORDER BY sira ASC, id ASC`,
             [kaynakId]
         );
         return { success: true, data: result || [] };
     } catch (error: any) {
         console.error("Kaynak içerikleri alınamadı:", error);
         return { success: false, data: [], error: error.message };
+    }
+}
+
+export async function kaynakIcerikSiraGuncelle(iceriklerListesi: { id: number; sira: number }[]) {
+    try {
+        const db = await ensureDatabaseReady();
+        for (const item of iceriklerListesi) {
+            await db.runAsync(
+                `UPDATE kaynak_icerikleri SET sira=? WHERE id=?`,
+                [item.sira, item.id]
+            );
+        }
+        return { success: true };
+    } catch (error: any) {
+        console.error("Kaynak içerik sıralama güncelleme hatası:", error);
+        return { success: false, error: error.message };
     }
 }
 
@@ -418,7 +440,7 @@ export async function getKaynakTamamlanmaRaporu(ogrenciId: number): Promise<{
 
             // Kaynağın tüm içerikleri
             const icerikleri = await db.getAllAsync<{ id: number; icerik: string }>(
-                `SELECT id, icerik FROM kaynak_icerikleri WHERE kaynakId=? ORDER BY id ASC`,
+                `SELECT id, icerik FROM kaynak_icerikleri WHERE kaynakId=? ORDER BY sira ASC, id ASC`,
                 [globalKaynak.id]
             );
 
