@@ -2,21 +2,17 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, Alert } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { OdevType } from '../types';
 
 interface OdevItemProps {
     item: OdevType;
     onGuncelle: (guncelOdev: OdevType) => void;
     onSil?: (odevId: number) => void;
+    onDuzenle?: (item: OdevType) => void;
 }
 
-const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle, onSil }) => {
+const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle, onSil, onDuzenle }) => {
     const [yapilmaDurumu, setYapilmaDurumu] = useState(item.yapilmadurumu || 'Bekliyor');
-    const [verilme, setVerilme] = useState(new Date(item.verilmetarihi));
-    const [teslim, setTeslim] = useState(new Date(item.teslimttarihi));
-    const [verilmePickerAcik, setVerilmePickerAcik] = useState(false);
-    const [teslimPickerAcik, setTeslimPickerAcik] = useState(false);
 
     const formatTarih = (tarih: Date | string) => {
         if (!tarih) return '';
@@ -54,26 +50,21 @@ const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle, onSil }) => {
         <View style={[styles.odevItem, teslimGecmis && { borderColor: 'red', borderWidth: 2 }]}>
             <Text style={styles.odevKonu}>{item.odev}</Text>
             <Text style={styles.odevKaynak}>{item.kaynak}</Text>
-            {/* Tarih Seçiciler */}
+            
+            {/* Tarihler (Salt Okunur) */}
             <View style={styles.odevTarihler}>
-                <TouchableOpacity
-                    style={styles.dateButton}
-                    onPress={() => setVerilmePickerAcik(true)}
-                >
-                    <MaterialIcons name="date-range" size={18} color="#666" />
-                    <Text style={styles.dateText}>Verildi: {formatTarih(verilme)}</Text>
-                </TouchableOpacity>
+                <View style={styles.dateTextContainer}>
+                    <MaterialIcons name="date-range" size={16} color="#666" style={{ marginRight: 4 }} />
+                    <Text style={styles.dateText}>Verildi: {formatTarih(item.verilmetarihi)}</Text>
+                </View>
 
-                <TouchableOpacity
-                    style={styles.dateButton}
-                    onPress={() => setTeslimPickerAcik(true)}
-                >
-                    <MaterialIcons name="date-range" size={18} color="#666" />
-                    <Text style={styles.dateText}>Teslim: {formatTarih(teslim)}</Text>
-                </TouchableOpacity>
+                <View style={styles.dateTextContainer}>
+                    <MaterialIcons name="date-range" size={16} color="#666" style={{ marginRight: 4 }} />
+                    <Text style={styles.dateText}>Teslim: {formatTarih(item.teslimttarihi)}</Text>
+                </View>
             </View>
 
-            {/* Durum + Gncll + Sil Aynı Satırda */}
+            {/* Durum + Aksiyonlar Aynı Satırda */}
             <View style={styles.altAksiyonSatiri}>
                 <View style={[styles.durumContainer, { backgroundColor: getDurumRenk(yapilmaDurumu) }]}>
                     <Picker
@@ -81,7 +72,6 @@ const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle, onSil }) => {
                         onValueChange={(val: string) => setYapilmaDurumu(val)}
                         style={styles.durumPicker}
                         dropdownIconColor="white"
-
                     >
                         <Picker.Item label="Bekliyor" value="Bekliyor" color={Platform.OS === 'ios' ? 'white' : '#f51212ff'} />
                         <Picker.Item label="Yapıldı" value="Yapıldı" color={Platform.OS === 'ios' ? 'white' : '#f51212ff'} />
@@ -90,21 +80,32 @@ const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle, onSil }) => {
                     </Picker>
                 </View>
 
-                {/* Güncelle Butonu */}
+                {/* Güncelle Butonu (Sadece Durumu Kaydeder) */}
                 <TouchableOpacity
                     style={styles.guncelleButon}
                     onPress={() =>
                         onGuncelle({
                             ...item,
                             yapilmadurumu: yapilmaDurumu,
-                            verilmetarihi: verilme.toISOString().split('T')[0],
-                            teslimttarihi: teslim.toISOString().split('T')[0],
                         })
                     }
                 >
-                    <MaterialIcons name="save" size={16} color="white" />
+                    <MaterialIcons name="save" size={14} color="white" />
                     <Text style={styles.guncelleText}>Gncll</Text>
                 </TouchableOpacity>
+               
+                {/* Düzenle Butonu */}
+                {onDuzenle && (
+                    <TouchableOpacity
+                        style={styles.duzenleButon}
+                        onPress={() => onDuzenle(item)}
+                    >
+                        <MaterialIcons name="edit" size={14} color="white" />
+                        <Text style={styles.duzenleText}>Düzenle</Text>
+                    </TouchableOpacity>
+                )}
+
+               
 
                 {/* Sil Butonu */}
                 {onSil && (
@@ -112,35 +113,11 @@ const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle, onSil }) => {
                         style={styles.silButon}
                         onPress={silOnayla}
                     >
-                        <MaterialIcons name="delete" size={16} color="white" />
+                        <MaterialIcons name="delete" size={14} color="white" />
                         <Text style={styles.silText}>Sil</Text>
                     </TouchableOpacity>
                 )}
             </View>
-
-            {/* DatePickers */}
-            {verilmePickerAcik && (
-                <DateTimePicker
-                    value={verilme}
-                    mode="date"
-                    display="default"
-                    onChange={(e, selected) => {
-                        setVerilmePickerAcik(false);
-                        if (selected) setVerilme(selected);
-                    }}
-                />
-            )}
-            {teslimPickerAcik && (
-                <DateTimePicker
-                    value={teslim}
-                    mode="date"
-                    display="default"
-                    onChange={(e, selected) => {
-                        setTeslimPickerAcik(false);
-                        if (selected) setTeslim(selected);
-                    }}
-                />
-            )}
         </View>
     );
 };
@@ -154,26 +131,20 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#e1e8ed',
     },
-    odevKonu: { fontSize: 15, fontWeight: 'bold', marginBottom: 6, color: '#2c3e50' },
-    odevKaynak: { fontSize: 12, fontWeight: 'normal', marginBottom: 6, color: '#5da7f1ff' },
+    odevKonu: { fontSize: 12, fontWeight: 'bold', marginBottom: 4, color: '#2c3e50' },
+    odevKaynak: { fontSize: 12, fontWeight: 'normal', marginBottom: 4, color: '#5da7f1ff' },
     odevTarihler: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 8,
+        marginBottom: 6,
         gap: 6,
     },
-    dateButton: {
+    dateTextContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 6,
-        paddingVertical: 6,
-        paddingHorizontal: 8,
-        backgroundColor: '#fff',
         flex: 1,
     },
-    dateText: { marginLeft: 4, fontSize: 12, color: '#333' },
+    dateText: { fontSize: 12, color: '#666' },
     altAksiyonSatiri: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -193,34 +164,44 @@ const styles = StyleSheet.create({
         flex: 1,
         color: '#0c0c0cff',
         fontWeight: "normal",
-        fontSize: 12,
+        fontSize: 8,
         textDecorationColor: "red",
         padding: 0,
-        
         marginTop: -10,
     },
+    duzenleButon: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#9b59b6',
+        paddingVertical: 8,
+        paddingHorizontal: 8,
+        borderRadius: 6,
+        height: 38,
+    },
+    duzenleText: { color: 'white', marginLeft: 2, fontWeight: 'bold', fontSize: 8 },
     guncelleButon: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#3498db',
         paddingVertical: 8,
-        paddingHorizontal: 10,
+        paddingHorizontal: 8,
         borderRadius: 6,
         height: 38,
     },
-    guncelleText: { color: 'white', marginLeft: 1, fontWeight: 'bold', fontSize: 8 },
+    guncelleText: { color: 'white', marginLeft: 2, fontWeight: 'bold', fontSize: 8 },
     silButon: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#e74c3c',
         paddingVertical: 8,
-        paddingHorizontal: 10,
+        paddingHorizontal: 8,
         borderRadius: 6,
         height: 38,
     },
-    silText: { color: 'white', marginLeft: 4, fontWeight: 'bold', fontSize: 8 },
+    silText: { color: 'white', marginLeft: 2, fontWeight: 'bold', fontSize: 8 },
 });
 
 export default OdevItem;

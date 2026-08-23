@@ -77,6 +77,21 @@ export default function OdevEkle() {
     const [seciliIcerikler, setSeciliIcerikler] = useState<string[]>([]);
     const [konuModu, setKonuModu] = useState<'liste' | 'elle'>('elle'); // 'liste' | 'elle'
 
+    // Ödev düzenleme modalı state'leri
+    const [duzenlenenOdev, setDuzenlenenOdev] = useState<OdevType | null>(null);
+    const [duzenleModalGorunur, setDuzenleModalGorunur] = useState(false);
+    const [duzenleKayitsizKaynak, setDuzenleKayitsizKaynak] = useState(false);
+    const [duzenleSeciliKaynak, setDuzenleSeciliKaynak] = useState('');
+    const [duzenleSerbetKaynak, setDuzenleSerbetKaynak] = useState('');
+    const [duzenleOdevKonusu, setDuzenleOdevKonusu] = useState('');
+    const [duzenleVerilmeTarihi, setDuzenleVerilmeTarihi] = useState(new Date());
+    const [duzenleTeslimTarihi, setDuzenleTeslimTarihi] = useState(new Date());
+    const [duzenleVerilmeTarihPickerAcik, setDuzenleVerilmeTarihPickerAcik] = useState(false);
+    const [duzenleTeslimTarihPickerAcik, setDuzenleTeslimTarihPickerAcik] = useState(false);
+    const [duzenleKaynakIcerikleri, setDuzenleKaynakIcerikleri] = useState<IcerikItem[]>([]);
+    const [duzenleSeciliIcerikler, setDuzenleSeciliIcerikler] = useState<string[]>([]);
+    const [duzenleKonuModu, setDuzenleKonuModu] = useState<'liste' | 'elle'>('elle');
+
     // Stil Yardımcı Fonksiyonu
     const getIcerikStili = (icerik: string, isSelected: boolean) => {
         const kaynakValue = kayitsizKaynak ? serbetKaynak : seciliKaynak;
@@ -442,6 +457,136 @@ export default function OdevEkle() {
         // 1 hafta sonrasını hesapla
         const yeniTeslimTarihi = new Date(tarih.getTime() + 7 * 24 * 60 * 60 * 1000);
         setTeslimTarihi(yeniTeslimTarihi);
+    };
+
+    const handleDuzenlemeBaslat = async (item: OdevType) => {
+        setDuzenlenenOdev(item);
+        setDuzenleVerilmeTarihi(new Date(item.verilmetarihi));
+        setDuzenleTeslimTarihi(new Date(item.teslimttarihi));
+        
+        // Find if this is a registered resource
+        const existsInRegistered = kaynaklar.some(k => k.kaynak.toLowerCase() === item.kaynak?.toLowerCase());
+        
+        if (existsInRegistered) {
+            setDuzenleKayitsizKaynak(false);
+            setDuzenleSeciliKaynak(item.kaynak || '');
+            setDuzenleSerbetKaynak('');
+            
+            const idResult = await getKaynakIdByAd(item.kaynak || '');
+            if (idResult.success && idResult.data) {
+                const icResult = await getKaynakIcerikleri(idResult.data.id);
+                if (icResult.success && icResult.data.length > 0) {
+                    setDuzenleKaynakIcerikleri(icResult.data as IcerikItem[]);
+                    
+                    const currentOdevText = item.odev || '';
+                    const parsedTopics = currentOdevText.split(',').map(s => s.trim().toLowerCase());
+                    const matchedTopics = (icResult.data as IcerikItem[])
+                        .filter(ic => parsedTopics.includes(ic.icerik.trim().toLowerCase()))
+                        .map(ic => ic.icerik);
+                    
+                    if (matchedTopics.length > 0) {
+                        setDuzenleSeciliIcerikler(matchedTopics);
+                        setDuzenleKonuModu('liste');
+                        setDuzenleOdevKonusu('');
+                    } else {
+                        setDuzenleSeciliIcerikler([]);
+                        setDuzenleKonuModu('elle');
+                        setDuzenleOdevKonusu(currentOdevText);
+                    }
+                } else {
+                    setDuzenleKaynakIcerikleri([]);
+                    setDuzenleSeciliIcerikler([]);
+                    setDuzenleKonuModu('elle');
+                    setDuzenleOdevKonusu(item.odev || '');
+                }
+            } else {
+                setDuzenleKaynakIcerikleri([]);
+                setDuzenleSeciliIcerikler([]);
+                setDuzenleKonuModu('elle');
+                setDuzenleOdevKonusu(item.odev || '');
+            }
+        } else {
+            setDuzenleKayitsizKaynak(true);
+            setDuzenleSeciliKaynak('');
+            setDuzenleSerbetKaynak(item.kaynak || '');
+            setDuzenleKaynakIcerikleri([]);
+            setDuzenleSeciliIcerikler([]);
+            setDuzenleKonuModu('elle');
+            setDuzenleOdevKonusu(item.odev || '');
+        }
+        
+        setDuzenleModalGorunur(true);
+    };
+
+    const duzenleKaynakSecildi = async (kaynakAdi: string) => {
+        setDuzenleSeciliKaynak(kaynakAdi);
+        setDuzenleOdevKonusu('');
+        setDuzenleSeciliIcerikler([]);
+        setDuzenleKonuModu('elle');
+        setDuzenleKaynakIcerikleri([]);
+        if (!kaynakAdi) return;
+        const idResult = await getKaynakIdByAd(kaynakAdi);
+        if (idResult.success && idResult.data) {
+            const icResult = await getKaynakIcerikleri(idResult.data.id);
+            if (icResult.success && icResult.data.length > 0) {
+                setDuzenleKaynakIcerikleri(icResult.data as IcerikItem[]);
+                setDuzenleKonuModu('liste');
+            }
+        }
+    };
+
+    const duzenleIcerikTiklandi = (icerik: string) => {
+        let yeniSecilenler = [...duzenleSeciliIcerikler];
+        if (yeniSecilenler.includes(icerik)) {
+            yeniSecilenler = yeniSecilenler.filter(x => x !== icerik);
+        } else {
+            yeniSecilenler.push(icerik);
+        }
+        setDuzenleSeciliIcerikler(yeniSecilenler);
+    };
+
+    const handleDuzenleKaydet = async () => {
+        if (!duzenlenenOdev) return;
+        
+        const kaynakValue = duzenleKayitsizKaynak ? duzenleSerbetKaynak.trim() : duzenleSeciliKaynak;
+        
+        let odevKonuValue = '';
+        if (duzenleKonuModu === 'liste' && duzenleSeciliIcerikler.length > 0) {
+            odevKonuValue = duzenleSeciliIcerikler.join(', ');
+        } else {
+            odevKonuValue = duzenleOdevKonusu.trim();
+        }
+        
+        if (!odevKonuValue) {
+            Alert.alert('Hata', 'Lütfen ödev konusu giriniz veya listeden seçiniz.');
+            return;
+        }
+        
+        try {
+            setLoading(true);
+            const guncelOdev: OdevType = {
+                ...duzenlenenOdev,
+                kaynak: kaynakValue,
+                odev: odevKonuValue,
+                verilmetarihi: duzenleVerilmeTarihi.toISOString().split('T')[0],
+                teslimttarihi: duzenleTeslimTarihi.toISOString().split('T')[0],
+            };
+            
+            const result = await odevGuncelle(duzenlenenOdev.odevId!, guncelOdev);
+            if (result.success) {
+                Alert.alert('Başarılı', 'Ödev güncellendi.');
+                setDuzenleModalGorunur(false);
+                setDuzenlenenOdev(null);
+                await odevleriYenile();
+            } else {
+                Alert.alert('Hata', 'Ödev güncellenemedi.');
+            }
+        } catch (error) {
+            console.error('Ödev düzenleme kaydetme hatası:', error);
+            Alert.alert('Hata', 'Bir hata oluştu.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     // PDF Raporu Oluştur ve Paylaş/İndir
@@ -1062,6 +1207,7 @@ export default function OdevEkle() {
                                             item={item}
                                             onGuncelle={odevGuncelleKaydet}
                                             onSil={odevSilKaydet}
+                                            onDuzenle={handleDuzenlemeBaslat}
                                         />
                                     )}
                                     keyExtractor={item => (item.odevId?.toString() || Math.random().toString())}
@@ -1167,6 +1313,192 @@ export default function OdevEkle() {
                         onChange={(event, date) => { setShowDurumBitis(false); if (date) setDurumBitis(date); }}
                     />
                 )}
+            </Modal>
+
+            {/* 🔵 ÖDEV DÜZENLEME MODALI 🔵 */}
+            <Modal visible={duzenleModalGorunur} animationType="slide" transparent={true} onRequestClose={() => setDuzenleModalGorunur(false)}>
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.reportModalContent, { height: '80%', padding: 20 }]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Ödev Düzenle</Text>
+                            <TouchableOpacity onPress={() => setDuzenleModalGorunur(false)}>
+                                <MaterialIcons name="close" size={24} color="#555" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView style={{ flex: 1, marginTop: 10 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                            
+                            {/* Kaynak Seçimi */}
+                            {!duzenleKayitsizKaynak ? (
+                                <View style={styles.inputContainer}>
+                                    <Text style={styles.inputLabel}>Kaynak Seç (İsteğe Bağlı)</Text>
+                                    <View style={styles.pickerContainer}>
+                                        <Picker
+                                            selectedValue={duzenleSeciliKaynak}
+                                            onValueChange={duzenleKaynakSecildi}
+                                            style={styles.picker}
+                                        >
+                                            <Picker.Item label="Kaynak seçiniz..." value="" />
+                                            {kaynaklar.map((kaynak) => (
+                                                <Picker.Item
+                                                    key={kaynak.kaynakId}
+                                                    label={kaynak.kaynak}
+                                                    value={kaynak.kaynak}
+                                                />
+                                            ))}
+                                        </Picker>
+                                    </View>
+                                </View>
+                            ) : (
+                                <View style={styles.inputContainer}>
+                                    <Text style={styles.inputLabel}>Kaynak Adı (İsteğe Bağlı)</Text>
+                                    <TextInput
+                                        style={styles.textInput}
+                                        value={duzenleSerbetKaynak}
+                                        onChangeText={setDuzenleSerbetKaynak}
+                                        placeholder="Kaynak adını yazınız"
+                                    />
+                                </View>
+                            )}
+
+                            {/* Kayıtsız Kaynak Switch */}
+                            <View style={styles.switchContainer}>
+                                <Text style={styles.switchLabel}>Serbest Kaynak Girişi</Text>
+                                <Switch
+                                    value={duzenleKayitsizKaynak}
+                                    onValueChange={(val) => {
+                                        setDuzenleKayitsizKaynak(val);
+                                        setDuzenleKaynakIcerikleri([]);
+                                        setDuzenleSeciliIcerikler([]);
+                                        setDuzenleKonuModu('elle');
+                                        setDuzenleOdevKonusu('');
+                                    }}
+                                    thumbColor={duzenleKayitsizKaynak ? "#4CAF50" : "#f4f3f4"}
+                                    trackColor={{ false: "#767577", true: "#81b0ff" }}
+                                />
+                            </View>
+
+                            {/* Ödev Konusu */}
+                            <View style={styles.inputContainer}>
+                                <View style={styles.konuHeader}>
+                                    <Text style={styles.inputLabel}>Ödev Konusu *</Text>
+                                    {duzenleKaynakIcerikleri.length > 0 && !duzenleKayitsizKaynak && (
+                                        <View style={styles.konuModToggle}>
+                                            <TouchableOpacity
+                                                style={[styles.konuModBtn, duzenleKonuModu === 'liste' && styles.konuModBtnAktif]}
+                                                onPress={() => setDuzenleKonuModu('liste')}
+                                            >
+                                                <MaterialIcons name="list" size={14} color={duzenleKonuModu === 'liste' ? 'white' : '#555'} />
+                                                <Text style={[styles.konuModBtnText, duzenleKonuModu === 'liste' && { color: 'white' }]}>Listeden</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                                style={[styles.konuModBtn, duzenleKonuModu === 'elle' && styles.konuModBtnAktif]}
+                                                onPress={() => { setDuzenleKonuModu('elle'); setDuzenleOdevKonusu(''); }}
+                                            >
+                                                <MaterialIcons name="edit" size={14} color={duzenleKonuModu === 'elle' ? 'white' : '#555'} />
+                                                <Text style={[styles.konuModBtnText, duzenleKonuModu === 'elle' && { color: 'white' }]}>Elle Yaz</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    )}
+                                </View>
+
+                                {duzenleKonuModu === 'liste' && duzenleKaynakIcerikleri.length > 0 && !duzenleKayitsizKaynak ? (
+                                    <View style={styles.icerikListeContainer}>
+                                        {duzenleKaynakIcerikleri.map(ic => {
+                                            const isSelected = duzenleSeciliIcerikler.includes(ic.icerik);
+                                            const chipStyle = getIcerikStili(ic.icerik, isSelected);
+                                            return (
+                                                <TouchableOpacity
+                                                    key={ic.id}
+                                                    style={[
+                                                        styles.icerikSecimChip,
+                                                        { backgroundColor: chipStyle.bg, borderColor: chipStyle.border }
+                                                    ]}
+                                                    onPress={() => duzenleIcerikTiklandi(ic.icerik)}
+                                                >
+                                                    <Text style={[styles.icerikSecimChipText, { color: chipStyle.text }]}>
+                                                        {ic.icerik}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            );
+                                        })}
+                                    </View>
+                                ) : (
+                                    <TextInput
+                                        style={[styles.textInput, { height: 60 }]}
+                                        value={duzenleOdevKonusu}
+                                        onChangeText={setDuzenleOdevKonusu}
+                                        placeholder="Ödev konusunu yazınız..."
+                                        multiline
+                                    />
+                                )}
+                            </View>
+
+                            {/* Tarihler */}
+                            <Text style={[styles.inputLabel, { marginTop: 10 }]}>Tarih Ayarları</Text>
+                            <View style={styles.odevTarihler}>
+                                <TouchableOpacity
+                                    style={styles.dateButton}
+                                    onPress={() => setDuzenleVerilmeTarihPickerAcik(true)}
+                                >
+                                    <MaterialIcons name="date-range" size={18} color="#666" />
+                                    <Text style={styles.dateText}>Verildi: {formatTarih(duzenleVerilmeTarihi)}</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={styles.dateButton}
+                                    onPress={() => setDuzenleTeslimTarihPickerAcik(true)}
+                                >
+                                    <MaterialIcons name="date-range" size={18} color="#666" />
+                                    <Text style={styles.dateText}>Teslim: {formatTarih(duzenleTeslimTarihi)}</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            {duzenleVerilmeTarihPickerAcik && (
+                                <DateTimePicker
+                                    value={duzenleVerilmeTarihi}
+                                    mode="date"
+                                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                                    onChange={(e, selected) => {
+                                        setDuzenleVerilmeTarihPickerAcik(Platform.OS === 'ios');
+                                        if (selected) {
+                                            setDuzenleVerilmeTarihi(selected);
+                                            setDuzenleTeslimTarihi(new Date(selected.getTime() + 7 * 24 * 60 * 60 * 1000));
+                                        }
+                                    }}
+                                />
+                            )}
+
+                            {duzenleTeslimTarihPickerAcik && (
+                                <DateTimePicker
+                                    value={duzenleTeslimTarihi}
+                                    mode="date"
+                                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                                    onChange={(e, selected) => {
+                                        setDuzenleTeslimTarihPickerAcik(Platform.OS === 'ios');
+                                        if (selected) setDuzenleTeslimTarihi(selected);
+                                    }}
+                                />
+                            )}
+
+                        </ScrollView>
+
+                        <View style={styles.modalFooter}>
+                            <TouchableOpacity
+                                style={[styles.modalButton, styles.cancelButton]}
+                                onPress={() => setDuzenleModalGorunur(false)}
+                            >
+                                <Text style={styles.cancelButtonText}>İptal</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.modalButton, styles.saveButton]}
+                                onPress={handleDuzenleKaydet}
+                            >
+                                <Text style={styles.saveButtonText}>Kaydet</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
             </Modal>
 
         </KeyboardAvoidingView>
@@ -2172,6 +2504,47 @@ const styles = StyleSheet.create({
         marginRight: 12,
     },
     durumAtaText: {
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+    odevTarihler: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 15,
+        gap: 10,
+    },
+    modalFooter: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        borderTopWidth: 1,
+        borderTopColor: '#eee',
+        backgroundColor: '#fff',
+    },
+    modalButton: {
+        flex: 0.48,
+        height: 48,
+        borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+        flexDirection: 'row',
+    },
+    cancelButton: {
+        backgroundColor: '#f1f2f6',
+        borderWidth: 1,
+        borderColor: '#ced6e0',
+    },
+    cancelButtonText: {
+        color: '#57606f',
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+    saveButton: {
+        backgroundColor: '#2ecc71',
+    },
+    saveButtonText: {
+        color: '#fff',
         fontSize: 14,
         fontWeight: 'bold',
     },
