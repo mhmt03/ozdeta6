@@ -362,6 +362,7 @@ export type KonuRaporItem = {
     odevVarMi: boolean;
     odevTarihi: string | null;      // verilmetarihi
     odevDurumu: string | null;      // yapilmadurumu
+    odevId?: number | null;
 };
 
 export type KaynakRaporItem = {
@@ -423,11 +424,12 @@ export async function getKaynakTamamlanmaRaporu(ogrenciId: number): Promise<{
 
             // Bu öğrenciye bu kaynaktan verilen tüm ödevler
             const odevler = await db.getAllAsync<{
+                odevId: number;
                 odev: string;
                 verilmetarihi: string;
                 yapilmadurumu: string;
             }>(
-                `SELECT odev, verilmetarihi, yapilmadurumu
+                `SELECT odevId, odev, verilmetarihi, yapilmadurumu
                  FROM odevler
                  WHERE ogrenciId=? AND kaynak=?`,
                 [ogrenciId, kaynakAd]
@@ -443,6 +445,7 @@ export async function getKaynakTamamlanmaRaporu(ogrenciId: number): Promise<{
                     odevVarMi: !!eslesen,
                     odevTarihi: eslesen?.verilmetarihi ?? null,
                     odevDurumu: eslesen?.yapilmadurumu ?? null,
+                    odevId: eslesen?.odevId ?? null,
                 };
             });
 

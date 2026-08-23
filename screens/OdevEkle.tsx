@@ -1,10 +1,14 @@
-
-// /*1. Klavye Sorunları Çözüldü:
-
-// KeyboardAvoidingView'i doğru yere taşıdı ve keyboardVerticalOffset ekledi
-// keyboardShouldPersistTaps="handled" ekledi ki ScrollView içindeki butonlara klavye açıkken tıklanabilsin
-// Modal içinde de KeyboardAvoidingView ve TouchableWithoutFeedback ekledi*/
-
+/**
+ * OdevEkle Ekrani
+ * 
+ * Bu ekran, secili ogrencinin odev durumlarini takip etmeyi, yeni odevler vermeyi, 
+ * ve ogrencinin kaynak tamamlanma durumlarina gore cesitli formatlarda (WhatsApp / PDF) 
+ * raporlar olusturmayi saglar.
+ * 
+ * iOS ve Android arayuz uyumlulugu icin:
+ * - KeyboardAvoidingView ve ScrollView bilesenleri klavye acildiginda formlarin kapanmamasi icin entegre edilmistir.
+ * - Platform.OS kontrolu ile klavye kayma mesafeleri ve klavye davranislari yonetilmektedir.
+ */
 
 import { KeyboardAvoidingView, Keyboard, TouchableWithoutFeedback, Switch } from 'react-native';
 import React, { useState, useEffect } from 'react';
@@ -39,6 +43,7 @@ import {
     getKaynakIcerikleri,
     getKaynakTamamlanmaRaporu,
     type KaynakRaporItem,
+    type KonuRaporItem,
 } from '../database/homeworkOperations';
 import { KaynakType, OdevType, OgrenciType } from '../types';
 import * as Print from 'expo-print';
@@ -103,10 +108,17 @@ export default function OdevEkle() {
     const [showRaporBitisPicker, setShowRaporBitisPicker] = useState(false);
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
-    // Kaynak Tamamlanma Raporu state'leri
+    // Kaynak Tamamlanma Raporu Sekmeleri icin Tip Tanimlamasi (Odevler, Ozet, Detay, Kapsamli)
     type RaporTipi = 'odevler' | 'ozet' | 'detay' | 'kapsamli';
-    const [raporTipi, setRaporTipi] = useState<'odevler' | 'kapsamli' | 'kapsamli_detay'>('odevler');
+    
+    // Rapor sekmesi secim durumunu tutan State (RaporTipi ile tip guvenligi saglanmistir)
+    const [raporTipi, setRaporTipi] = useState<RaporTipi>('odevler');
     const [seciliRaporKaynak, setSeciliRaporKaynak] = useState<KaynakRaporItem | null>(null);
+
+    // Konu Durum Atama Modali State'leri
+    const [durumSecimModalGorunur, setDurumSecimModalGorunur] = useState(false);
+    const [seciliKonuKaynakAd, setSeciliKonuKaynakAd] = useState('');
+    const [seciliKonu, setSeciliKonu] = useState<KonuRaporItem | null>(null);
 
     // 🔵 ÖDEV BİLGİ YOLLA MODAL STATE 🔵
     const [bilgiModalGorunur, setBilgiModalGorunur] = useState(false);
@@ -161,6 +173,82 @@ export default function OdevEkle() {
     const tarihSiralamasiDegistir = () => {
         setTarihSiralamasi(prev => prev === 'azalan' ? 'artan' : 'azalan');
     };
+
+    const konuTiklandi = (kaynakAd: string, konu: KonuRaporItem) => {
+        setSeciliKonuKaynakAd(kaynakAd);
+        setSeciliKonu(konu);
+        setDurumSecimModalGorunur(true);
+    };
+
+    const durumAta = async (yeniDurum: string) => {
+        if (!seciliKonu || !ogrenci) return;
+        try {
+            setLoading(true);
+            setDurumSecimModalGorunur(false);
+            
+            if (yeniDurum === 'Atanmadı') {
+                if (seciliKonu.odevVarMi && seciliKonu.odevId) {
+                    const res = await odevSil(seciliKonu.odevId);
+                    if (res.success) {
+                        Alert.alert('Başarılı', 'Ödev silindi (Atanmadı durumuna alındı).');
+                    } else {
+                        Alert.alert('Hata', 'Ödev durumu güncellenemedi.');
+                    }
+                }
+            } else {
+                if (seciliKonu.odevVarMi && seciliKonu.odevId) {
+                    const mevcutOdev = odevler.find(o => o.odevId === seciliKonu.odevId);
+                    if (mevcutOdev) {
+                        const guncelOdev = {
+                            ...mevcutOdev,
+                            yapilmadurumu: yeniDurum,
+                            kontroltarihi: yeniDurum === 'Yapıldı' ? new Date().toISOString().split('T')[0] : mevcutOdev.kontroltarihi
+                        };
+                        const res = await odevGuncelle(seciliKonu.odevId, guncelOdev);
+                        if (res.success) {
+                            Alert.alert('Başarılı', `Ödev durumu "${yeniDurum}" olarak güncellendi.`);
+                        } else {
+                            Alert.alert('Hata', 'Ödev durumu güncellenemedi.');
+                        }
+                    }
+                } else {
+                    const yeniOdev = {
+                        ogrenciId: ogrenciId,
+                        kaynak: seciliKonuKaynakAd,
+                        odev: seciliKonu.icerik,
+                        verilmetarihi: new Date().toISOString().split('T')[0],
+                        teslimttarihi: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                        yapilmadurumu: yeniDurum,
+                        aciklama: 'Rapor sayfasından durum atandı'
+                    };
+                    const res = await odevKaydet(yeniOdev);
+                    if (res.success) {
+                        Alert.alert('Başarılı', `Ödev kaydedildi ve "${yeniDurum}" olarak işaretlendi.`);
+                    } else {
+                        Alert.alert('Hata', 'Ödev kaydedilemedi.');
+                    }
+                }
+            }
+
+            await odevleriYenile();
+            const r = await getKaynakTamamlanmaRaporu(ogrenciId);
+            if (r.success) {
+                setKaynakRaporVerisi(r.data);
+                if (seciliRaporKaynak) {
+                    const guncelSecili = r.data.find(k => k.kaynakAd === seciliRaporKaynak.kaynakAd);
+                    setSeciliRaporKaynak(guncelSecili || null);
+                }
+            }
+        } catch (error) {
+            console.error('Durum atama hatası:', error);
+            Alert.alert('Hata', 'İşlem sırasında bir hata oluştu.');
+        } finally {
+            setLoading(false);
+            setSeciliKonu(null);
+            setSeciliKonuKaynakAd('');
+        }
+    };
+
     useEffect(() => {
         veriAl();
     }, []);
@@ -1321,7 +1409,11 @@ export default function OdevEkle() {
                                                                 <Text style={[styles.detayColDurum, styles.ozetBaslikText]}>Durum</Text>
                                                             </View>
                                                             {seciliRaporKaynak.konular.map((konu, ki) => (
-                                                                <View key={ki} style={[styles.detaySatir, ki % 2 === 1 && { backgroundColor: '#f9f9f9' }]}>
+                                                                <TouchableOpacity
+                                                                    key={ki}
+                                                                    style={[styles.detaySatir, ki % 2 === 1 && { backgroundColor: '#f9f9f9' }]}
+                                                                    onPress={() => konuTiklandi(seciliRaporKaynak.kaynakAd, konu)}
+                                                                >
                                                                     <Text style={styles.detayColKonu} numberOfLines={2}>{konu.icerik}</Text>
                                                                     <Text style={styles.detayColTarih}>{konu.odevTarihi ? formatTarih(konu.odevTarihi) : '-'}</Text>
                                                                     <View style={[styles.detayDurumBadge, {
@@ -1339,7 +1431,7 @@ export default function OdevEkle() {
                                                                             {!konu.odevVarMi ? 'Atanmadı' : konu.odevDurumu ?? '-'}
                                                                         </Text>
                                                                     </View>
-                                                                </View>
+                                                                </TouchableOpacity>
                                                             ))}
                                                             <TouchableOpacity style={[styles.raporPdfBtn, { marginTop: 12 }]} onPress={() => kaynakDetayPdfOlustur(seciliRaporKaynak)}>
                                                                 <MaterialIcons name="picture-as-pdf" size={18} color="white" />
@@ -1388,7 +1480,11 @@ export default function OdevEkle() {
                                                     {genisletilmisKaynak === k.kaynakAd && k.konular.length > 0 && (
                                                         <View style={styles.kapsamliKonuListe}>
                                                             {k.konular.map((konu, i) => (
-                                                                <View key={i} style={styles.kapsamliKonuSatir}>
+                                                                <TouchableOpacity
+                                                                    key={i}
+                                                                    style={styles.kapsamliKonuSatir}
+                                                                    onPress={() => konuTiklandi(k.kaynakAd, konu)}
+                                                                >
                                                                     <View style={[styles.konuDurumDot, {
                                                                         backgroundColor: !konu.odevVarMi ? '#ccc'
                                                                             : konu.odevDurumu === 'Yapıldı' ? '#27ae60'
@@ -1399,7 +1495,7 @@ export default function OdevEkle() {
                                                                     <Text style={styles.kapsamliKonuTarih}>
                                                                         {konu.odevTarihi ? formatTarih(konu.odevTarihi) : '—'}
                                                                     </Text>
-                                                                </View>
+                                                                </TouchableOpacity>
                                                             ))}
                                                         </View>
                                                     )}
@@ -1512,6 +1608,89 @@ export default function OdevEkle() {
                     <DateTimePicker value={bilgiBitis} mode="date" display="default"
                         onChange={(event, date) => { setShowBilgiBitis(false); if (date) setBilgiBitis(date); }} />
                 )}
+            </Modal>
+
+            {/* ─── DURUM SEÇİM MODALI ─── */}
+            <Modal
+                visible={durumSecimModalGorunur}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setDurumSecimModalGorunur(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.reportModalContent, { height: 'auto', padding: 20, width: '90%' }]}>
+                        <View style={styles.modalHeader}>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.modalTitle}>Durum Ata</Text>
+                                <Text style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+                                    {seciliKonuKaynakAd}
+                                </Text>
+                            </View>
+                            <TouchableOpacity onPress={() => setDurumSecimModalGorunur(false)}>
+                                <MaterialIcons name="close" size={24} color="#555" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={{ marginVertical: 15 }}>
+                            <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#333', marginBottom: 10 }}>
+                                Konu: <Text style={{ fontWeight: 'normal' }}>{seciliKonu?.icerik}</Text>
+                            </Text>
+
+                            <Text style={{ fontSize: 13, color: '#7f8c8d', marginBottom: 15 }}>
+                                Lütfen bu içerik/konu için yeni durumu seçin:
+                            </Text>
+
+                            <View style={styles.durumAtaButonlarGrup}>
+                                <TouchableOpacity
+                                    style={[styles.durumAtaButon, { backgroundColor: '#e8f5e9', borderColor: '#81c784' }]}
+                                    onPress={() => durumAta('Yapıldı')}
+                                >
+                                    <View style={[styles.durumAtaDot, { backgroundColor: '#27ae60' }]} />
+                                    <Text style={[styles.durumAtaText, { color: '#2e7d32' }]}>Yapıldı</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={[styles.durumAtaButon, { backgroundColor: '#fff3e0', borderColor: '#ffb74d' }]}
+                                    onPress={() => durumAta('Eksik')}
+                                >
+                                    <View style={[styles.durumAtaDot, { backgroundColor: '#e67e22' }]} />
+                                    <Text style={[styles.durumAtaText, { color: '#e65100' }]}>Eksik</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={[styles.durumAtaButon, { backgroundColor: '#f8d7da', borderColor: '#f5c6cb' }]}
+                                    onPress={() => durumAta('Yapılmadı')}
+                                >
+                                    <View style={[styles.durumAtaDot, { backgroundColor: '#c62828' }]} />
+                                    <Text style={[styles.durumAtaText, { color: '#721c24' }]}>Yapılmadı</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={[styles.durumAtaButon, { backgroundColor: '#e3f2fd', borderColor: '#90caf9' }]}
+                                    onPress={() => durumAta('Bekliyor')}
+                                >
+                                    <View style={[styles.durumAtaDot, { backgroundColor: '#1565c0' }]} />
+                                    <Text style={[styles.durumAtaText, { color: '#0d47a1' }]}>Bekliyor</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={[styles.durumAtaButon, { backgroundColor: '#f5f5f5', borderColor: '#ddd' }]}
+                                    onPress={() => durumAta('Atanmadı')}
+                                >
+                                    <View style={[styles.durumAtaDot, { backgroundColor: '#777' }]} />
+                                    <Text style={[styles.durumAtaText, { color: '#333' }]}>Atanmadı (Ödevi Sil)</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        <TouchableOpacity
+                            style={[styles.paylasimButon, { backgroundColor: '#e74c3c', width: '100%', marginTop: 10, flex: 0 }]}
+                            onPress={() => setDurumSecimModalGorunur(false)}
+                        >
+                            <Text style={styles.paylasimText}>Kapat</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
             </Modal>
 
         </View>
@@ -1968,6 +2147,34 @@ const styles = StyleSheet.create({
         backgroundColor: '#e74c3c', padding: 12, borderRadius: 8, gap: 6, marginBottom: 30
     },
     raporPdfBtnText: { color: 'white', fontWeight: 'bold', fontSize: 14 },
+
+    // Tarih Araligi Secici Stilleri (iOS & Android)
+    reportDateText: {
+        fontSize: 13,
+        color: '#333',
+        fontWeight: '500',
+    },
+    durumAtaButonlarGrup: {
+        gap: 10,
+    },
+    durumAtaButon: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        borderWidth: 1,
+    },
+    durumAtaDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        marginRight: 12,
+    },
+    durumAtaText: {
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
 });
 
 

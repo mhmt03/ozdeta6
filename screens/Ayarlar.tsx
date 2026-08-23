@@ -1022,7 +1022,7 @@ export default function Ayarlar() {
                         <View style={styles.ayarText}>
                             <Text style={styles.ayarBaslik}>Veritabanını Yedekle </Text>
                             <Text style={styles.ayarAciklama}>
-                                veritabanını uygulama klasörüne kaydet
+                                Veritabanını uygulama klasörüne kaydet
                             </Text>
                         </View>
                     </TouchableOpacity>
@@ -1035,7 +1035,7 @@ export default function Ayarlar() {
                         <View style={styles.ayarText}>
                             <Text style={styles.ayarBaslik}>Veritabanını Geri Yükle</Text>
                             <Text style={styles.ayarAciklama}>
-                                yedek dosyasını geri yükle (tüm veriler değişir)
+                                Yedek dosyasını geri yükle (tüm veriler değişir)
                             </Text>
                         </View>
                     </TouchableOpacity>

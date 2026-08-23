@@ -20,6 +20,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as XLSX from 'xlsx';
+import * as Sharing from 'expo-sharing';
 import {
     tumKaynakEkle,
     tumKaynakGuncelle,
@@ -500,6 +501,226 @@ export default function GlobalKaynakYonetimi() {
         );
     };
 
+    const handleExcelGlobalKaynakImport = async () => {
+        try {
+            const res = await DocumentPicker.getDocumentAsync({
+                type: ['application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv'],
+                copyToCacheDirectory: true,
+            });
+
+            if (res.canceled) return;
+            const file = res.assets[0];
+
+            setLoading(true);
+
+            // Read file as Base64 using FileSystem
+            const fileBase64 = await FileSystem.readAsStringAsync(file.uri, {
+                encoding: 'base64',
+            });
+
+            // Parse with XLSX
+            const workbook = XLSX.read(fileBase64, { type: 'base64' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+
+            // Convert to JSON array of arrays
+            const data = XLSX.utils.sheet_to_json<any[]>(worksheet, { header: 1 });
+
+            if (!data || data.length === 0) {
+                Alert.alert('Hata', 'Excel dosyası boş veya okunamadı.');
+                setLoading(false);
+                return;
+            }
+
+            // Extract data
+            const sistemTurleri = kaynak_turleri.map(t => t.ad.trim().toLowerCase());
+            const parsedRows: { kaynakAd: string; kaynakTur: string; icerik: string }[] = [];
+
+            for (let i = 0; i < data.length; i++) {
+                const row = data[i];
+                if (row && row.length >= 2) {
+                    const cellA = row[0] ? String(row[0]).trim() : '';
+                    const cellB = row[1] ? String(row[1]).trim() : '';
+                    const cellC = row[2] ? String(row[2]).trim() : '';
+
+                    // Skip header row
+                    if (
+                        cellA.toLowerCase().includes('kaynak ad') ||
+                        cellB.toLowerCase().includes('kaynak tür') ||
+                        cellC.toLowerCase().includes('içerik') ||
+                        cellC.toLowerCase().includes('konu')
+                    ) {
+                        continue;
+                    }
+
+                    if (cellA !== '' && cellB !== '') {
+                        parsedRows.push({
+                            kaynakAd: cellA,
+                            kaynakTur: cellB,
+                            icerik: cellC,
+                        });
+                    }
+                }
+            }
+
+            if (parsedRows.length === 0) {
+                Alert.alert('Uyarı', 'Excel dosyasında eklenebilecek geçerli kaynak veya içerik verisi bulunamadı.');
+                setLoading(false);
+                return;
+            }
+
+            // Validate resource types
+            const gecersizSatirlar: string[] = [];
+            for (let idx = 0; idx < parsedRows.length; idx++) {
+                const row = parsedRows[idx];
+                if (!sistemTurleri.includes(row.kaynakTur.toLowerCase())) {
+                    gecersizSatirlar.push(`Satır ${idx + 2}: "${row.kaynakAd}" için belirtilen "${row.kaynakTur}" türü sistemde kayıtlı değil.`);
+                }
+            }
+
+            if (gecersizSatirlar.length > 0) {
+                Alert.alert(
+                    'İçe Aktarma İptal Edildi',
+                    `Sistemde tanımlı olmayan kaynak türleri tespit edildiği için işlem iptal edildi. Lütfen önce bu türleri ekleyin.\n\n` +
+                    `Tanımsız Türler:\n${gecersizSatirlar.slice(0, 10).join('\n')}${gecersizSatirlar.length > 10 ? '\n... ve dahası' : ''}\n\n` +
+                    `Sistemdeki Kaynak Türleri: ${kaynak_turleri.map(t => t.ad).join(', ')}`
+                );
+                setLoading(false);
+                return;
+            }
+
+            // Group contents by resource
+            const kaynakGruplari: Record<string, { ad: string; tur: string; icerikler: string[] }> = {};
+            for (const row of parsedRows) {
+                const key = `${row.kaynakAd.toLowerCase()}|||${row.kaynakTur.toLowerCase()}`;
+                if (!kaynakGruplari[key]) {
+                    kaynakGruplari[key] = {
+                        ad: row.kaynakAd,
+                        tur: kaynak_turleri.find(t => t.ad.toLowerCase() === row.kaynakTur.toLowerCase())?.ad || row.kaynakTur,
+                        icerikler: [],
+                    };
+                }
+                if (row.icerik && !kaynakGruplari[key].icerikler.includes(row.icerik)) {
+                    kaynakGruplari[key].icerikler.push(row.icerik);
+                }
+            }
+
+            // Validate existing resources to prevent duplicates
+            const varOlanKaynaklar: string[] = [];
+            for (const key in kaynakGruplari) {
+                const group = kaynakGruplari[key];
+                const mevcut = kaynaklar.find(
+                    k => k.ad.toLowerCase() === group.ad.toLowerCase() && k.tur.toLowerCase() === group.tur.toLowerCase()
+                );
+                if (mevcut) {
+                    varOlanKaynaklar.push(`- "${group.ad}" (${group.tur})`);
+                }
+            }
+
+            if (varOlanKaynaklar.length > 0) {
+                Alert.alert(
+                    'İçe Aktarma İptal Edildi',
+                    `Excel dosyasındaki bazı kaynaklar sistemde zaten kayıtlı olduğu için çakışmayı önlemek amacıyla işlem iptal edildi.\n\n` +
+                    `Sistemde Zaten Kayıtlı Olanlar:\n${varOlanKaynaklar.slice(0, 10).join('\n')}${varOlanKaynaklar.length > 10 ? '\n... ve dahası' : ''}`
+                );
+                setLoading(false);
+                return;
+            }
+
+            let eklenenKaynakSayisi = 0;
+            let eklenenIcerikSayisi = 0;
+
+            for (const key in kaynakGruplari) {
+                const group = kaynakGruplari[key];
+
+                let kaynakId: number;
+                const mevcutKaynak = kaynaklar.find(
+                    k => k.ad.toLowerCase() === group.ad.toLowerCase() && k.tur.toLowerCase() === group.tur.toLowerCase()
+                );
+
+                if (mevcutKaynak) {
+                    kaynakId = mevcutKaynak.id;
+                } else {
+                    const r = await tumKaynakEkle(group.ad, group.tur);
+                    if (r.success && r.id) {
+                        kaynakId = r.id;
+                        eklenenKaynakSayisi++;
+                    } else {
+                        throw new Error(`"${group.ad}" kaynağı oluşturulurken hata oluştu.`);
+                    }
+                }
+
+                const mevcutIceriklerResult = await getKaynakIcerikleri(kaynakId);
+                const mevcutIcerikMetinleri = mevcutIceriklerResult.success
+                    ? (mevcutIceriklerResult.data as IcerikItem[]).map(ic => ic.icerik.trim().toLowerCase())
+                    : [];
+
+                for (const icerik of group.icerikler) {
+                    if (!mevcutIcerikMetinleri.includes(icerik.trim().toLowerCase())) {
+                        const r = await kaynakIcerikEkle(kaynakId, icerik);
+                        if (r.success) {
+                            eklenenIcerikSayisi++;
+                        }
+                    }
+                }
+            }
+
+            Alert.alert(
+                'Başarılı',
+                `Excel'den içe aktarım tamamlandı!\n` +
+                `- ${eklenenKaynakSayisi} yeni ortak kaynak eklendi.\n` +
+                `- ${eklenenIcerikSayisi} yeni konu/içerik eklendi.`
+            );
+
+            await verileriYukle();
+
+        } catch (error: any) {
+            console.error('Excel Import Error:', error);
+            Alert.alert('Hata', 'İçe aktarım sırasında bir hata oluştu: ' + error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleExcelSablonuIndir = async () => {
+        try {
+            const workbook = XLSX.utils.book_new();
+            
+            const ornekTur = kaynak_turleri.length > 0 ? kaynak_turleri[0].ad : 'TYT';
+            const ornekTur2 = kaynak_turleri.length > 1 ? kaynak_turleri[1].ad : 'AYT';
+
+            const veri = [
+                ['Kaynak Adı', 'Kaynak Türü', 'İçerik'],
+                ['Bilgi Yayınları', ornekTur, 'Fizik Bilimine Giriş'],
+                ['Bilgi Yayınları', ornekTur, 'Madde ve Özellikleri'],
+                ['Örnek Soru Bankası', ornekTur2, 'Vektörler'],
+                ['Örnek Soru Bankası', ornekTur2, 'Kuvvet'],
+                ['Örnek Soru Bankası', ornekTur2, 'Dinamik'],
+            ];
+
+            const worksheet = XLSX.utils.aoa_to_sheet(veri);
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Global Kaynak Şablonu');
+            
+            const excelBuffer = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
+            
+            const filepath = `${FileSystem.documentDirectory}global_kaynak_sablonu.xlsx`;
+            await FileSystem.writeAsStringAsync(filepath, excelBuffer, { encoding: FileSystem.EncodingType.Base64 });
+            
+            if (await Sharing.isAvailableAsync()) {
+                await Sharing.shareAsync(filepath, {
+                    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    dialogTitle: 'Şablon Excel Dosyasını Paylaş',
+                    UTI: 'com.adobe.excel.xlsx'
+                });
+            } else {
+                Alert.alert('Hata', 'Paylaşım özelliği bu cihazda aktif değil.');
+            }
+        } catch (error: any) {
+            console.error('Şablon oluşturma hatası:', error);
+            Alert.alert('Hata', 'Şablon dosyası oluşturulamadı: ' + error.message);
+        }
+    };
+
     return (
         <View style={styles.container}>
             <KeyboardAvoidingView
@@ -551,6 +772,24 @@ export default function GlobalKaynakYonetimi() {
                             <Text style={styles.aciklama}>
                                 Buraya eklediğiniz kaynaklar tüm öğrencilerinize ödev verirken veya kaynak seçerken listede görünecektir.
                             </Text>
+
+                            {/* Excel Import / Template Buttons */}
+                            <View style={styles.excelAksiyonlarGrup}>
+                                <TouchableOpacity style={styles.excelAksiyonBtn} onPress={handleExcelGlobalKaynakImport} disabled={loading}>
+                                    {loading ? (
+                                        <ActivityIndicator size="small" color="white" />
+                                    ) : (
+                                        <MaterialIcons name="file-upload" size={16} color="white" />
+                                    )}
+                                    <Text style={styles.excelAksiyonBtnText}>
+                                        {loading ? 'Yükleniyor...' : 'Excel\'den Yükle'}
+                                    </Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={[styles.excelAksiyonBtn, styles.excelSablonBtn]} onPress={handleExcelSablonuIndir}>
+                                    <MaterialIcons name="file-download" size={16} color="#3498db" />
+                                    <Text style={[styles.excelAksiyonBtnText, styles.excelSablonBtnText]}>Şablonu İndir</Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
 
                         {/* Kaynaklar Listesi */}
@@ -1167,5 +1406,36 @@ const styles: StyleSheet.NamedStyles<any> = StyleSheet.create({
         fontSize: 11,
         color: '#7f8c8d',
         marginTop: 2,
-    }
+    },
+    excelAksiyonlarGrup: {
+        flexDirection: 'row',
+        gap: 10,
+        marginTop: 15,
+        borderTopWidth: 1,
+        borderTopColor: '#f1f1f1',
+        paddingTop: 12,
+    },
+    excelAksiyonBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#27ae60',
+        paddingVertical: 10,
+        borderRadius: 8,
+        gap: 6,
+    },
+    excelAksiyonBtnText: {
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: 12,
+    },
+    excelSablonBtn: {
+        backgroundColor: 'white',
+        borderWidth: 1,
+        borderColor: '#3498db',
+    },
+    excelSablonBtnText: {
+        color: '#3498db',
+    },
 })

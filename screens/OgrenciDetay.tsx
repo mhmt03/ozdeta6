@@ -869,8 +869,6 @@ export default function OgrenciDetay() {
     //!
 };
 
-
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,
