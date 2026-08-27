@@ -93,24 +93,35 @@ export default function OdevEkle() {
     const [duzenleKonuModu, setDuzenleKonuModu] = useState<'liste' | 'elle'>('elle');
 
     // Stil Yardımcı Fonksiyonu
-    const getIcerikStili = (icerik: string, isSelected: boolean) => {
-        const kaynakValue = kayitsizKaynak ? serbetKaynak : seciliKaynak;
+    const getIcerikStili = (icerik: string, isSelected: boolean, kaynakParam?: string) => {
+        const kaynakValue = kaynakParam !== undefined ? kaynakParam : (kayitsizKaynak ? serbetKaynak : seciliKaynak);
         const gecmisOdevler = odevler.filter(o => o.kaynak === kaynakValue && o.odev === icerik);
         
         let durum = 'verilmedi';
         if (gecmisOdevler.length > 0) {
-            const yapilmayan = gecmisOdevler.find(o => o.yapilmadurumu !== 'Yapıldı');
-            durum = yapilmayan ? 'eksik' : 'yapildi';
+            const eksikVarMi = gecmisOdevler.some(o => o.yapilmadurumu === 'Yapılmadı' || o.yapilmadurumu === 'Eksik');
+            const bekleyenVarMi = gecmisOdevler.some(o => o.yapilmadurumu === 'Bekliyor');
+            const yapildiVarMi = gecmisOdevler.some(o => o.yapilmadurumu === 'Yapıldı');
+            
+            if (eksikVarMi) {
+                durum = 'eksik';
+            } else if (bekleyenVarMi) {
+                durum = 'bekliyor';
+            } else if (yapildiVarMi) {
+                durum = 'yapildi';
+            }
         }
 
         if (isSelected) {
-            if (durum === 'yapildi') return { bg: '#27ae60', border: '#27ae60', text: 'white' };
-            if (durum === 'eksik') return { bg: '#e67e22', border: '#e67e22', text: 'white' };
-            return { bg: '#3498db', border: '#3498db', text: 'white' };
+            if (durum === 'yapildi') return { bg: '#27ae60', border: '#27ae60', text: 'white' }; // Yeşil
+            if (durum === 'eksik') return { bg: '#e74c3c', border: '#e74c3c', text: 'white' }; // Kırmızı
+            if (durum === 'bekliyor') return { bg: '#f39c12', border: '#f39c12', text: 'white' }; // Turuncu
+            return { bg: '#3498db', border: '#3498db', text: 'white' }; // Mavi
         }
 
         if (durum === 'yapildi') return { bg: '#e8f5e9', border: '#81c784', text: '#2e7d32' };
-        if (durum === 'eksik') return { bg: '#fff3e0', border: '#ffb74d', text: '#e65100' };
+        if (durum === 'eksik') return { bg: '#ffebee', border: '#e57373', text: '#c62828' };
+        if (durum === 'bekliyor') return { bg: '#fff8e1', border: '#ffb74d', text: '#e65100' };
         return { bg: '#f9f9f9', border: '#ddd', text: '#555' };
     };
 
@@ -1406,7 +1417,8 @@ export default function OdevEkle() {
                                     <View style={styles.icerikListeContainer}>
                                         {duzenleKaynakIcerikleri.map(ic => {
                                             const isSelected = duzenleSeciliIcerikler.includes(ic.icerik);
-                                            const chipStyle = getIcerikStili(ic.icerik, isSelected);
+                                            const duzenleKaynakValue = duzenleKayitsizKaynak ? duzenleSerbetKaynak : duzenleSeciliKaynak;
+                                            const chipStyle = getIcerikStili(ic.icerik, isSelected, duzenleKaynakValue);
                                             return (
                                                 <TouchableOpacity
                                                     key={ic.id}

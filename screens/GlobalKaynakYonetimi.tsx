@@ -41,7 +41,7 @@ import {
     type KaynakTuru,
 } from '../database/homeworkOperations';
 
-// Dinamik renk paleti — index'e göre renk 
+// Dinamik renk paleti — index'e göre renk
 const TUR_RENKLER = ['#3498db','#9b59b6','#27ae60','#16a085','#e67e22','#e74c3c','#f39c12','#1abc9c','#d35400','#8e44ad'];
 const turRenk = (ad: string, turleri: KaynakTuru[]): string => {
     const idx = turleri.findIndex(t => t.ad === ad);
