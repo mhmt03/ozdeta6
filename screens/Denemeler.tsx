@@ -386,6 +386,7 @@ export default function Denemeler() {
                                         value={denemeAd}
                                         onChangeText={setDenemeAd}
                                         placeholder="Örn: Türkiye Geneli Deneme 1"
+                                        multiline={true}
                                     />
                                 </View>
 
@@ -579,6 +580,7 @@ export default function Denemeler() {
                                         style={styles.textInput}
                                         value={editingDeneme.denemeAd}
                                         onChangeText={(val) => setEditingDeneme({ ...editingDeneme, denemeAd: val })}
+                                        multiline={true}
                                     />
                                 </View>
 

@@ -152,6 +152,7 @@ export default function OdevEkle() {
     const [bilgiBitis, setBilgiBitis] = useState<Date>(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
     const [bilgiOgrenciSecili, setBilgiOgrenciSecili] = useState(true);
     const [bilgiVeliSecili, setBilgiVeliSecili] = useState(false);
+    const [bilgiVeli2Secili, setBilgiVeli2Secili] = useState(false);
     const [showBilgiBaslangic, setShowBilgiBaslangic] = useState(false);
     const [showBilgiBitis, setShowBilgiBitis] = useState(false);
 
@@ -161,6 +162,7 @@ export default function OdevEkle() {
     const [durumBitis, setDurumBitis] = useState<Date>(new Date());
     const [durumOgrenciSecili, setDurumOgrenciSecili] = useState(false);
     const [durumVeliSecili, setDurumVeliSecili] = useState(true);
+    const [durumVeli2Secili, setDurumVeli2Secili] = useState(false);
     const [showDurumBaslangic, setShowDurumBaslangic] = useState(false);
     const [showDurumBitis, setShowDurumBitis] = useState(false);
 
@@ -601,7 +603,7 @@ export default function OdevEkle() {
     };
 
     // PDF Raporu Oluştur ve Paylaş/İndir
-    const odevRaporuOlustur = async (hedef: 'indir' | 'ogrenci' | 'veli') => {
+    const odevRaporuOlustur = async (hedef: 'indir' | 'ogrenci' | 'veli' | 'veli2') => {
         if (!ogrenci) return;
 
         try {
@@ -685,7 +687,7 @@ export default function OdevEkle() {
                 };
 
                 // WhatsApp için metin hazırla
-                if (hedef === 'ogrenci' || hedef === 'veli') {
+                if (hedef === 'ogrenci' || hedef === 'veli' || hedef === 'veli2') {
                     const mesaj = `${studentName} e ait ödev raporu ektedir.`;
                     (shareOptions as any).message = mesaj;
                 }
@@ -779,7 +781,7 @@ export default function OdevEkle() {
     // ── WHATSAPP ÖDEV BİLGİ YOLLA ──
     const whatsappOdevBilgiYolla = () => {
         if (!ogrenci) return;
-        if (!bilgiOgrenciSecili && !bilgiVeliSecili) {
+        if (!bilgiOgrenciSecili && !bilgiVeliSecili && !bilgiVeli2Secili) {
             Alert.alert("Uyarı", "Lütfen en az bir alıcı (öğrenci veya veli) seçin.");
             return;
         }
@@ -816,18 +818,29 @@ export default function OdevEkle() {
             });
         };
 
+        let delay = 0;
         if (bilgiOgrenciSecili && ogrenci.ogrenciTel) {
             yollaKisi(ogrenci.ogrenciTel, formatla(`${ogrenci.ogrenciAd} ${ogrenci.ogrenciSoyad}`));
+            delay += 1500;
         } else if (bilgiOgrenciSecili) {
             Alert.alert("Uyarı", "Öğrenci numarası kayıtlı değil.");
         }
 
-        if (bilgiVeliSecili && ogrenci.veliTel) {
+        if (bilgiVeliSecili && ogrenci.veliTel && ogrenci.veliTel !== '-') {
             setTimeout(() => {
-                yollaKisi(ogrenci.veliTel, formatla(ogrenci.veliAd || 'Veli'));
-            }, bilgiOgrenciSecili ? 1500 : 0);
+                yollaKisi(ogrenci.veliTel, formatla(ogrenci.veliAd || '1. Veli'));
+            }, delay);
+            delay += 1500;
         } else if (bilgiVeliSecili) {
-            Alert.alert("Uyarı", "Veli numarası kayıtlı değil.");
+            Alert.alert("Uyarı", "1. Veli numarası kayıtlı değil.");
+        }
+
+        if (bilgiVeli2Secili && ogrenci.veli2Tel && ogrenci.veli2Tel !== '-') {
+            setTimeout(() => {
+                yollaKisi(ogrenci.veli2Tel!, formatla(ogrenci.veli2Ad || '2. Veli'));
+            }, delay);
+        } else if (bilgiVeli2Secili) {
+            Alert.alert("Uyarı", "2. Veli numarası kayıtlı değil.");
         }
 
         setBilgiModalGorunur(false);
@@ -836,7 +849,7 @@ export default function OdevEkle() {
     // 🔵 WHATSAPP ÖDEV DURUM YOLLA 🔵
     const whatsappOdevDurumYolla = () => {
         if (!ogrenci) return;
-        if (!durumOgrenciSecili && !durumVeliSecili) {
+        if (!durumOgrenciSecili && !durumVeliSecili && !durumVeli2Secili) {
             Alert.alert("Uyarı", "Lütfen en az bir alıcı (öğrenci veya veli) seçin.");
             return;
         }
@@ -876,18 +889,29 @@ export default function OdevEkle() {
             });
         };
 
+        let delay = 0;
         if (durumOgrenciSecili && ogrenci.ogrenciTel) {
             yollaKisi(ogrenci.ogrenciTel, formatla(`${ogrenci.ogrenciAd} ${ogrenci.ogrenciSoyad}`));
+            delay += 1500;
         } else if (durumOgrenciSecili) {
             Alert.alert("Uyarı", "Öğrenci numarası kayıtlı değil.");
         }
 
-        if (durumVeliSecili && ogrenci.veliTel) {
+        if (durumVeliSecili && ogrenci.veliTel && ogrenci.veliTel !== '-') {
             setTimeout(() => {
-                yollaKisi(ogrenci.veliTel, formatla(ogrenci.veliAd || 'Veli'));
-            }, durumOgrenciSecili ? 1500 : 0);
+                yollaKisi(ogrenci.veliTel, formatla(ogrenci.veliAd || '1. Veli'));
+            }, delay);
+            delay += 1500;
         } else if (durumVeliSecili) {
-            Alert.alert("Uyarı", "Veli numarası kayıtlı değil.");
+            Alert.alert("Uyarı", "1. Veli numarası kayıtlı değil.");
+        }
+
+        if (durumVeli2Secili && ogrenci.veli2Tel && ogrenci.veli2Tel !== '-') {
+            setTimeout(() => {
+                yollaKisi(ogrenci.veli2Tel!, formatla(ogrenci.veli2Ad || '2. Veli'));
+            }, delay);
+        } else if (durumVeli2Secili) {
+            Alert.alert("Uyarı", "2. Veli numarası kayıtlı değil.");
         }
 
         setDurumModalGorunur(false);
@@ -1054,6 +1078,7 @@ export default function OdevEkle() {
                                             value={serbetKaynak}
                                             onChangeText={setSerbetKaynak}
                                             placeholder="Kaynak adını yazınız"
+                                            multiline={true}
                                         />
                                     </View>
                                 )}
@@ -1259,7 +1284,17 @@ export default function OdevEkle() {
                         </View>
 
                         <Text style={{ marginTop: 15, marginBottom: 5, fontWeight: 'bold' }}>Alıcı Seçin</Text>
-                        <View style={{ flexDirection: 'row', gap: 20, marginBottom: 20 }}>
+                        {ogrenci && (
+                            <View style={{ marginBottom: 10 }}>
+                                <Text style={{ fontSize: 12, color: ogrenci.veli_odev_istiyor_mu === 1 ? '#27ae60' : '#e74c3c', marginBottom: 2, fontStyle: 'italic' }}>
+                                    Not: 1. Veli ({ogrenci.veliAd || 'Veli'}) ödev bilgisi {ogrenci.veli_odev_istiyor_mu === 1 ? 'İSTİYOR' : 'İSTEMİYOR'}.
+                                </Text>
+                                <Text style={{ fontSize: 12, color: ogrenci.veli2_odev_istiyor_mu === 1 ? '#27ae60' : '#e74c3c', marginBottom: 2, fontStyle: 'italic' }}>
+                                    Not: 2. Veli ({ogrenci.veli2Ad || '2. Veli'}) ödev bilgisi {ogrenci.veli2_odev_istiyor_mu === 1 ? 'İSTİYOR' : 'İSTEMİYOR'}.
+                                </Text>
+                            </View>
+                        )}
+                        <View style={{ flexDirection: 'row', gap: 15, marginBottom: 20, flexWrap: 'wrap' }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                 <Switch
                                     value={durumOgrenciSecili}
@@ -1272,7 +1307,14 @@ export default function OdevEkle() {
                                     value={durumVeliSecili}
                                     onValueChange={setDurumVeliSecili}
                                 />
-                                <Text style={{ marginLeft: 8 }}>Veli</Text>
+                                <Text style={{ marginLeft: 8 }}>1. Veli</Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <Switch
+                                    value={durumVeli2Secili}
+                                    onValueChange={setDurumVeli2Secili}
+                                />
+                                <Text style={{ marginLeft: 8 }}>2. Veli</Text>
                             </View>
                         </View>
 
@@ -1368,6 +1410,7 @@ export default function OdevEkle() {
                                         value={duzenleSerbetKaynak}
                                         onChangeText={setDuzenleSerbetKaynak}
                                         placeholder="Kaynak adını yazınız"
+                                        multiline={true}
                                     />
                                 </View>
                             )}
@@ -1441,7 +1484,7 @@ export default function OdevEkle() {
                                         value={duzenleOdevKonusu}
                                         onChangeText={setDuzenleOdevKonusu}
                                         placeholder="Ödev konusunu yazınız..."
-                                        multiline
+                                        multiline={true}
                                     />
                                 )}
                             </View>
@@ -1614,7 +1657,11 @@ export default function OdevEkle() {
                                             </TouchableOpacity>
                                             <TouchableOpacity style={[styles.paylasimButon, { backgroundColor: '#8e44ad' }]} onPress={() => odevRaporuOlustur('veli')} disabled={isGeneratingPDF}>
                                                 <MaterialIcons name="people" size={20} color="white" />
-                                                <Text style={styles.paylasimText}>Veliye</Text>
+                                                <Text style={styles.paylasimText}>1. Veliye</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity style={[styles.paylasimButon, { backgroundColor: '#d35400' }]} onPress={() => odevRaporuOlustur('veli2')} disabled={isGeneratingPDF}>
+                                                <MaterialIcons name="people" size={20} color="white" />
+                                                <Text style={styles.paylasimText}>2. Veliye</Text>
                                             </TouchableOpacity>
                                         </View>
                                     </View>
@@ -1894,11 +1941,16 @@ export default function OdevEkle() {
 
                         <Text style={{ marginTop: 15, marginBottom: 5, fontWeight: 'bold' }}>Alıcı Seçin</Text>
                         {ogrenci && (
-                            <Text style={{ fontSize: 12, color: ogrenci.veli_odev_istiyor_mu === 1 ? '#27ae60' : '#e74c3c', marginBottom: 10, fontStyle: 'italic' }}>
-                                Not: Veli sistemde ödev bilgisi {ogrenci.veli_odev_istiyor_mu === 1 ? 'İSTİYOR' : 'İSTEMİYOR'}.
-                            </Text>
+                            <View style={{ marginBottom: 10 }}>
+                                <Text style={{ fontSize: 12, color: ogrenci.veli_odev_istiyor_mu === 1 ? '#27ae60' : '#e74c3c', marginBottom: 2, fontStyle: 'italic' }}>
+                                    Not: 1. Veli ({ogrenci.veliAd || 'Veli'}) ödev bilgisi {ogrenci.veli_odev_istiyor_mu === 1 ? 'İSTİYOR' : 'İSTEMİYOR'}.
+                                </Text>
+                                <Text style={{ fontSize: 12, color: ogrenci.veli2_odev_istiyor_mu === 1 ? '#27ae60' : '#e74c3c', marginBottom: 2, fontStyle: 'italic' }}>
+                                    Not: 2. Veli ({ogrenci.veli2Ad || '2. Veli'}) ödev bilgisi {ogrenci.veli2_odev_istiyor_mu === 1 ? 'İSTİYOR' : 'İSTEMİYOR'}.
+                                </Text>
+                            </View>
                         )}
-                        <View style={{ flexDirection: 'row', gap: 20, marginBottom: 20 }}>
+                        <View style={{ flexDirection: 'row', gap: 15, marginBottom: 20, flexWrap: 'wrap' }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                 <Switch
                                     value={bilgiOgrenciSecili}
@@ -1911,7 +1963,14 @@ export default function OdevEkle() {
                                     value={bilgiVeliSecili}
                                     onValueChange={setBilgiVeliSecili}
                                 />
-                                <Text style={{ marginLeft: 8 }}>Veli</Text>
+                                <Text style={{ marginLeft: 8 }}>1. Veli</Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <Switch
+                                    value={bilgiVeli2Secili}
+                                    onValueChange={setBilgiVeli2Secili}
+                                />
+                                <Text style={{ marginLeft: 8 }}>2. Veli</Text>
                             </View>
                         </View>
 

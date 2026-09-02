@@ -12,8 +12,11 @@ export interface OgrenciType {
     ucret: number;
     ogrenciTel: string;
     veliTel: string;
+    veli2Ad?: string;
+    veli2Tel?: string;
     aktifmi: number; // 0 or 1
     veli_odev_istiyor_mu?: number; // 0 or 1
+    veli2_odev_istiyor_mu?: number; // 0 or 1
 }
 
 export interface DersType {

@@ -398,19 +398,19 @@ export default function OgrenciDetay() {
                                 )}
                             </View>
 
-                            {/* Veli Bilgileri */}
+                            {/* 1. Veli Bilgileri */}
                             <View style={styles.bilgiSatiri}>
-                                <Text style={styles.bilgiEtiket}>Veli Adı:</Text>
+                                <Text style={styles.bilgiEtiket}>1. Veli Adı:</Text>
                                 <Text style={styles.bilgiDeger}>{ogrenci.veliAd || 'Belirtilmemiş'}</Text>
                             </View>
 
-                            {/* Veli Telefon */}
+                            {/* 1. Veli Telefon */}
                             <View style={styles.telefonContainer}>
                                 <View style={styles.telefonBilgi}>
-                                    <Text style={styles.bilgiEtiket}>Veli Tel:</Text>
+                                    <Text style={styles.bilgiEtiket}>1. Veli Tel:</Text>
                                     <Text style={styles.bilgiDeger}>{ogrenci.veliTel || 'Belirtilmemiş'}</Text>
                                 </View>
-                                {ogrenci.veliTel && (
+                                {ogrenci.veliTel && ogrenci.veliTel !== '-' && (
                                     <View style={styles.telefonButonlari}>
                                         <TouchableOpacity
                                             style={styles.telefonButon}
@@ -432,6 +432,54 @@ export default function OgrenciDetay() {
                                         </TouchableOpacity>
                                     </View>
                                 )}
+                            </View>
+                            <View style={styles.bilgiSatiri}>
+                                <Text style={styles.bilgiEtiket}>1. Veli Ödev Bilgisi:</Text>
+                                <Text style={[styles.bilgiDeger, { color: ogrenci.veli_odev_istiyor_mu === 1 ? '#27ae60' : '#e74c3c', fontWeight: 'bold' }]}>
+                                    {ogrenci.veli_odev_istiyor_mu === 1 ? 'İstiyor' : 'İstemiyor'}
+                                </Text>
+                            </View>
+
+                            {/* 2. Veli Bilgileri */}
+                            <View style={[styles.bilgiSatiri, { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#f0f0f0' }]}>
+                                <Text style={styles.bilgiEtiket}>2. Veli Adı:</Text>
+                                <Text style={styles.bilgiDeger}>{ogrenci.veli2Ad || 'Belirtilmemiş'}</Text>
+                            </View>
+
+                            {/* 2. Veli Telefon */}
+                            <View style={styles.telefonContainer}>
+                                <View style={styles.telefonBilgi}>
+                                    <Text style={styles.bilgiEtiket}>2. Veli Tel:</Text>
+                                    <Text style={styles.bilgiDeger}>{ogrenci.veli2Tel || 'Belirtilmemiş'}</Text>
+                                </View>
+                                {ogrenci.veli2Tel && ogrenci.veli2Tel !== '-' && (
+                                    <View style={styles.telefonButonlari}>
+                                        <TouchableOpacity
+                                            style={styles.telefonButon}
+                                            onPress={() => telefonEt(ogrenci.veli2Tel!)}
+                                        >
+                                            <MaterialIcons name="call" size={20} color="white" />
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={styles.smsButon}
+                                            onPress={() => smsGonder(ogrenci.veli2Tel!)}
+                                        >
+                                            <MaterialIcons name="sms" size={20} color="white" />
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={styles.whatsappButon}
+                                            onPress={() => whatsappGonder(ogrenci.veli2Tel!)}
+                                        >
+                                            <MaterialIcons name="chat" size={20} color="white" />
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
+                            </View>
+                            <View style={styles.bilgiSatiri}>
+                                <Text style={styles.bilgiEtiket}>2. Veli Ödev Bilgisi:</Text>
+                                <Text style={[styles.bilgiDeger, { color: ogrenci.veli2_odev_istiyor_mu === 1 ? '#27ae60' : '#e74c3c', fontWeight: 'bold' }]}>
+                                    {ogrenci.veli2_odev_istiyor_mu === 1 ? 'İstiyor' : 'İstemiyor'}
+                                </Text>
                             </View>
                         </View>
 

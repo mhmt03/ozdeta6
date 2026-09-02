@@ -21,7 +21,7 @@ export default function OgrenciForm({ ogrenci, setOgrenci, onSave, onCancel }: O
         metinDegisti(bolge, numerik === '' ? 0 : parseInt(numerik, 10));
     }
 
-    const rehberdenSec = async (bolge: 'ogrenciTel' | 'veliTel') => {
+    const rehberdenSec = async (bolge: 'ogrenciTel' | 'veliTel' | 'veli2Tel') => {
         try {
             const { status } = await Contacts.requestPermissionsAsync();
             if (status === 'granted') {
@@ -126,17 +126,17 @@ export default function OgrenciForm({ ogrenci, setOgrenci, onSave, onCancel }: O
                     <Text style={styles.sectionTitle}>Veli Bilgileri</Text>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Veli Adı</Text>
+                        <Text style={styles.label}>1. Veli Adı</Text>
                         <TextInput
                             value={ogrenci.veliAd ?? ''}
                             onChangeText={text => metinDegisti('veliAd', text)}
                             style={styles.input}
-                            placeholder="Veli adını girin"
+                            placeholder="1. Veli adını girin"
                         />
                     </View>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Veli Telefon</Text>
+                        <Text style={styles.label}>1. Veli Telefon</Text>
                         <View style={styles.inputRow}>
                             <TextInput
                                 value={(ogrenci.veliTel ?? '').toString()}
@@ -146,6 +146,32 @@ export default function OgrenciForm({ ogrenci, setOgrenci, onSave, onCancel }: O
                                 placeholder="5XX XXX XX XX"
                             />
                             <TouchableOpacity style={styles.pickerButton} onPress={() => rehberdenSec('veliTel')}>
+                                <MaterialIcons name="contact-phone" size={24} color="white" />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>2. Veli Adı</Text>
+                        <TextInput
+                            value={ogrenci.veli2Ad ?? ''}
+                            onChangeText={text => metinDegisti('veli2Ad', text)}
+                            style={styles.input}
+                            placeholder="2. Veli adını girin"
+                        />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>2. Veli Telefon</Text>
+                        <View style={styles.inputRow}>
+                            <TextInput
+                                value={(ogrenci.veli2Tel ?? '').toString()}
+                                onChangeText={text => metinDegisti('veli2Tel', text)}
+                                style={styles.inputWithButton}
+                                keyboardType="phone-pad"
+                                placeholder="5XX XXX XX XX"
+                            />
+                            <TouchableOpacity style={styles.pickerButton} onPress={() => rehberdenSec('veli2Tel')}>
                                 <MaterialIcons name="contact-phone" size={24} color="white" />
                             </TouchableOpacity>
                         </View>
@@ -197,11 +223,21 @@ export default function OgrenciForm({ ogrenci, setOgrenci, onSave, onCancel }: O
                     </View>
 
                     <View style={styles.switchRow}>
-                        <Text style={styles.switchLabel}>Veli Ödev Bilgisi İstiyor mu?</Text>
+                        <Text style={styles.switchLabel}>1. Veli Ödev Bilgisi İstiyor mu?</Text>
                         <Switch
                             value={ogrenci.veli_odev_istiyor_mu === 1}
                             onValueChange={value => metinDegisti('veli_odev_istiyor_mu', value ? 1 : 0)}
                             thumbColor={ogrenci.veli_odev_istiyor_mu === 1 ? "#4CAF50" : "#f4f3f4"}
+                            trackColor={{ false: "#767577", true: "#81b0ff" }}
+                        />
+                    </View>
+
+                    <View style={styles.switchRow}>
+                        <Text style={styles.switchLabel}>2. Veli Ödev Bilgisi İstiyor mu?</Text>
+                        <Switch
+                            value={ogrenci.veli2_odev_istiyor_mu === 1}
+                            onValueChange={value => metinDegisti('veli2_odev_istiyor_mu', value ? 1 : 0)}
+                            thumbColor={ogrenci.veli2_odev_istiyor_mu === 1 ? "#4CAF50" : "#f4f3f4"}
                             trackColor={{ false: "#767577", true: "#81b0ff" }}
                         />
                     </View>

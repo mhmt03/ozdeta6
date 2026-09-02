@@ -20,14 +20,16 @@ export async function ogrenciKaydet(params: OgrenciType) {
         }
 
         const result = await db.runAsync(`
-            INSERT INTO ogrenciler (ogrenciAd, ogrenciSoyad, ogrenciTel, veliAd, veliTel, ucret, okul, sinif, aciklama1, aciklama2, kayitTarihi, aktifmi, veli_odev_istiyor_mu) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            INSERT INTO ogrenciler (ogrenciAd, ogrenciSoyad, ogrenciTel, veliAd, veliTel, veli2Ad, veli2Tel, ucret, okul, sinif, aciklama1, aciklama2, kayitTarihi, aktifmi, veli_odev_istiyor_mu, veli2_odev_istiyor_mu) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 params.ogrenciAd,
                 params.ogrenciSoyad,
                 params.ogrenciTel,
                 params.veliAd,
                 params.veliTel,
+                params.veli2Ad ?? '-',
+                params.veli2Tel ?? '-',
                 params.ucret,
                 params.okul,
                 params.sinif,
@@ -35,7 +37,8 @@ export async function ogrenciKaydet(params: OgrenciType) {
                 params.aciklama2,
                 params.kayitTarihi,
                 params.aktifmi ? 1 : 0,
-                params.veli_odev_istiyor_mu ?? 0
+                params.veli_odev_istiyor_mu ?? 0,
+                params.veli2_odev_istiyor_mu ?? 0
             ]
         );
         return { success: true, result };
@@ -76,7 +79,7 @@ export async function ogrenciGuncelle(ogrenciId: number, params: OgrenciType) {
 
         const result = await db.runAsync(`
             UPDATE ogrenciler
-            SET ogrenciAd=?, ogrenciSoyad=?, ogrenciTel=?, veliAd=?, veliTel=?, ucret=?, okul=?, sinif=?, aciklama1=?, aciklama2=?, kayitTarihi=?, aktifmi=?, veli_odev_istiyor_mu=?
+            SET ogrenciAd=?, ogrenciSoyad=?, ogrenciTel=?, veliAd=?, veliTel=?, veli2Ad=?, veli2Tel=?, ucret=?, okul=?, sinif=?, aciklama1=?, aciklama2=?, kayitTarihi=?, aktifmi=?, veli_odev_istiyor_mu=?, veli2_odev_istiyor_mu=?
             WHERE ogrenciId=?`,
             [
                 params.ogrenciAd,
@@ -84,6 +87,8 @@ export async function ogrenciGuncelle(ogrenciId: number, params: OgrenciType) {
                 params.ogrenciTel,
                 params.veliAd,
                 params.veliTel,
+                params.veli2Ad ?? '-',
+                params.veli2Tel ?? '-',
                 params.ucret,
                 params.okul,
                 params.sinif,
@@ -92,6 +97,7 @@ export async function ogrenciGuncelle(ogrenciId: number, params: OgrenciType) {
                 params.kayitTarihi,
                 params.aktifmi ? 1 : 0,
                 params.veli_odev_istiyor_mu ?? 0,
+                params.veli2_odev_istiyor_mu ?? 0,
                 ogrenciId
             ]
         );

@@ -797,7 +797,8 @@ export default function GlobalKaynakYonetimi() {
                                     style={styles.input}
                                     value={yeniKaynak}
                                     onChangeText={setYeniKaynak}
-                                    placeholder="Kitap/Kaynak adı giriniz"
+                                placeholder="Kitap/Kaynak adı giriniz"
+                                    multiline={true}
                                 />
                                 <TouchableOpacity style={styles.ekleButon} onPress={handleEkle}>
                                     <MaterialIcons name="add" size={24} color="white" />
@@ -900,6 +901,7 @@ export default function GlobalKaynakYonetimi() {
                                         value={duzAd}
                                         onChangeText={setDuzAd}
                                         placeholder="Kaynak adı"
+                                        multiline={true}
                                     />
 
                                     <Text style={styles.fieldLabel}>Kaynak Türü</Text>
@@ -964,7 +966,7 @@ export default function GlobalKaynakYonetimi() {
                                             value={yeniIcerik}
                                             onChangeText={setYeniIcerik}
                                             placeholder="Konu / içerik giriniz"
-                                            multiline={false}
+                                            multiline={true}
                                         />
                                         <TouchableOpacity style={styles.icerikEkleBtn} onPress={handleIcerikEkle}>
                                             <MaterialIcons name="add" size={22} color="white" />

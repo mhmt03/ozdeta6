@@ -46,8 +46,11 @@ CREATE TABLE IF NOT EXISTS ogrenciler (
     ucret                INTEGER DEFAULT 0,                 -- Anlaşılan ders ucreti
     ogrenciTel           TEXT    DEFAULT '-',               -- Öğrenci telefon numarası
     veliTel              TEXT    DEFAULT '-',               -- Veli telefon numarası
+    veli2Ad              TEXT    DEFAULT '-',               -- 2. Veli Adı/Soyadı
+    veli2Tel             TEXT    DEFAULT '-',               -- 2. Veli telefon numarası
     aktifmi              INTEGER DEFAULT 1,                 -- Öğrencinin aktiflik durumu (1: Aktif, 0: Pasif)
-    veli_odev_istiyor_mu INTEGER DEFAULT 0                  -- Velinin ödev bildirimi isteyip istemediği (1: Evet, 0: Hayır)
+    veli_odev_istiyor_mu INTEGER DEFAULT 0,                 -- Velinin ödev bildirimi isteyip istemediği (1: Evet, 0: Hayır)
+    veli2_odev_istiyor_mu INTEGER DEFAULT 0                 -- 2. Velinin ödev bildirimi isteyip istemediği (1: Evet, 0: Hayır)
 );
 
 -- 2. Alınan/işlenen derslerin kayıtlarını tutan tablo
@@ -294,6 +297,9 @@ async function kolonEkle(
 async function ensureSchema(database: SQLite.SQLiteDatabase): Promise<void> {
     // 1. Öğrenciler tablosunda veli odev istiyor mu sütununun garantilenmesi
     await kolonEkle(database, 'ogrenciler', 'veli_odev_istiyor_mu', "INTEGER DEFAULT 0");
+    await kolonEkle(database, 'ogrenciler', 'veli2Ad', "TEXT DEFAULT '-'");
+    await kolonEkle(database, 'ogrenciler', 'veli2Tel', "TEXT DEFAULT '-'");
+    await kolonEkle(database, 'ogrenciler', 'veli2_odev_istiyor_mu', "INTEGER DEFAULT 0");
 
     // 2. Kaynaklar tablosunda kaynak türü sütununun garantilenmesi
     await kolonEkle(database, 'tum_kaynaklar', 'tur', "TEXT DEFAULT 'Diğer'");

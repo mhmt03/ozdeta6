@@ -18,13 +18,16 @@ export default function YeniKayit({ route, navigation }: Props) {
         okul: '',
         veliAd: '',
         veliTel: '',
+        veli2Ad: '',
+        veli2Tel: '',
         ucret: 0,
         kayitTarihi: new Date().toISOString().split('T')[0],
         aktifmi: 1,
         aciklama1: '',
         aciklama2: '',
         sinif: '',
-        veli_odev_istiyor_mu: 0
+        veli_odev_istiyor_mu: 0,
+        veli2_odev_istiyor_mu: 0
     });
 
     useEffect(() => {
