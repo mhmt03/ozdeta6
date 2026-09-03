@@ -788,8 +788,8 @@ export default function OdevEkle() {
         }
 
         const filteredOdevler = odevler.filter(o => {
-            if (!o.teslimttarihi) return false;
-            const t = new Date(o.teslimttarihi).getTime();
+            if (!o.verilmetarihi) return false;
+            const t = new Date(o.verilmetarihi).getTime();
             return t >= bilgiBaslangic.setHours(0, 0, 0, 0) && t <= bilgiBitis.setHours(23, 59, 59, 999);
         });
 
@@ -1263,7 +1263,12 @@ export default function OdevEkle() {
                 {/* 🔵 ÖDEV DURUM YOLLA MODALI 🔵 */}
             <Modal visible={durumModalGorunur} animationType="fade" transparent={true} onRequestClose={() => setDurumModalGorunur(false)}>
                 <View style={styles.modalOverlay}>
-                    <View style={[styles.reportModalContent, { height: 'auto', padding: 20 }]}>
+                    <ScrollView 
+                        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 20 }} 
+                        style={{ width: '100%' }} 
+                        showsVerticalScrollIndicator={false}
+                    >
+                        <View style={[styles.reportModalContent, { height: 'auto', padding: 20 }]}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>Ödev Durumu Yolla (WhatsApp)</Text>
                             <TouchableOpacity onPress={() => setDurumModalGorunur(false)}>
@@ -1320,7 +1325,7 @@ export default function OdevEkle() {
                         </View>
 
                         <Text style={{ marginTop: 5, marginBottom: 5, fontWeight: 'bold' }}>Gönderilecek Durum (Önizleme):</Text>
-                        <ScrollView style={{ maxHeight: 150, backgroundColor: '#f9f9f9', padding: 10, borderRadius: 8, marginBottom: 15, borderWidth: 1, borderColor: '#eee' }}>
+                        <ScrollView nestedScrollEnabled={true} style={{ maxHeight: 150, backgroundColor: '#f9f9f9', padding: 10, borderRadius: 8, marginBottom: 15, borderWidth: 1, borderColor: '#eee' }}>
                             {(() => {
                                 const onizlemeDurum = odevler.filter(o => {
                                     const oDate = new Date(o.verilmetarihi);
@@ -1349,6 +1354,7 @@ export default function OdevEkle() {
                             <Text style={styles.raporPdfBtnText}>WhatsApp ile Yolla</Text>
                         </TouchableOpacity>
                     </View>
+                    </ScrollView>
                 </View>
 
                 {showDurumBaslangic && (
@@ -1919,7 +1925,12 @@ export default function OdevEkle() {
             {/* ── ÖDEV BİLGİ YOLLA MODALI ── */}
             <Modal visible={bilgiModalGorunur} animationType="fade" transparent={true} onRequestClose={() => setBilgiModalGorunur(false)}>
                 <View style={styles.modalOverlay}>
-                    <View style={[styles.reportModalContent, { height: 'auto', padding: 20 }]}>
+                    <ScrollView 
+                        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 20 }} 
+                        style={{ width: '100%' }} 
+                        showsVerticalScrollIndicator={false}
+                    >
+                        <View style={[styles.reportModalContent, { height: 'auto', padding: 20 }]}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>Ödev Bilgisi Yolla (WhatsApp)</Text>
                             <TouchableOpacity onPress={() => setBilgiModalGorunur(false)}>
@@ -1976,11 +1987,11 @@ export default function OdevEkle() {
                         </View>
 
                         <Text style={{ marginTop: 5, marginBottom: 5, fontWeight: 'bold' }}>Gönderilecek Ödevler (Önizleme):</Text>
-                        <ScrollView style={{ maxHeight: 150, backgroundColor: '#f9f9f9', padding: 10, borderRadius: 8, marginBottom: 15, borderWidth: 1, borderColor: '#eee' }}>
+                        <ScrollView nestedScrollEnabled={true} style={{ maxHeight: 150, backgroundColor: '#f9f9f9', padding: 10, borderRadius: 8, marginBottom: 15, borderWidth: 1, borderColor: '#eee' }}>
                             {(() => {
                                 const onizlemeOdevler = odevler.filter(o => {
-                                    if (!o.teslimttarihi) return false;
-                                    const t = new Date(o.teslimttarihi).getTime();
+                                    if (!o.verilmetarihi) return false;
+                                    const t = new Date(o.verilmetarihi).getTime();
                                     const basDate = new Date(bilgiBaslangic);
                                     basDate.setHours(0, 0, 0, 0);
                                     const bitDate = new Date(bilgiBitis);
@@ -2002,6 +2013,7 @@ export default function OdevEkle() {
                             <Text style={styles.raporPdfBtnText}>WhatsApp ile Yolla</Text>
                         </TouchableOpacity>
                     </View>
+                    </ScrollView>
                 </View>
 
                 {showBilgiBaslangic && (
