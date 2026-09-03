@@ -10,8 +10,10 @@ import {
     Modal,
     ActivityIndicator,
     Platform,
-    Switch
+    Switch,
+    TextInput
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -77,10 +79,34 @@ export default function Ayarlar() {
     const [notificationVibrate, setNotificationVibrate] = useState(true);
     const [dailySummaryEnabled, setDailySummaryEnabled] = useState(false);
 
+    // Yedekleme ayarları state'leri
+    const [yedekHatirlaticiAktif, setYedekHatirlaticiAktif] = useState(true);
+    const [yedekHatirlaticiSiklik, setYedekHatirlaticiSiklik] = useState('14');
+
     useEffect(() => {
         borcluOgrencileriHesapla();
         loadNotificationSettings();
+        loadBackupSettings();
     }, []);
+
+    const loadBackupSettings = async () => {
+        try {
+            const enabledStr = await AsyncStorage.getItem('@backup_reminder_enabled');
+            const intervalStr = await AsyncStorage.getItem('@backup_reminder_interval');
+            if (enabledStr !== null) setYedekHatirlaticiAktif(enabledStr === 'true');
+            if (intervalStr !== null) setYedekHatirlaticiSiklik(intervalStr);
+        } catch (error) {
+            console.error('Yedekleme ayarları yüklenemedi:', error);
+        }
+    };
+
+    const saveBackupSetting = async (key: string, value: string) => {
+        try {
+            await AsyncStorage.setItem(key, value);
+        } catch (error) {
+            console.error('Yedekleme ayarı kaydedilemedi:', error);
+        }
+    };
 
     const loadNotificationSettings = async () => {
         try {
@@ -1039,6 +1065,49 @@ export default function Ayarlar() {
                             </Text>
                         </View>
                     </TouchableOpacity>
+
+                    <View style={styles.ayarItem}>
+                        <MaterialIcons name="event-available" size={24} color="#2196F3" />
+                        <View style={[styles.ayarText, { flex: 1, marginLeft: 16 }]}>
+                            <Text style={styles.ayarBaslik}>Yedekleme Hatırlatıcısı</Text>
+                            <Text style={styles.ayarAciklama}>Otomatik yedekleme hatırlatması al</Text>
+                        </View>
+                        <Switch
+                            value={yedekHatirlaticiAktif}
+                            onValueChange={(val) => {
+                                setYedekHatirlaticiAktif(val);
+                                saveBackupSetting('@backup_reminder_enabled', val ? 'true' : 'false');
+                            }}
+                            trackColor={{ false: "#767577", true: "#81b0ff" }}
+                            thumbColor={yedekHatirlaticiAktif ? "#2196F3" : "#f4f3f4"}
+                        />
+                    </View>
+
+                    {yedekHatirlaticiAktif && (
+                        <View style={[styles.ayarItem, { paddingLeft: 40 }]}>
+                            <MaterialIcons name="update" size={20} color="#666" />
+                            <View style={[styles.ayarText, { flex: 1, marginLeft: 16 }]}>
+                                <Text style={styles.ayarBaslik}>Hatırlatıcı Sıklığı (Gün)</Text>
+                                <Text style={styles.ayarAciklama}>Kaç günde bir hatırlatılsın</Text>
+                            </View>
+                            <TextInput
+                                style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 4, padding: 5, width: 60, textAlign: 'center', color: '#333' }}
+                                keyboardType="numeric"
+                                value={yedekHatirlaticiSiklik}
+                                onChangeText={(text) => setYedekHatirlaticiSiklik(text)}
+                                onEndEditing={() => {
+                                    const val = parseInt(yedekHatirlaticiSiklik, 10);
+                                    if (isNaN(val) || val < 1) {
+                                        setYedekHatirlaticiSiklik('14');
+                                        saveBackupSetting('@backup_reminder_interval', '14');
+                                        Alert.alert('Hata', 'Geçerli bir gün sayısı giriniz.');
+                                    } else {
+                                        saveBackupSetting('@backup_reminder_interval', val.toString());
+                                    }
+                                }}
+                            />
+                        </View>
+                    )}
 
                     <TouchableOpacity
                         style={styles.ayarItem}

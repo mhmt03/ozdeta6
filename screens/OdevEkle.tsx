@@ -22,7 +22,8 @@ import {
     Alert,
     FlatList,
     Platform,
-    Linking
+    Linking,
+    ToastAndroid
 } from 'react-native';
 import OdevItem from '../components/OdevItem';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -444,14 +445,14 @@ export default function OdevEkle() {
         try {
             const result = await odevGuncelle(odev.odevId!, odev);
             if (result.success) {
-                Alert.alert('Başarılı', 'Ödev güncellendi');
+                Platform.OS === 'android' ? ToastAndroid.show('Ödev güncellendi', ToastAndroid.SHORT) : Alert.alert('Başarılı', 'Ödev güncellendi');
                 await odevleriYenile();
             } else {
-                Alert.alert('Hata', 'Ödev güncellenemedi');
+                Platform.OS === 'android' ? ToastAndroid.show('Ödev güncellenemedi', ToastAndroid.SHORT) : Alert.alert('Hata', 'Ödev güncellenemedi');
             }
         } catch (error) {
             console.error('Ödev güncelleme hatası:', error);
-            Alert.alert('Hata', 'Güncelleme yapılamadı');
+            Platform.OS === 'android' ? ToastAndroid.show('Güncelleme yapılamadı', ToastAndroid.SHORT) : Alert.alert('Hata', 'Güncelleme yapılamadı');
         }
     };
 
@@ -587,16 +588,16 @@ export default function OdevEkle() {
             
             const result = await odevGuncelle(duzenlenenOdev.odevId!, guncelOdev);
             if (result.success) {
-                Alert.alert('Başarılı', 'Ödev güncellendi.');
+                Platform.OS === 'android' ? ToastAndroid.show('Ödev güncellendi.', ToastAndroid.SHORT) : Alert.alert('Başarılı', 'Ödev güncellendi.');
                 setDuzenleModalGorunur(false);
                 setDuzenlenenOdev(null);
                 await odevleriYenile();
             } else {
-                Alert.alert('Hata', 'Ödev güncellenemedi.');
+                Platform.OS === 'android' ? ToastAndroid.show('Ödev güncellenemedi.', ToastAndroid.SHORT) : Alert.alert('Hata', 'Ödev güncellenemedi.');
             }
         } catch (error) {
             console.error('Ödev düzenleme kaydetme hatası:', error);
-            Alert.alert('Hata', 'Bir hata oluştu.');
+            Platform.OS === 'android' ? ToastAndroid.show('Bir hata oluştu.', ToastAndroid.SHORT) : Alert.alert('Hata', 'Bir hata oluştu.');
         } finally {
             setLoading(false);
         }

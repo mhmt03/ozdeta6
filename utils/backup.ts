@@ -5,19 +5,29 @@ import { Alert } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
-// Otomatik yedekleme sıklığı (14 günde bir)
-const BACKUP_INTERVAL_DAYS = 14;
+// Otomatik yedekleme sıklığı (varsayılan)
+const DEFAULT_BACKUP_INTERVAL_DAYS = 14;
 // Son otomatik yedekleme tarihini depolamak için kullanılan AsyncStorage anahtarı
 const LAST_BACKUP_KEY = '@last_auto_backup_date';
+const BACKUP_ENABLED_KEY = '@backup_reminder_enabled';
+const BACKUP_INTERVAL_KEY = '@backup_reminder_interval';
 // Takip edilen veritabanı dosya adı
 const DATABASE_NAME = 'ozdeta.db';
 
 /**
  * Otomatik yedekleme vaktinin gelip gelmediğini kontrol eder.
- * Eğer en son yedeklemeden bu yana 14 gün geçmişse kullanıcıya bir uyarı penceresi (Alert) gösterir.
+ * Eğer en son yedeklemeden bu yana belirlenen gün geçmişse kullanıcıya bir uyarı penceresi (Alert) gösterir.
  */
 export const checkAutomaticBackup = async () => {
     try {
+        const enabledStr = await AsyncStorage.getItem(BACKUP_ENABLED_KEY);
+        if (enabledStr === 'false') {
+            return; // Hatırlatıcı kapalı
+        }
+
+        const intervalStr = await AsyncStorage.getItem(BACKUP_INTERVAL_KEY);
+        const intervalDays = intervalStr ? parseInt(intervalStr, 10) : DEFAULT_BACKUP_INTERVAL_DAYS;
+
         // Cihazın yerel depolama alanından son otomatik yedekleme tarihini oku
         const lastBackupStr = await AsyncStorage.getItem(LAST_BACKUP_KEY);
         const now = new Date();
@@ -29,8 +39,8 @@ export const checkAutomaticBackup = async () => {
             // Milisaniyeyi gün sayısına dönüştür (Yuvarlayarak)
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-            // Eğer fark belirlenen periyoda (14 gün) eşit veya büyükse yedekleme teklif et
-            if (diffDays >= BACKUP_INTERVAL_DAYS) {
+            // Eğer fark belirlenen periyoda eşit veya büyükse yedekleme teklif et
+            if (diffDays >= intervalDays) {
                 promptForBackup(now);
             }
         } else {

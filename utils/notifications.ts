@@ -143,6 +143,9 @@ export async function rescheduleAllRandevuNotifications() {
         // Önceki tüm planlanmış bildirimleri temizle
         await Notifications.cancelAllScheduledNotificationsAsync();
         
+        // Günlük özeti her halükarda yeniden planlamayı dene (kendi içinde aktiflik kontrolü var)
+        await scheduleDailySummaryNotification();
+        
         // Eğer bildirimler tamamen kapalıysa yeni planlama yapma
         if (enabled !== '1') {
             return;
@@ -166,5 +169,43 @@ export async function rescheduleAllRandevuNotifications() {
         console.log(`${rows.length} randevu bildirimi yeniden planlandı.`);
     } catch (error) {
         console.error('Bildirimler yeniden yapılandırılırken hata:', error);
+    }
+}
+
+/**
+ * Her gün sabah saat 08:00'de günlük ders özetini gösterecek bildirimi kurar.
+ */
+export async function scheduleDailySummaryNotification() {
+    try {
+        const enabled = await getSetting('daily_summary', '0');
+        
+        // Önceki günlük özet bildirimini temizle (temizlenmiş olsa bile güvenli)
+        await Notifications.cancelScheduledNotificationAsync('daily-summary');
+        
+        if (enabled !== '1') return;
+
+        const vibrate = (await getSetting('notification_vibrate', '1')) === '1';
+        const sound = (await getSetting('notification_sound', '1')) === '1';
+
+        await Notifications.scheduleNotificationAsync({
+            identifier: 'daily-summary',
+            content: {
+                title: 'Günlük Ajanda Özeti',
+                body: 'Bugünkü ders programınızı ve randevularınızı kontrol etmeyi unutmayın.',
+                sound: sound,
+                vibrate: vibrate ? [0, 250, 250, 250] : undefined,
+                data: { type: 'daily-summary' },
+                // @ts-ignore
+                android: { channelId: 'default' }
+            },
+            trigger: {
+                type: Notifications.SchedulableTriggerInputTypes.DAILY,
+                hour: 8,
+                minute: 0,
+            },
+        });
+        console.log('Günlük özet bildirimi planlandı.');
+    } catch (error) {
+        console.error('Günlük özet planlanamadı:', error);
     }
 }
