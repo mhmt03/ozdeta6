@@ -137,11 +137,13 @@ export default function App() {
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.2,
             shadowRadius: 3,
+            height: 70, // <-- BURADAN YÜKSEKLİĞİ AYARLAYABİLİRSİNİZ
           },
           headerTintColor: '#aef013ff',
           headerTitleStyle: {
             fontWeight: 'bold',
-            fontSize: 18,
+            fontSize: 13,
+            padding:2, margin:2,
           },
 
           headerShadowVisible: true,

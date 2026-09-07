@@ -270,7 +270,7 @@ export async function tumKaynakGuncelle(id: number, ad: string, tur: string) {
 
 // ================= KAYNAK İÇERİK OPERATIONS =================
 
-export async function kaynakIcerikEkle(kaynakId: number, icerik: string) {
+export async function kaynakIcerikEkle(kaynakId: number, icerik: string, sayfa_no: string = '') {
     try {
         const db = await ensureDatabaseReady();
         const maxRow = await db.getFirstAsync<{ maxSira: number }>(
@@ -280,8 +280,8 @@ export async function kaynakIcerikEkle(kaynakId: number, icerik: string) {
         const yeniSira = (maxRow?.maxSira ?? 0) + 1;
 
         const result = await db.runAsync(
-            `INSERT INTO kaynak_icerikleri (kaynakId, icerik, sira) VALUES (?, ?, ?)`,
-            [kaynakId, icerik, yeniSira]
+            `INSERT INTO kaynak_icerikleri (kaynakId, icerik, sira, sayfa_no) VALUES (?, ?, ?, ?)`,
+            [kaynakId, icerik, yeniSira, sayfa_no]
         );
         return { success: true, id: result.lastInsertRowId };
     } catch (error: any) {
@@ -293,7 +293,7 @@ export async function kaynakIcerikEkle(kaynakId: number, icerik: string) {
 export async function getKaynakIcerikleri(kaynakId: number) {
     try {
         const db = await ensureDatabaseReady();
-        const result = await db.getAllAsync<{ id: number; kaynakId: number; icerik: string; sira?: number }>(
+        const result = await db.getAllAsync<{ id: number; kaynakId: number; icerik: string; sira?: number; sayfa_no?: string }>(
             `SELECT * FROM kaynak_icerikleri WHERE kaynakId=? ORDER BY sira ASC, id ASC`,
             [kaynakId]
         );
@@ -320,12 +320,12 @@ export async function kaynakIcerikSiraGuncelle(iceriklerListesi: { id: number; s
     }
 }
 
-export async function kaynakIcerikGuncelle(id: number, icerik: string) {
+export async function kaynakIcerikGuncelle(id: number, yeniIcerik: string, sayfa_no: string = '') {
     try {
         const db = await ensureDatabaseReady();
         const result = await db.runAsync(
-            `UPDATE kaynak_icerikleri SET icerik=? WHERE id=?`,
-            [icerik, id]
+            `UPDATE kaynak_icerikleri SET icerik=?, sayfa_no=? WHERE id=?`,
+            [yeniIcerik, sayfa_no, id]
         );
         return { success: result.changes > 0 };
     } catch (error: any) {

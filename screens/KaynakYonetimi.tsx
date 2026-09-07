@@ -174,14 +174,14 @@ export default function KaynakYonetimi() {
     return (
         <View style={styles.container}>
             {/* Header */}
-            <View style={styles.header}>
+            {/* <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()}>
                     <MaterialIcons name="arrow-back" size={24} color="#333" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>
                     {route.params?.ogrenciAd ? `${route.params.ogrenciAd} ${route.params.ogrenciSoyad || ''}` : (ogrenci ? `${ogrenci.ogrenciAd} ${ogrenci.ogrenciSoyad}` : 'Kaynak Yönetimi')}
                 </Text>
-            </View>
+            </View> */}
 
             <KeyboardAvoidingView
                 style={styles.keyboardView}
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f8f9fa',
-        paddingTop: 16,
+        paddingTop: 6,
     },
     loadingContainer: {
         flex: 1,
@@ -269,14 +269,14 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 16,
+        padding: 6,
         backgroundColor: 'white',
         borderBottomWidth: 1,
         borderBottomColor: '#e1e8ed',
         elevation: 2,
     },
     headerTitle: {
-        fontSize: 18,
+        fontSize: 12,
         fontWeight: 'bold',
         marginLeft: 16,
         color: '#333',
@@ -300,12 +300,13 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 16,
         fontWeight: 'bold',
-        color: '#333',
+        color: '#3f0cf5ff',
         marginBottom: 12,
     },
     kaynakEkleRow: {
         flexDirection: 'row',
         alignItems: 'center',
+        
     },
     textInput: {
         borderWidth: 1,
@@ -340,6 +341,7 @@ const styles = StyleSheet.create({
     },
     picker: {
         width: '100%',
+        color:'red'
     },
     manageGlobalBtn: {
         marginTop: 12,
@@ -354,7 +356,7 @@ const styles = StyleSheet.create({
     listeContainer: {
         backgroundColor: 'white',
         borderRadius: 8,
-        padding: 16,
+        padding: 6,
         elevation: 2,
         flex: 1,
     },

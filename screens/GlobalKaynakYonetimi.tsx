@@ -18,6 +18,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as XLSX from 'xlsx';
 import * as Sharing from 'expo-sharing';
@@ -50,7 +51,7 @@ const turRenk = (ad: string, turleri: KaynakTuru[]): string => {
 
 
 type GlobalKaynak = { id: number; ad: string; tur: string };
-type IcerikItem  = { id: number; kaynakId: number; icerik: string };
+type IcerikItem  = { id: number; kaynakId: number; icerik: string; sayfa_no?: string };
 
 export default function GlobalKaynakYonetimi() {
     const navigation = useNavigation<any>();
@@ -76,11 +77,13 @@ export default function GlobalKaynakYonetimi() {
     const [duzTur, setDuzTur]                   = useState('');
     const [icerikler, setIcerikler]             = useState<IcerikItem[]>([]);
     const [yeniIcerik, setYeniIcerik]           = useState('');
+    const [yeniSayfaNo, setYeniSayfaNo]         = useState('');
     const [icerikYukleniyor, setIcerikYukleniyor] = useState(false);
 
     // İçerik düzenleme
     const [duzIcerikId, setDuzIcerikId]         = useState<number | null>(null);
     const [duzIcerikMetin, setDuzIcerikMetin]   = useState('');
+    const [duzSayfaNo, setDuzSayfaNo]           = useState('');
 
     // İçerik kopyalama
     const [kopyalaModalGorunur, setKopyalaModalGorunur] = useState(false);
@@ -183,8 +186,10 @@ export default function GlobalKaynakYonetimi() {
         setDuzAd(kaynak.ad);
         setDuzTur(kaynak.tur);
         setYeniIcerik('');
+        setYeniSayfaNo('');
         setDuzIcerikId(null);
         setDuzIcerikMetin('');
+        setDuzSayfaNo('');
         setKopyalaKaynakSecili(null);
         setModalGorunur(true);
         await iceriklerYukle(kaynak.id);
@@ -223,9 +228,10 @@ export default function GlobalKaynakYonetimi() {
 
     const handleIcerikEkle = async () => {
         if (!yeniIcerik.trim() || !seciliKaynak) return;
-        const result = await kaynakIcerikEkle(seciliKaynak.id, yeniIcerik.trim());
+        const result = await kaynakIcerikEkle(seciliKaynak.id, yeniIcerik.trim(), yeniSayfaNo.trim());
         if (result.success) {
             setYeniIcerik('');
+            setYeniSayfaNo('');
             Keyboard.dismiss();
             await iceriklerYukle(seciliKaynak.id);
         } else {
@@ -296,17 +302,167 @@ export default function GlobalKaynakYonetimi() {
         }
     };
 
+    const handleOCREkle = async () => {
+        if (!seciliKaynak) return;
+
+        try {
+            // İzin iste
+            const { status } = await ImagePicker.requestCameraPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert('İzin Gerekli', 'Kamera kullanımı için izin vermelisiniz.');
+                return;
+            }
+
+            Alert.alert(
+                'Görüntü Kaynağı Seçin',
+                'İçindekiler sayfasının fotoğrafını çekin veya galeriden seçin.\n\n⚠️ ÖNEMLİ: Eğer sayfa iki veya daha fazla sütundan oluşuyorsa, yazıların birbirine karışmaması için fotoğrafı çekerken sadece tek bir sütuna odaklanın (yakınlaştırın) veya galeriden seçmeden önce fotoğrafı tek sütun kalacak şekilde kırpın.',
+                [
+                    {
+                        text: 'Kamera',
+                        onPress: async () => await processOCRImage(true)
+                    },
+                    {
+                        text: 'Galeri',
+                        onPress: async () => await processOCRImage(false)
+                    },
+                    { text: 'İptal', style: 'cancel' }
+                ]
+            );
+        } catch (error) {
+            console.error('OCR Başlatma Hatası:', error);
+            Alert.alert('Hata', 'Kamera veya galeri başlatılamadı.');
+        }
+    };
+
+    const processOCRImage = async (useCamera: boolean) => {
+        try {
+            let result;
+            const options: ImagePicker.ImagePickerOptions = {
+                mediaTypes: ['images'],
+                allowsEditing: true, // Kullanıcıya resmi kırpma imkanı sunar
+                base64: true,
+                quality: 0.8, // Çok yüksek kaliteye gerek yok, API'yi yormasın
+            };
+
+            if (useCamera) {
+                result = await ImagePicker.launchCameraAsync(options);
+            } else {
+                result = await ImagePicker.launchImageLibraryAsync(options);
+            }
+
+            if (result.canceled || !result.assets || result.assets.length === 0) return;
+
+            setIcerikYukleniyor(true);
+            const base64Image = result.assets[0].base64;
+
+            if (!base64Image) {
+                Alert.alert('Hata', 'Görüntü işlenemedi.');
+                setIcerikYukleniyor(false);
+                return;
+            }
+
+            // OCR.space API çağrısı
+            const formData = new FormData();
+            formData.append('base64Image', `data:image/jpeg;base64,${base64Image}`);
+            formData.append('language', 'tur');
+            formData.append('isTable', 'true'); // Resmi kırptığımız için artık satır satır okuması en doğrusu
+            formData.append('scale', 'true');
+
+            const ocrResponse = await fetch('https://api.ocr.space/parse/image', {
+                method: 'POST',
+                headers: {
+                    apikey: 'K81898715088957', // Ücretsiz Public API Anahtarı
+                },
+                body: formData,
+            });
+
+            const ocrData = await ocrResponse.json();
+
+            if (ocrData.IsErroredOnProcessing) {
+                Alert.alert('OCR Hatası', 'Görüntüden metin çıkarılamadı. Daha net bir fotoğraf çekmeyi deneyin.');
+                setIcerikYukleniyor(false);
+                return;
+            }
+
+            const parsedText = ocrData.ParsedResults?.[0]?.ParsedText || '';
+            if (!parsedText.trim()) {
+                Alert.alert('Sonuç Bulunamadı', 'Görüntüde okunabilir bir metin tespit edilemedi.');
+                setIcerikYukleniyor(false);
+                return;
+            }
+
+            // Metni satırlara böl ve parse et
+            const lines = parsedText.split(/\r?\n/).map((l: string) => l.trim()).filter((l: string) => l.length > 0);
+            
+            let basariliS = 0;
+            const eklenenler: string[] = [];
+            let currentPrefix = '';
+
+            for (const line of lines) {
+                let currentLine = line;
+
+                // 1. Başlık Yakalama (Örn: "1. BÖLÜM: KUVVET VE DENGE" veya "BÖLÜM 01")
+                // Eğer satırda sayfa numarası (en sonda bir rakam grubu) YOKSA ve satır "Bölüm", "Ünite" vs. içeriyorsa:
+                // Bu satırı "Ana Başlık" olarak hafızaya al.
+                const hasPageNumber = /^(.*?)(?:\s+|\.+)(\d+)$/.test(currentLine);
+                
+                if (!hasPageNumber && /(bölüm|bolum|ünite|unite|test|chapter|kısım|kisim)/i.test(currentLine)) {
+                    currentPrefix = currentLine.replace(/[:\-]+$/, '').trim();
+                    continue; // Bu satırı tek başına listeye ekleme
+                }
+
+                let icerik = currentLine;
+                let sayfaNo = '';
+
+                // Sonda sayfa numarası arama Regex'i: "... 123", " ...123", "123" gibi
+                const match = currentLine.match(/^(.*?)(?:\s+|\.+)(\d+)$/);
+
+                if (match) {
+                    icerik = match[1].replace(/\.+$/g, '').trim(); // Sondaki noktaları sil
+                    sayfaNo = match[2];
+                }
+
+                // Eğer üst satırlardan hafızada tutulan bir BÖLÜM başlığı varsa içeriğin başına ekle
+                if (currentPrefix) {
+                    icerik = currentPrefix + " - " + icerik;
+                }
+
+                // Çok kısa, anlamsız veya OCR hatası olan "sadece BÖLÜM" yazan satırları geç
+                if (icerik.length < 2 || /^[\d\.\-\_]+$/.test(icerik) || /^(bölüm|bolum|ünite|unite|test|chapter)$/i.test(icerik.trim())) {
+                    continue;
+                }
+
+                const r = await kaynakIcerikEkle(seciliKaynak!.id, icerik, sayfaNo);
+                if (r.success) {
+                    basariliS++;
+                    eklenenler.push(`${icerik} (Syf: ${sayfaNo || '-'})`);
+                }
+            }
+
+            Alert.alert('OCR Tamamlandı', `${basariliS} içerik başarıyla eklendi!`);
+            await iceriklerYukle(seciliKaynak!.id);
+
+        } catch (error) {
+            console.error('OCR İşleme Hatası:', error);
+            Alert.alert('Hata', 'Görüntü işlenirken bir sorun oluştu. İnternet bağlantınızı kontrol edin.');
+        } finally {
+            setIcerikYukleniyor(false);
+        }
+    };
+
     const handleIcerikDuzenlemeBaslat = (item: IcerikItem) => {
         setDuzIcerikId(item.id);
         setDuzIcerikMetin(item.icerik);
+        setDuzSayfaNo(item.sayfa_no || '');
     };
 
     const handleIcerikGuncelle = async () => {
         if (!duzIcerikMetin.trim() || duzIcerikId === null) return;
-        const result = await kaynakIcerikGuncelle(duzIcerikId, duzIcerikMetin.trim());
+        const result = await kaynakIcerikGuncelle(duzIcerikId, duzIcerikMetin.trim(), duzSayfaNo.trim());
         if (result.success) {
             setDuzIcerikId(null);
             setDuzIcerikMetin('');
+            setDuzSayfaNo('');
             if (seciliKaynak) await iceriklerYukle(seciliKaynak.id);
         } else {
             Alert.alert('Hata', 'Güncelleme başarısız');
@@ -474,15 +630,22 @@ export default function GlobalKaynakYonetimi() {
                 {duzenlemede ? (
                     <View style={styles.icerikDuzRow}>
                         <TextInput
-                            style={styles.icerikDuzInput}
+                            style={[styles.icerikDuzInput, { flex: 2 }]}
                             value={duzIcerikMetin}
                             onChangeText={setDuzIcerikMetin}
                             autoFocus
                         />
+                        <TextInput
+                            style={[styles.icerikDuzInput, { flex: 1, marginLeft: 5 }]}
+                            value={duzSayfaNo}
+                            onChangeText={setDuzSayfaNo}
+                            placeholder="Syf"
+                            keyboardType="numeric"
+                        />
                         <TouchableOpacity onPress={handleIcerikGuncelle} style={styles.icerikKaydetBtn}>
                             <MaterialIcons name="check" size={18} color="white" />
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => { setDuzIcerikId(null); setDuzIcerikMetin(''); }} style={styles.icerikIptalBtn}>
+                        <TouchableOpacity onPress={() => { setDuzIcerikId(null); setDuzIcerikMetin(''); setDuzSayfaNo(''); }} style={styles.icerikIptalBtn}>
                             <MaterialIcons name="close" size={18} color="#666" />
                         </TouchableOpacity>
                     </View>
@@ -490,6 +653,7 @@ export default function GlobalKaynakYonetimi() {
                     <View style={styles.icerikGosterRow}>
                         <MaterialIcons name="fiber-manual-record" size={8} color="#95a5a6" style={{ marginRight: 8, marginTop: 2 }} />
                         <Text style={styles.icerikText}>{item.icerik}</Text>
+                        {item.sayfa_no ? <Text style={{ color: '#7f8c8d', fontSize: 12, marginRight: 8 }}>Syf: {item.sayfa_no}</Text> : null}
                         <View style={styles.icerikBtnGrup}>
                             {/* Yukarı Taşı */}
                             <TouchableOpacity
@@ -962,17 +1126,27 @@ export default function GlobalKaynakYonetimi() {
                                     {/* Yeni İçerik Ekleme */}
                                     <View style={styles.icerikEkleRow}>
                                         <TextInput
-                                            style={styles.icerikInput}
+                                            style={[styles.icerikInput, { flex: 2 }]}
                                             value={yeniIcerik}
                                             onChangeText={setYeniIcerik}
                                             placeholder="Konu / içerik giriniz"
                                             multiline={true}
+                                        />
+                                        <TextInput
+                                            style={[styles.icerikInput, { flex: 1, marginLeft: 8 }]}
+                                            value={yeniSayfaNo}
+                                            onChangeText={setYeniSayfaNo}
+                                            placeholder="Sayfa No"
+                                            keyboardType="numeric"
                                         />
                                         <TouchableOpacity style={styles.icerikEkleBtn} onPress={handleIcerikEkle}>
                                             <MaterialIcons name="add" size={22} color="white" />
                                         </TouchableOpacity>
                                         <TouchableOpacity style={[styles.icerikEkleBtn, { backgroundColor: '#27ae60', marginLeft: 6 }]} onPress={handleExcelIcerikEkle}>
                                             <MaterialIcons name="file-upload" size={22} color="white" />
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={[styles.icerikEkleBtn, { backgroundColor: '#f39c12', marginLeft: 6 }]} onPress={handleOCREkle}>
+                                            <MaterialIcons name="camera-alt" size={22} color="white" />
                                         </TouchableOpacity>
                                     </View>
 

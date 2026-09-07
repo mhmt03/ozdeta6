@@ -163,6 +163,8 @@ CREATE TABLE IF NOT EXISTS kaynak_icerikleri (
     id                   INTEGER PRIMARY KEY AUTOINCREMENT, -- Benzersiz İçerik ID
     kaynakId             INTEGER NOT NULL,                  -- İlişkili Ortak Kaynak ID
     icerik               TEXT NOT NULL,                     -- Konu veya içerik başlığı (Örn: Üslü Sayılar)
+    sira                 INTEGER DEFAULT 0,                 -- Sıralama
+    sayfa_no             TEXT DEFAULT '',                   -- Sayfa Numarası
     FOREIGN KEY (kaynakId) REFERENCES tum_kaynaklar(id) ON DELETE CASCADE
 );
 
@@ -260,6 +262,10 @@ const migrations: Array<(db: SQLite.SQLiteDatabase) => Promise<void>> = [
     async (database) => {
         await kolonEkle(database, 'kaynak_icerikleri', 'sira', "INTEGER DEFAULT 0");
     },
+    // 6. ADIM (v6 -> v7): `kaynak_icerikleri` tablosuna `sayfa_no` sütunu eklenmesi.
+    async (database) => {
+        await kolonEkle(database, 'kaynak_icerikleri', 'sayfa_no', "TEXT DEFAULT ''");
+    },
 ];
 
 // ─── YARDIMCI METOTLAR ───────────────────────────────────────────────────────
@@ -311,10 +317,13 @@ async function ensureSchema(database: SQLite.SQLiteDatabase): Promise<void> {
             kaynakId INTEGER NOT NULL,
             icerik   TEXT NOT NULL,
             sira     INTEGER DEFAULT 0,
+            sayfa_no TEXT DEFAULT '',
             FOREIGN KEY (kaynakId) REFERENCES tum_kaynaklar(id) ON DELETE CASCADE
         );
     `);
+    // 7. Kaynak içeriklerinde sıra ve sayfa_no garantisi
     await kolonEkle(database, 'kaynak_icerikleri', 'sira', "INTEGER DEFAULT 0");
+    await kolonEkle(database, 'kaynak_icerikleri', 'sayfa_no', "TEXT DEFAULT ''");
 
     // 4. Kaynak türleri tablosunun varlığının kesinleştirilmesi ve temel değerlerin seed edilmesi
     await database.execAsync(`
