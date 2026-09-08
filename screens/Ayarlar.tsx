@@ -366,7 +366,7 @@ export default function Ayarlar() {
 
             Alert.alert(
                 'Veritabanı Yedekle',
-                'SQLite veritabanı olarak yedeklenecek. Devam edilsin mi?',
+                'veritabanı yedeklenecek. Devam edilsin mi?',
                 [
                     { text: 'İptal', style: 'cancel' },
                     {

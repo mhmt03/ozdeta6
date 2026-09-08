@@ -564,42 +564,84 @@ export default function OdevEkle() {
         
         const kaynakValue = duzenleKayitsizKaynak ? duzenleSerbetKaynak.trim() : duzenleSeciliKaynak;
         
-        let odevKonuValue = '';
         if (duzenleKonuModu === 'liste' && duzenleSeciliIcerikler.length > 0) {
-            odevKonuValue = duzenleSeciliIcerikler.join(', ');
-        } else {
-            odevKonuValue = duzenleOdevKonusu.trim();
-        }
-        
-        if (!odevKonuValue) {
-            Alert.alert('Hata', 'Lütfen ödev konusu giriniz veya listeden seçiniz.');
-            return;
-        }
-        
-        try {
-            setLoading(true);
-            const guncelOdev: OdevType = {
-                ...duzenlenenOdev,
-                kaynak: kaynakValue,
-                odev: odevKonuValue,
-                verilmetarihi: duzenleVerilmeTarihi.toISOString().split('T')[0],
-                teslimttarihi: duzenleTeslimTarihi.toISOString().split('T')[0],
-            };
-            
-            const result = await odevGuncelle(duzenlenenOdev.odevId!, guncelOdev);
-            if (result.success) {
-                Platform.OS === 'android' ? ToastAndroid.show('Ödev güncellendi.', ToastAndroid.SHORT) : Alert.alert('Başarılı', 'Ödev güncellendi.');
-                setDuzenleModalGorunur(false);
-                setDuzenlenenOdev(null);
-                await odevleriYenile();
-            } else {
-                Platform.OS === 'android' ? ToastAndroid.show('Ödev güncellenemedi.', ToastAndroid.SHORT) : Alert.alert('Hata', 'Ödev güncellenemedi.');
+            try {
+                setLoading(true);
+                // İlk seçilen konuyu mevcut ödevin üzerine kaydet
+                const guncelOdev: OdevType = {
+                    ...duzenlenenOdev,
+                    kaynak: kaynakValue,
+                    odev: duzenleSeciliIcerikler[0],
+                    verilmetarihi: duzenleVerilmeTarihi.toISOString().split('T')[0],
+                    teslimttarihi: duzenleTeslimTarihi.toISOString().split('T')[0],
+                };
+                
+                const result = await odevGuncelle(duzenlenenOdev.odevId!, guncelOdev);
+                let allSuccess = result.success;
+
+                // Geri kalan konular için YENİ ödev kaydı oluştur
+                for (let i = 1; i < duzenleSeciliIcerikler.length; i++) {
+                    const yeniOdev = {
+                        ogrenciId: duzenlenenOdev.ogrenciId,
+                        kaynak: kaynakValue,
+                        odev: duzenleSeciliIcerikler[i],
+                        verilmetarihi: duzenleVerilmeTarihi.toISOString().split('T')[0],
+                        teslimttarihi: duzenleTeslimTarihi.toISOString().split('T')[0],
+                        yapilmadurumu: duzenlenenOdev.yapilmadurumu || 'Bekliyor',
+                        aciklama: duzenlenenOdev.aciklama || ''
+                    };
+                    const yResult = await odevKaydet(yeniOdev);
+                    if (!yResult.success) allSuccess = false;
+                }
+
+                if (allSuccess) {
+                    Platform.OS === 'android' ? ToastAndroid.show('Ödevler güncellendi.', ToastAndroid.SHORT) : Alert.alert('Başarılı', 'Ödevler güncellendi.');
+                    setDuzenleModalGorunur(false);
+                    setDuzenlenenOdev(null);
+                    await odevleriYenile();
+                } else {
+                    Platform.OS === 'android' ? ToastAndroid.show('Bazı ödevler güncellenemedi.', ToastAndroid.SHORT) : Alert.alert('Hata', 'Bazı ödevler güncellenemedi.');
+                }
+            } catch (error) {
+                console.error('Ödev düzenleme kaydetme hatası:', error);
+                Platform.OS === 'android' ? ToastAndroid.show('Bir hata oluştu.', ToastAndroid.SHORT) : Alert.alert('Hata', 'Bir hata oluştu.');
+            } finally {
+                setLoading(false);
             }
-        } catch (error) {
-            console.error('Ödev düzenleme kaydetme hatası:', error);
-            Platform.OS === 'android' ? ToastAndroid.show('Bir hata oluştu.', ToastAndroid.SHORT) : Alert.alert('Hata', 'Bir hata oluştu.');
-        } finally {
-            setLoading(false);
+        } else {
+            // Elle girilen konu durumu
+            const odevKonuValue = duzenleOdevKonusu.trim();
+            
+            if (!odevKonuValue) {
+                Alert.alert('Hata', 'Lütfen ödev konusu giriniz veya listeden seçiniz.');
+                return;
+            }
+            
+            try {
+                setLoading(true);
+                const guncelOdev: OdevType = {
+                    ...duzenlenenOdev,
+                    kaynak: kaynakValue,
+                    odev: odevKonuValue,
+                    verilmetarihi: duzenleVerilmeTarihi.toISOString().split('T')[0],
+                    teslimttarihi: duzenleTeslimTarihi.toISOString().split('T')[0],
+                };
+                
+                const result = await odevGuncelle(duzenlenenOdev.odevId!, guncelOdev);
+                if (result.success) {
+                    Platform.OS === 'android' ? ToastAndroid.show('Ödev güncellendi.', ToastAndroid.SHORT) : Alert.alert('Başarılı', 'Ödev güncellendi.');
+                    setDuzenleModalGorunur(false);
+                    setDuzenlenenOdev(null);
+                    await odevleriYenile();
+                } else {
+                    Platform.OS === 'android' ? ToastAndroid.show('Ödev güncellenemedi.', ToastAndroid.SHORT) : Alert.alert('Hata', 'Ödev güncellenemedi.');
+                }
+            } catch (error) {
+                console.error('Ödev düzenleme kaydetme hatası:', error);
+                Platform.OS === 'android' ? ToastAndroid.show('Bir hata oluştu.', ToastAndroid.SHORT) : Alert.alert('Hata', 'Bir hata oluştu.');
+            } finally {
+                setLoading(false);
+            }
         }
     };
 
