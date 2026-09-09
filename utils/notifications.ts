@@ -143,14 +143,6 @@ export async function rescheduleAllRandevuNotifications() {
         // Önceki tüm planlanmış bildirimleri temizle
         await Notifications.cancelAllScheduledNotificationsAsync();
         
-        // Günlük özeti her halükarda yeniden planlamayı dene (kendi içinde aktiflik kontrolü var)
-        await scheduleDailySummaryNotification();
-        
-        // Eğer bildirimler tamamen kapalıysa yeni planlama yapma
-        if (enabled !== '1') {
-            return;
-        }
-
         const db = await ensureDatabaseReady();
         const todayStr = new Date().toISOString().split('T')[0];
         
@@ -161,6 +153,14 @@ export async function rescheduleAllRandevuNotifications() {
              WHERE tarih >= ? AND iptal != 1 AND tamamlandiMi != 1 AND tamamlanma != '1' AND sutun1 != 'tamamlandı'`,
             [todayStr]
         );
+
+        // Günlük detaylı özetleri dinamik olarak ileri dönük planla
+        await scheduleDailySummaryNotification(rows);
+        
+        // Eğer bireysel ders bildirimleri kapalıysa tek tek alarm kurma
+        if (enabled !== '1') {
+            return;
+        }
 
         // Her aktif randevu için tek tek alarm kur
         for (const row of rows) {
@@ -173,38 +173,64 @@ export async function rescheduleAllRandevuNotifications() {
 }
 
 /**
- * Her gün sabah saat 08:00'de günlük ders özetini gösterecek bildirimi kurar.
+ * Gelecekteki her gün için, eğer o gün randevu varsa saat 08:00'e dinamik detaylı özet planlar.
+ * Böylece arka planda JS kodunun çalışmasına gerek kalmadan işletim sistemi zamanı gelince özeti gösterir.
  */
-export async function scheduleDailySummaryNotification() {
+export async function scheduleDailySummaryNotification(rows: any[]) {
     try {
         const enabled = await getSetting('daily_summary', '0');
-        
-        // Önceki günlük özet bildirimini temizle (temizlenmiş olsa bile güvenli)
-        await Notifications.cancelScheduledNotificationAsync('daily-summary');
-        
         if (enabled !== '1') return;
 
         const vibrate = (await getSetting('notification_vibrate', '1')) === '1';
         const sound = (await getSetting('notification_sound', '1')) === '1';
 
-        await Notifications.scheduleNotificationAsync({
-            identifier: 'daily-summary',
-            content: {
-                title: 'Günlük Ajanda Özeti',
-                body: 'Bugünkü ders programınızı ve randevularınızı kontrol etmeyi unutmayın.',
-                sound: sound,
-                vibrate: vibrate ? [0, 250, 250, 250] : undefined,
-                data: { type: 'daily-summary' },
-                // @ts-ignore
-                android: { channelId: 'default' }
-            },
-            trigger: {
-                type: Notifications.SchedulableTriggerInputTypes.DAILY,
-                hour: 8,
-                minute: 0,
-            },
-        });
-        console.log('Günlük özet bildirimi planlandı.');
+        // Randevuları tarihlere göre grupla
+        const randevularByDate: Record<string, any[]> = {};
+        for (const row of rows) {
+            if (!randevularByDate[row.tarih]) {
+                randevularByDate[row.tarih] = [];
+            }
+            randevularByDate[row.tarih].push(row);
+        }
+
+        let planlananGunSayisi = 0;
+
+        for (const tarih in randevularByDate) {
+            const randevular = randevularByDate[tarih];
+            const [year, month, day] = tarih.split('-').map(Number);
+            const summaryDate = new Date(year, month - 1, day, 8, 0, 0); // O gün sabah 8:00
+
+            // Geçmişse atla
+            if (summaryDate.getTime() <= Date.now()) continue;
+
+            const sorted = randevular.sort((a, b) => a.saat.localeCompare(b.saat));
+            const namesAndTimes = sorted.map(r => `${r.saat} ${r.ogrAdsoyad}`).join(', ');
+            let bodyText = `Bugün ${randevular.length} dersiniz var: ${namesAndTimes}`;
+            
+            // Eğer metin çok uzunsa kırp (Bildirim metni çok uzamasın)
+            if (bodyText.length > 150) {
+                bodyText = bodyText.substring(0, 147) + '...';
+            }
+
+            await Notifications.scheduleNotificationAsync({
+                identifier: `daily-summary-${tarih}`,
+                content: {
+                    title: 'Günlük Ajanda Özeti',
+                    body: bodyText,
+                    sound: sound,
+                    vibrate: vibrate ? [0, 250, 250, 250] : undefined,
+                    data: { type: 'daily-summary', tarih },
+                    // @ts-ignore
+                    android: { channelId: 'default' }
+                },
+                trigger: {
+                    type: Notifications.SchedulableTriggerInputTypes.DATE,
+                    date: summaryDate,
+                },
+            });
+            planlananGunSayisi++;
+        }
+        console.log(`${planlananGunSayisi} gün için detaylı özet bildirimi planlandı.`);
     } catch (error) {
         console.error('Günlük özet planlanamadı:', error);
     }

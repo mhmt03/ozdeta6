@@ -188,7 +188,6 @@ export default function KaynakYonetimi() {
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
             >
-                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                     <View style={styles.content}>
                         <View style={styles.ekleFormContainer}>
                             <Text style={styles.sectionTitle}>Global Listeden Kaynak Seç</Text>
@@ -249,7 +248,6 @@ export default function KaynakYonetimi() {
                             )}
                         </View>
                     </View>
-                </TouchableWithoutFeedback>
             </KeyboardAvoidingView>
         </View>
     );
@@ -298,7 +296,7 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
     sectionTitle: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: 'bold',
         color: '#3f0cf5ff',
         marginBottom: 12,
@@ -335,7 +333,7 @@ const styles = StyleSheet.create({
         borderColor: '#ddd',
         borderRadius: 6,
         marginRight: 10,
-        backgroundColor: '#fff',
+        backgroundColor: '#fdececff',
         height: 50,
         justifyContent: 'center',
     },
@@ -344,7 +342,7 @@ const styles = StyleSheet.create({
         color:'red'
     },
     manageGlobalBtn: {
-        marginTop: 12,
+        marginTop: 8,
         alignItems: 'center',
         padding: 8,
     },
@@ -373,12 +371,12 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 16,
+        padding: 6,
         backgroundColor: '#f8f9fa',
         borderRadius: 8,
         borderWidth: 1,
         borderColor: '#e1e8ed',
-        marginBottom: 8,
+        marginBottom: 4,
     },
     kaynakInfo: {
         flexDirection: 'row',

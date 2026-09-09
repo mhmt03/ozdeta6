@@ -219,9 +219,9 @@ export default function OdevEkle() {
                 if (seciliKonu.odevVarMi && seciliKonu.odevId) {
                     const res = await odevSil(seciliKonu.odevId);
                     if (res.success) {
-                        Alert.alert('Başarılı', 'Ödev silindi (Atanmadı durumuna alındı).');
+                        Platform.OS === 'android' ? ToastAndroid.show('Ödev silindi', ToastAndroid.SHORT) : Alert.alert('Başarılı', 'Ödev silindi (Atanmadı durumuna alındı).');
                     } else {
-                        Alert.alert('Hata', 'Ödev durumu güncellenemedi.');
+                        Platform.OS === 'android' ? ToastAndroid.show('Ödev durumu güncellenemedi.', ToastAndroid.SHORT) : Alert.alert('Hata', 'Ödev durumu güncellenemedi.');
                     }
                 }
             } else {
@@ -235,9 +235,9 @@ export default function OdevEkle() {
                         };
                         const res = await odevGuncelle(seciliKonu.odevId, guncelOdev);
                         if (res.success) {
-                            Alert.alert('Başarılı', `Ödev durumu "${yeniDurum}" olarak güncellendi.`);
+                            Platform.OS === 'android' ? ToastAndroid.show(`Durum "${yeniDurum}" yapıldı`, ToastAndroid.SHORT) : Alert.alert('Başarılı', `Ödev durumu "${yeniDurum}" olarak güncellendi.`);
                         } else {
-                            Alert.alert('Hata', 'Ödev durumu güncellenemedi.');
+                            Platform.OS === 'android' ? ToastAndroid.show('Ödev durumu güncellenemedi.', ToastAndroid.SHORT) : Alert.alert('Hata', 'Ödev durumu güncellenemedi.');
                         }
                     }
                 } else {
@@ -252,9 +252,9 @@ export default function OdevEkle() {
                     };
                     const res = await odevKaydet(yeniOdev);
                     if (res.success) {
-                        Alert.alert('Başarılı', `Ödev kaydedildi ve "${yeniDurum}" olarak işaretlendi.`);
+                        Platform.OS === 'android' ? ToastAndroid.show(`Durum "${yeniDurum}" yapıldı`, ToastAndroid.SHORT) : Alert.alert('Başarılı', `Ödev kaydedildi ve "${yeniDurum}" olarak işaretlendi.`);
                     } else {
-                        Alert.alert('Hata', 'Ödev kaydedilemedi.');
+                        Platform.OS === 'android' ? ToastAndroid.show('Ödev kaydedilemedi.', ToastAndroid.SHORT) : Alert.alert('Hata', 'Ödev kaydedilemedi.');
                     }
                 }
             }
@@ -270,7 +270,7 @@ export default function OdevEkle() {
             }
         } catch (error) {
             console.error('Durum atama hatası:', error);
-            Alert.alert('Hata', 'İşlem sırasında bir hata oluştu.');
+            Platform.OS === 'android' ? ToastAndroid.show('İşlem sırasında bir hata oluştu.', ToastAndroid.SHORT) : Alert.alert('Hata', 'İşlem sırasında bir hata oluştu.');
         } finally {
             setLoading(false);
             setSeciliKonu(null);
@@ -832,7 +832,8 @@ export default function OdevEkle() {
         const filteredOdevler = odevler.filter(o => {
             if (!o.verilmetarihi) return false;
             const t = new Date(o.verilmetarihi).getTime();
-            return t >= bilgiBaslangic.setHours(0, 0, 0, 0) && t <= bilgiBitis.setHours(23, 59, 59, 999);
+            const statusOk = o.yapilmadurumu !== 'Yapıldı';
+            return t >= bilgiBaslangic.setHours(0, 0, 0, 0) && t <= bilgiBitis.setHours(23, 59, 59, 999) && statusOk;
         });
 
         if (filteredOdevler.length === 0) {
@@ -998,10 +999,11 @@ export default function OdevEkle() {
         } catch { Alert.alert('Hata','PDF oluşturulamadı.'); } finally { setIsGeneratingPDF(false); }
     };
 
-    if (loading) {
+    if (loading && !ogrenci) {
         return (
             <View style={styles.loadingContainer}>
-                <Text>Yükleniyor...</Text>
+                <ActivityIndicator size="large" color="#3498db" />
+                <Text style={{marginTop: 10, color: '#555'}}>Yükleniyor...</Text>
             </View>
         );
     }
@@ -1321,23 +1323,23 @@ export default function OdevEkle() {
                         <Text style={{ marginTop: 10, marginBottom: 5, fontWeight: 'bold' }}>Tarih Aralığı Seçin</Text>
                         <View style={styles.dateRangeContainer}>
                             <TouchableOpacity style={styles.reportDateButton} onPress={() => setShowDurumBaslangic(true)}>
-                                <MaterialIcons name="date-range" size={16} color="#666" />
+                                {/* <MaterialIcons name="date-range" size={10} color="#666" /> */}
                                 <Text style={styles.reportDateText}>{formatTarih(durumBaslangic.toISOString())}</Text>
                             </TouchableOpacity>
                             <Text style={{ color: '#aaa', marginHorizontal: 4, alignSelf: 'center' }}>-</Text>
                             <TouchableOpacity style={styles.reportDateButton} onPress={() => setShowDurumBitis(true)}>
-                                <MaterialIcons name="date-range" size={16} color="#666" />
+                                {/* <MaterialIcons name="date-range" size={16} color="#666" /> */}
                                 <Text style={styles.reportDateText}>{formatTarih(durumBitis.toISOString())}</Text>
                             </TouchableOpacity>
                         </View>
 
-                        <Text style={{ marginTop: 15, marginBottom: 5, fontWeight: 'bold' }}>Alıcı Seçin</Text>
+                        <Text style={{ marginTop: 5, marginBottom: 5, fontWeight: 'bold' }}>Alıcı Seçin</Text>
                         {ogrenci && (
-                            <View style={{ marginBottom: 10 }}>
-                                <Text style={{ fontSize: 12, color: ogrenci.veli_odev_istiyor_mu === 1 ? '#27ae60' : '#e74c3c', marginBottom: 2, fontStyle: 'italic' }}>
+                            <View style={{ marginBottom: 5 }}>
+                                <Text style={{ fontSize: 10, color: ogrenci.veli_odev_istiyor_mu === 1 ? '#27ae60' : '#e74c3c', marginBottom: 2, fontStyle: 'italic' }}>
                                     Not: 1. Veli ({ogrenci.veliAd || 'Veli'}) ödev bilgisi {ogrenci.veli_odev_istiyor_mu === 1 ? 'İSTİYOR' : 'İSTEMİYOR'}.
                                 </Text>
-                                <Text style={{ fontSize: 12, color: ogrenci.veli2_odev_istiyor_mu === 1 ? '#27ae60' : '#e74c3c', marginBottom: 2, fontStyle: 'italic' }}>
+                                <Text style={{ fontSize: 10, color: ogrenci.veli2_odev_istiyor_mu === 1 ? '#27ae60' : '#e74c3c', marginBottom: 2, fontStyle: 'italic' }}>
                                     Not: 2. Veli ({ogrenci.veli2Ad || '2. Veli'}) ödev bilgisi {ogrenci.veli2_odev_istiyor_mu === 1 ? 'İSTİYOR' : 'İSTEMİYOR'}.
                                 </Text>
                             </View>
@@ -1348,26 +1350,26 @@ export default function OdevEkle() {
                                     value={durumOgrenciSecili}
                                     onValueChange={setDurumOgrenciSecili}
                                 />
-                                <Text style={{ marginLeft: 8 }}>Öğrenci</Text>
+                                <Text style={{ marginLeft: 1, fontSize: 10 }}>Öğrenci</Text>
                             </View>
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                 <Switch
                                     value={durumVeliSecili}
                                     onValueChange={setDurumVeliSecili}
                                 />
-                                <Text style={{ marginLeft: 8 }}>1. Veli</Text>
+                                <Text style={{ marginLeft: 1, fontSize: 10 }}>1. Veli</Text>
                             </View>
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                 <Switch
                                     value={durumVeli2Secili}
                                     onValueChange={setDurumVeli2Secili}
                                 />
-                                <Text style={{ marginLeft: 8 }}>2. Veli</Text>
+                                <Text style={{ marginLeft: 1 , fontSize: 10}}>2. Veli</Text>
                             </View>
                         </View>
 
-                        <Text style={{ marginTop: 5, marginBottom: 5, fontWeight: 'bold' }}>Gönderilecek Durum (Önizleme):</Text>
-                        <ScrollView nestedScrollEnabled={true} style={{ maxHeight: 150, backgroundColor: '#f9f9f9', padding: 10, borderRadius: 8, marginBottom: 15, borderWidth: 1, borderColor: '#eee' }}>
+                        <Text style={{ marginTop: 1, marginBottom: 1, fontWeight: 'bold' }}>Gönderilecek Durum (Önizleme):</Text>
+                        <ScrollView nestedScrollEnabled={true} style={{ maxHeight: 150, backgroundColor: '#f9f9f9', padding: 10, borderRadius: 8, marginBottom: 5, borderWidth: 1, borderColor: '#eee' }}>
                             {(() => {
                                 const onizlemeDurum = odevler.filter(o => {
                                     const oDate = new Date(o.verilmetarihi);
@@ -1697,9 +1699,10 @@ export default function OdevEkle() {
                                     <View style={styles.raporAksiyonlar}>
                                         <TouchableOpacity style={[styles.raporAksiyonButon, { backgroundColor: '#3498db' }]} onPress={() => odevRaporuOlustur('indir')} disabled={isGeneratingPDF}>
                                             <MaterialIcons name="file-download" size={24} color="white" />
-                                            <Text style={styles.raporAksiyonText}>İndir / Paylaş</Text>
+                                            <Text style={styles.raporAksiyonText}>İndir / Paylaş   (PDF)</Text>
                                         </TouchableOpacity>
-                                        <View style={styles.raporPaylasımGrup}>
+                                       
+                                        {/* <View style={styles.raporPaylasımGrup}>
                                             <TouchableOpacity style={[styles.paylasimButon, { backgroundColor: '#27ae60' }]} onPress={() => odevRaporuOlustur('ogrenci')} disabled={isGeneratingPDF}>
                                                 <MaterialIcons name="person" size={20} color="white" />
                                                 <Text style={styles.paylasimText}>Öğrenciye</Text>
@@ -1712,7 +1715,7 @@ export default function OdevEkle() {
                                                 <MaterialIcons name="people" size={20} color="white" />
                                                 <Text style={styles.paylasimText}>2. Veliye</Text>
                                             </TouchableOpacity>
-                                        </View>
+                                        </View> */}
                                     </View>
                                     {isGeneratingPDF && (
                                         <View style={{ alignItems: 'center', marginTop: 12 }}>
@@ -1722,7 +1725,9 @@ export default function OdevEkle() {
                                     )}
 
                                     {/* Ödev Listesi Gösterimi */}
-                                    <View style={{ marginTop: 24, borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 16 }}>
+                                    <View style={{
+                                        paddingBottom:12,  marginBottom:20, marginTop: 24, borderTopWidth: 1, borderTopColor: '#e2faccff', paddingTop: 6
+                                    }}>
                                         <Text style={[styles.modalSubtitle, { marginBottom: 12 }]}>Tarih Aralığındaki Ödevler</Text>
                                         {(() => {
                                             const filtrelenmisOdevler = odevler.filter(o => {
@@ -2004,27 +2009,30 @@ export default function OdevEkle() {
                                 </Text>
                             </View>
                         )}
-                        <View style={{ flexDirection: 'row', gap: 15, marginBottom: 20, flexWrap: 'wrap' }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-around', width: '100%', marginBottom: 10 }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                 <Switch
+                                    style={{ transform: [{ scale: 0.75 }] }}
                                     value={bilgiOgrenciSecili}
                                     onValueChange={setBilgiOgrenciSecili}
                                 />
-                                <Text style={{ marginLeft: 8 }}>Öğrenci</Text>
+                                <Text style={{ marginLeft: 2, fontSize: 13 }}>Öğrenci</Text>
                             </View>
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                 <Switch
+                                    style={{ transform: [{ scale: 0.75 }] }}
                                     value={bilgiVeliSecili}
                                     onValueChange={setBilgiVeliSecili}
                                 />
-                                <Text style={{ marginLeft: 8 }}>1. Veli</Text>
+                                <Text style={{ marginLeft: 2, fontSize: 13 }}>1. Veli</Text>
                             </View>
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                 <Switch
+                                    style={{ transform: [{ scale: 0.75 }] }}
                                     value={bilgiVeli2Secili}
                                     onValueChange={setBilgiVeli2Secili}
                                 />
-                                <Text style={{ marginLeft: 8 }}>2. Veli</Text>
+                                <Text style={{ marginLeft: 2, fontSize: 13 }}>2. Veli</Text>
                             </View>
                         </View>
 
@@ -2038,7 +2046,8 @@ export default function OdevEkle() {
                                     basDate.setHours(0, 0, 0, 0);
                                     const bitDate = new Date(bilgiBitis);
                                     bitDate.setHours(23, 59, 59, 999);
-                                    return t >= basDate.getTime() && t <= bitDate.getTime();
+                                    const statusOk = o.yapilmadurumu !== 'Yapıldı';
+                                    return t >= basDate.getTime() && t <= bitDate.getTime() && statusOk;
                                 });
                                 if (onizlemeOdevler.length === 0) return <Text style={{ color: '#888', fontStyle: 'italic', fontSize: 12 }}>Bu tarih aralığında ödev bulunamadı.</Text>;
                                 return onizlemeOdevler.map((o, idx) => (
@@ -2076,11 +2085,11 @@ export default function OdevEkle() {
                 onRequestClose={() => setDurumSecimModalGorunur(false)}
             >
                 <View style={styles.modalOverlay}>
-                    <View style={[styles.reportModalContent, { height: 'auto', padding: 20, width: '90%' }]}>
+                    <View style={[styles.reportModalContent, { height: 'auto', padding: 10, width: '90%' }]}>
                         <View style={styles.modalHeader}>
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.modalTitle}>Durum Ata</Text>
-                                <Text style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+                                <Text style={{ fontSize: 10, color: '#666', marginTop: 2 }}>
                                     {seciliKonuKaynakAd}
                                 </Text>
                             </View>
@@ -2150,7 +2159,12 @@ export default function OdevEkle() {
                     </View>
                 </View>
             </Modal>
-
+            {loading && !!ogrenci && (
+                <View style={styles.loadingOverlay}>
+                    <ActivityIndicator size="large" color="#3498db" />
+                    <Text style={styles.loadingText}>İşleniyor...</Text>
+                </View>
+            )}
         </View>
     );
 }
@@ -2400,35 +2414,35 @@ const styles = StyleSheet.create({
     },
 
     modalTitle: {
-        fontSize: 18,
+        fontSize: 12,
         fontWeight: 'bold',
         color: '#2c3e50',
     },
     modalSubtitle: {
-        fontSize: 14,
+        fontSize: 12,
         color: '#666',
-        marginBottom: 12,
+        marginBottom: 6,
     },
     dateRangeContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 25,
+        marginBottom: 10,
     },
     reportDateButton: {
         flex: 0.48,
         borderWidth: 1,
         borderColor: '#ddd',
         borderRadius: 8,
-        padding: 10,
+        padding: 8,
         alignItems: 'center',
     },
     dateLabel: {
-        fontSize: 11,
+        fontSize: 10,
         color: '#7f8c8d',
         marginBottom: 4,
     },
     dateValue: {
-        fontSize: 14,
+        fontSize: 10,
         fontWeight: 'bold',
         color: '#2c3e50',
     },
@@ -2439,14 +2453,14 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 15,
+        padding: 5,
         borderRadius: 8,
     },
     raporAksiyonText: {
         color: 'white',
         fontWeight: 'bold',
         marginLeft: 10,
-        fontSize: 16,
+        fontSize: 12,
     },
     raporPaylasımGrup: {
         flexDirection: 'row',

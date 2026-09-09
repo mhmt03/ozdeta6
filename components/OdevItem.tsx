@@ -124,8 +124,8 @@ const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle, onSil, onDuzenle 
 
 const styles = StyleSheet.create({
     odevItem: {
-        padding: 10,
-        marginBottom: 10,
+        padding: 5,
+        marginBottom: 5,
         backgroundColor: '#f8f9fa',
         borderRadius: 6,
         borderWidth: 1,
@@ -155,19 +155,21 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent:'flex-start',
         borderRadius: 16,
-        height: 48,
+        height: 34,
         overflow: 'hidden',
         padding: 0,
         margin: 0,
+        
     },
     durumPicker: {
         flex: 1,
         color: '#0c0c0cff',
         fontWeight: "normal",
-        fontSize: 8,
+        fontSize: 7,
         textDecorationColor: "red",
         padding: 0,
-        marginTop: -10,
+        marginTop: -15,
+        marginBottom:-10,
     },
     duzenleButon: {
         flexDirection: 'row',
