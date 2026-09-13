@@ -439,13 +439,14 @@ export default function DersRapor() {
     };
 
     // Ders listesi render
-    const renderDers = ({ item }: { item: DersType }) => (
+    const renderDers = ({ item, index }: { item: DersType; index: number }) => (
         <View style={styles.listItem}>
             <View style={styles.itemHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                    <MaterialIcons name="school" size={20} color="#3498db" />
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: '#555', marginRight: 6 }}>{index + 1}.</Text>
+                    <MaterialIcons name="school" size={12} color="#3498db" />
                     <Text style={styles.itemTarih}>{formatTarih(item.tarih)}</Text>
-                    <Text style={styles.itemSaat}>__Saat: {item.saat}</Text>
+                    {!odemeGoster && (<Text style={styles.itemSaat}>,  Saat: {item.saat}</Text>)}
                 </View>
                 <View style={styles.itemActions}>
                     {odemeGoster && (<Text style={[styles.itemUcret, { marginRight: 10 }]}>{item.ucret} TL</Text>)}
@@ -933,7 +934,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f8f9fa',
-        paddingTop: 16,
+        paddingTop: 1,
     },
     loadingContainer: {
         flex: 1,
@@ -943,14 +944,14 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 16,
+        padding: 6,
         backgroundColor: 'white',
         borderBottomWidth: 1,
         borderBottomColor: '#e1e8ed',
         elevation: 2,
     },
     headerTitle: {
-        fontSize: 18,
+        fontSize: 14,
         fontWeight: 'bold',
         marginLeft: 16,
         color: '#333',
@@ -958,7 +959,7 @@ const styles = StyleSheet.create({
     },
     pdfButtonsContainer: {
         flexDirection: 'row',
-        padding: 10,
+        padding: 3,
         backgroundColor: 'white',
         justifyContent: 'space-around',
         borderBottomWidth: 1,
@@ -967,36 +968,38 @@ const styles = StyleSheet.create({
     pdfButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 8,
-        paddingHorizontal: 15,
-        borderRadius: 20,
+        paddingVertical: 2,
+        paddingHorizontal: 1,
+        borderRadius: 10,
         elevation: 2,
+        height:35
     },
     pdfButtonText: {
         color: 'white',
         fontWeight: 'bold',
-        marginLeft: 5,
-        fontSize: 13,
+        marginLeft: 1,
+        fontSize: 12,
     },
     switchContainer: {
         flexDirection: 'row',
         alignItems: 'center',
+       
     },
     switchLabel: {
         fontSize: 12,
         color: '#333',
-        marginRight: 6,
+        marginRight: 1,
         fontWeight: '600',
     },
     content: {
         flex: 1,
-        padding: 16,
+        padding: 6,
         paddingBottom: 80,
     },
     ozetContainer: {
         flexDirection: 'row',
         backgroundColor: 'white',
-        padding: 16,
+        padding: 6,
         borderRadius: 8,
         marginBottom: 16,
         elevation: 2,
@@ -1011,7 +1014,7 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     ozetDeger: {
-        fontSize: 16,
+        fontSize: 12,
         fontWeight: 'bold',
         color: '#333',
     },
@@ -1095,13 +1098,13 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#e67e22',
-        padding: 12,
+        padding: 4,
         borderRadius: 8,
-        marginBottom: 16,
+        marginBottom: 6,
     },
     dersRaporButonText: {
         color: 'white',
-        fontSize: 16,
+        fontSize: 13,
         fontWeight: 'bold',
         marginLeft: 8,
     },
@@ -1110,13 +1113,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#3498db',
-        padding: 12,
+        padding: 4,
         borderRadius: 8,
-        marginBottom: 16,
+        marginBottom: 6,
+        marginTop:8,
     },
     odemeRaporButonText: {
         color: 'white',
-        fontSize: 16,
+        fontSize: 13,
         fontWeight: 'bold',
         marginLeft: 8,
     },

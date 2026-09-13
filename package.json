@@ -1,12 +1,14 @@
 {
   "name": "ozdeta",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "bump-version": "node bump-version.js",
+    "prepare": "husky"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -44,6 +46,7 @@
   "devDependencies": {
     "@types/react": "~19.1.0",
     "babel-preset-expo": "~54.0.10",
+    "husky": "^9.1.7",
     "typescript": "~5.9.2"
   },
   "private": true

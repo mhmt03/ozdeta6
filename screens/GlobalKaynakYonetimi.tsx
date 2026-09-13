@@ -396,46 +396,57 @@ export default function GlobalKaynakYonetimi() {
             
             let basariliS = 0;
             const eklenenler: string[] = [];
-            let currentPrefix = '';
+            let pendingText = '';
 
             for (const line of lines) {
-                let currentLine = line;
+                let currentLine = line.trim();
 
-                // 1. Başlık Yakalama (Örn: "1. BÖLÜM: KUVVET VE DENGE" veya "BÖLÜM 01")
-                // Eğer satırda sayfa numarası (en sonda bir rakam grubu) YOKSA ve satır "Bölüm", "Ünite" vs. içeriyorsa:
-                // Bu satırı "Ana Başlık" olarak hafızaya al.
-                const hasPageNumber = /^(.*?)(?:\s+|\.+)(\d+)$/.test(currentLine);
-                
-                if (!hasPageNumber && /(bölüm|bolum|ünite|unite|test|chapter|kısım|kisim)/i.test(currentLine)) {
-                    currentPrefix = currentLine.replace(/[:\-]+$/, '').trim();
-                    continue; // Bu satırı tek başına listeye ekleme
-                }
-
-                let icerik = currentLine;
-                let sayfaNo = '';
-
-                // Sonda sayfa numarası arama Regex'i: "... 123", " ...123", "123" gibi
                 const match = currentLine.match(/^(.*?)(?:\s+|\.+)(\d+)$/);
-
-                if (match) {
-                    icerik = match[1].replace(/\.+$/g, '').trim(); // Sondaki noktaları sil
-                    sayfaNo = match[2];
-                }
-
-                // Eğer üst satırlardan hafızada tutulan bir BÖLÜM başlığı varsa içeriğin başına ekle
-                if (currentPrefix) {
-                    icerik = currentPrefix + " - " + icerik;
-                }
-
-                // Çok kısa, anlamsız veya OCR hatası olan "sadece BÖLÜM" yazan satırları geç
-                if (icerik.length < 2 || /^[\d\.\-\_]+$/.test(icerik) || /^(bölüm|bolum|ünite|unite|test|chapter)$/i.test(icerik.trim())) {
+                
+                // Eğer sayfa numarası yoksa ve satır BÖLÜM vs. içeriyorsa tamamen atla
+                if (!match && /(bölüm|bolum|ünite|unite|test|chapter|kısım|kisim)/i.test(currentLine)) {
                     continue;
                 }
 
-                const r = await kaynakIcerikEkle(seciliKaynak!.id, icerik, sayfaNo);
-                if (r.success) {
-                    basariliS++;
-                    eklenenler.push(`${icerik} (Syf: ${sayfaNo || '-'})`);
+                if (match) {
+                    let icerik = match[1].replace(/\.+$/g, '').trim(); // Sondaki noktaları sil
+                    let sayfaNo = match[2];
+
+                    // Eğer önceden bekleyen bir metin (sayfa numarası olmayan satır) varsa birleştir
+                    if (pendingText) {
+                        icerik = pendingText + " " + icerik;
+                        pendingText = '';
+                    }
+
+                    // Çok kısa veya anlamsız satırları geç
+                    if (icerik.length < 2 || /^[\d\.\-\_]+$/.test(icerik) || /^(bölüm|bolum|ünite|unite|test|chapter)$/i.test(icerik.trim())) {
+                        continue;
+                    }
+
+                    const r = await kaynakIcerikEkle(seciliKaynak!.id, icerik, sayfaNo);
+                    if (r.success) {
+                        basariliS++;
+                        eklenenler.push(`${icerik} (Syf: ${sayfaNo || '-'})`);
+                    }
+                } else {
+                    // Sayfa numarası yoksa ve BÖLÜM başlığı da değilse, bir sonraki satırla birleştirmek için beklet
+                    if (pendingText) {
+                        pendingText += " " + currentLine;
+                    } else {
+                        pendingText = currentLine;
+                    }
+                }
+            }
+
+            // Döngü bittiğinde hala bekleyen bir metin varsa son olarak ekle
+            if (pendingText) {
+                let icerik = pendingText.trim();
+                if (!(icerik.length < 2 || /^[\d\.\-\_]+$/.test(icerik) || /^(bölüm|bolum|ünite|unite|test|chapter)$/i.test(icerik.trim()))) {
+                    const r = await kaynakIcerikEkle(seciliKaynak!.id, icerik, '');
+                    if (r.success) {
+                        basariliS++;
+                        eklenenler.push(`${icerik} (Syf: -)`);
+                    }
                 }
             }
 
