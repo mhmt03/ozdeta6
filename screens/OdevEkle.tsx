@@ -156,6 +156,11 @@ export default function OdevEkle() {
     const [bilgiVeli2Secili, setBilgiVeli2Secili] = useState(false);
     const [showBilgiBaslangic, setShowBilgiBaslangic] = useState(false);
     const [showBilgiBitis, setShowBilgiBitis] = useState(false);
+    const [bilgiDurumBekliyor, setBilgiDurumBekliyor] = useState(true);
+    const [bilgiDurumYapildi, setBilgiDurumYapildi] = useState(false);
+    const [bilgiDurumYapilmadi, setBilgiDurumYapilmadi] = useState(true);
+    const [bilgiDurumEksik, setBilgiDurumEksik] = useState(true);
+    const [bilgiDurumAtananlar, setBilgiDurumAtananlar] = useState(false);
 
     // 🔵 ÖDEV DURUM YOLLA MODAL STATE 🔵
     const [durumModalGorunur, setDurumModalGorunur] = useState(false);
@@ -654,8 +659,30 @@ export default function OdevEkle() {
 
             // Tarih aralığındaki ödevleri filtrele
             const filtrelenmişOdevler = odevler.filter(o => {
-                const oDate = new Date(o.verilmetarihi);
-                return oDate >= raporBaslangic && oDate <= raporBitis;
+                const aciklamaLower = o.aciklama ? o.aciklama.toLowerCase() : '';
+                const isRaporAtanmis = !o.aciklama || aciklamaLower.includes('rapor') || !aciklamaLower.includes('tarihinde verildi');
+                if (isRaporAtanmis && !bilgiDurumAtananlar) return false;
+
+                let inDateRange = false;
+                if (o.verilmetarihi) {
+                    const oDate = new Date(o.verilmetarihi);
+                    const basDate = new Date(raporBaslangic); basDate.setHours(0,0,0,0);
+                    const bitDate = new Date(raporBitis); bitDate.setHours(23,59,59,999);
+                    if (oDate >= basDate && oDate <= bitDate) {
+                        inDateRange = true;
+                    }
+                } else {
+                    if (isRaporAtanmis && bilgiDurumAtananlar) inDateRange = true;
+                }
+
+                let statusOk = false;
+                const durum = o.yapilmadurumu || 'Bekliyor';
+                if (durum === 'Bekliyor' && bilgiDurumBekliyor) statusOk = true;
+                if (durum === 'Yapıldı' && bilgiDurumYapildi) statusOk = true;
+                if (durum === 'Yapılmadı' && bilgiDurumYapilmadi) statusOk = true;
+                if (durum === 'Eksik' && bilgiDurumEksik) statusOk = true;
+
+                return inDateRange && statusOk;
             });
 
             if (filtrelenmişOdevler.length === 0) {
@@ -830,10 +857,32 @@ export default function OdevEkle() {
         }
 
         const filteredOdevler = odevler.filter(o => {
-            if (!o.verilmetarihi) return false;
-            const t = new Date(o.verilmetarihi).getTime();
-            const statusOk = o.yapilmadurumu !== 'Yapıldı';
-            return t >= bilgiBaslangic.setHours(0, 0, 0, 0) && t <= bilgiBitis.setHours(23, 59, 59, 999) && statusOk;
+            const aciklamaLower = o.aciklama ? o.aciklama.toLowerCase() : '';
+            const isRaporAtanmis = !o.aciklama || aciklamaLower.includes('rapor') || !aciklamaLower.includes('tarihinde verildi');
+            if (isRaporAtanmis && !bilgiDurumAtananlar) return false;
+
+            let inDateRange = false;
+            if (o.verilmetarihi) {
+                const t = new Date(o.verilmetarihi).getTime();
+                const bas = new Date(bilgiBaslangic);
+                bas.setHours(0, 0, 0, 0);
+                const bit = new Date(bilgiBitis);
+                bit.setHours(23, 59, 59, 999);
+                if (t >= bas.getTime() && t <= bit.getTime()) {
+                    inDateRange = true;
+                }
+            } else {
+                if (isRaporAtanmis && bilgiDurumAtananlar) inDateRange = true;
+            }
+
+            let statusOk = false;
+            const durum = o.yapilmadurumu || 'Bekliyor';
+            if (durum === 'Bekliyor' && bilgiDurumBekliyor) statusOk = true;
+            if (durum === 'Yapıldı' && bilgiDurumYapildi) statusOk = true;
+            if (durum === 'Yapılmadı' && bilgiDurumYapilmadi) statusOk = true;
+            if (durum === 'Eksik' && bilgiDurumEksik) statusOk = true;
+
+            return inDateRange && statusOk;
         });
 
         if (filteredOdevler.length === 0) {
@@ -899,12 +948,32 @@ export default function OdevEkle() {
         }
 
         const filteredOdevler = odevler.filter(o => {
-            const oDate = new Date(o.verilmetarihi);
-            const basDate = new Date(durumBaslangic);
-            basDate.setHours(0, 0, 0, 0);
-            const bitDate = new Date(durumBitis);
-            bitDate.setHours(23, 59, 59, 999);
-            return oDate.getTime() >= basDate.getTime() && oDate.getTime() <= bitDate.getTime();
+            const aciklamaLower = o.aciklama ? o.aciklama.toLowerCase() : '';
+            const isRaporAtanmis = !o.aciklama || aciklamaLower.includes('rapor') || !aciklamaLower.includes('tarihinde verildi');
+            if (isRaporAtanmis && !bilgiDurumAtananlar) return false;
+
+            let inDateRange = false;
+            if (o.verilmetarihi) {
+                const t = new Date(o.verilmetarihi).getTime();
+                const bas = new Date(durumBaslangic);
+                bas.setHours(0, 0, 0, 0);
+                const bit = new Date(durumBitis);
+                bit.setHours(23, 59, 59, 999);
+                if (t >= bas.getTime() && t <= bit.getTime()) {
+                    inDateRange = true;
+                }
+            } else {
+                if (isRaporAtanmis && bilgiDurumAtananlar) inDateRange = true;
+            }
+
+            let statusOk = false;
+            const durum = o.yapilmadurumu || 'Bekliyor';
+            if (durum === 'Bekliyor' && bilgiDurumBekliyor) statusOk = true;
+            if (durum === 'Yapıldı' && bilgiDurumYapildi) statusOk = true;
+            if (durum === 'Yapılmadı' && bilgiDurumYapilmadi) statusOk = true;
+            if (durum === 'Eksik' && bilgiDurumEksik) statusOk = true;
+
+            return inDateRange && statusOk;
         });
 
         if (filteredOdevler.length === 0) {
@@ -1333,6 +1402,30 @@ export default function OdevEkle() {
                             </TouchableOpacity>
                         </View>
 
+                        <Text style={{ marginTop: 2, marginBottom: 0, fontWeight: 'bold', fontSize: 13 }}>Ödev Durumu Seçin</Text>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', width: '100%', marginBottom: 5 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', width: '33%', marginBottom: -10 }}>
+                                <Switch style={{ transform: [{ scale: 0.65 }], marginLeft: -5 }} value={bilgiDurumBekliyor} onValueChange={setBilgiDurumBekliyor} />
+                                <Text style={{ marginLeft: -2, fontSize: 11 }}>Bekliyor</Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', width: '33%', marginBottom: -10 }}>
+                                <Switch style={{ transform: [{ scale: 0.65 }], marginLeft: -5 }} value={bilgiDurumYapildi} onValueChange={setBilgiDurumYapildi} />
+                                <Text style={{ marginLeft: -2, fontSize: 11 }}>Yapıldı</Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', width: '33%', marginBottom: -10 }}>
+                                <Switch style={{ transform: [{ scale: 0.65 }], marginLeft: -5 }} value={bilgiDurumYapilmadi} onValueChange={setBilgiDurumYapilmadi} />
+                                <Text style={{ marginLeft: -2, fontSize: 11 }}>Yapılmadı</Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', width: '33%', marginBottom: 0 }}>
+                                <Switch style={{ transform: [{ scale: 0.65 }], marginLeft: -5 }} value={bilgiDurumEksik} onValueChange={setBilgiDurumEksik} />
+                                <Text style={{ marginLeft: -2, fontSize: 11 }}>Eksik</Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', width: '66%', marginBottom: 0 }}>
+                                <Switch style={{ transform: [{ scale: 0.65 }], marginLeft: -5 }} value={bilgiDurumAtananlar} onValueChange={setBilgiDurumAtananlar} />
+                                <Text style={{ marginLeft: -2, fontSize: 11 }}>Durum syf. atananlar</Text>
+                            </View>
+                        </View>
+
                         <Text style={{ marginTop: 5, marginBottom: 5, fontWeight: 'bold' }}>Alıcı Seçin</Text>
                         {ogrenci && (
                             <View style={{ marginBottom: 5 }}>
@@ -1372,12 +1465,32 @@ export default function OdevEkle() {
                         <ScrollView nestedScrollEnabled={true} style={{ maxHeight: 150, backgroundColor: '#f9f9f9', padding: 10, borderRadius: 8, marginBottom: 5, borderWidth: 1, borderColor: '#eee' }}>
                             {(() => {
                                 const onizlemeDurum = odevler.filter(o => {
-                                    const oDate = new Date(o.verilmetarihi);
-                                    const basDate = new Date(durumBaslangic);
-                                    basDate.setHours(0, 0, 0, 0);
-                                    const bitDate = new Date(durumBitis);
-                                    bitDate.setHours(23, 59, 59, 999);
-                                    return oDate.getTime() >= basDate.getTime() && oDate.getTime() <= bitDate.getTime();
+                                    const aciklamaLower = o.aciklama ? o.aciklama.toLowerCase() : '';
+                                    const isRaporAtanmis = !o.aciklama || aciklamaLower.includes('rapor') || !aciklamaLower.includes('tarihinde verildi');
+                                    if (isRaporAtanmis && !bilgiDurumAtananlar) return false;
+
+                                    let inDateRange = false;
+                                    if (o.verilmetarihi) {
+                                        const t = new Date(o.verilmetarihi).getTime();
+                                        const bas = new Date(durumBaslangic);
+                                        bas.setHours(0, 0, 0, 0);
+                                        const bit = new Date(durumBitis);
+                                        bit.setHours(23, 59, 59, 999);
+                                        if (t >= bas.getTime() && t <= bit.getTime()) {
+                                            inDateRange = true;
+                                        }
+                                    } else {
+                                        if (isRaporAtanmis && bilgiDurumAtananlar) inDateRange = true;
+                                    }
+
+                                    let statusOk = false;
+                                    const durum = o.yapilmadurumu || 'Bekliyor';
+                                    if (durum === 'Bekliyor' && bilgiDurumBekliyor) statusOk = true;
+                                    if (durum === 'Yapıldı' && bilgiDurumYapildi) statusOk = true;
+                                    if (durum === 'Yapılmadı' && bilgiDurumYapilmadi) statusOk = true;
+                                    if (durum === 'Eksik' && bilgiDurumEksik) statusOk = true;
+
+                                    return inDateRange && statusOk;
                                 });
                                 if (onizlemeDurum.length === 0) return <Text style={{ color: '#888', fontStyle: 'italic', fontSize: 12 }}>Bu tarih aralığında ödev bulunamadı.</Text>;
                                 return onizlemeDurum.map((o, idx) => {
@@ -1685,37 +1798,48 @@ export default function OdevEkle() {
                             {/* ── SEKME 1: TÜM ÖDEVLER ── */}
                             {raporTipi === 'odevler' && (
                                 <View>
-                                    <Text style={styles.modalSubtitle}>Tarih aralığı seçiniz:</Text>
-                                    <View style={styles.dateRangeContainer}>
-                                        <TouchableOpacity style={styles.reportDateButton} onPress={() => setShowRaporBaslangicPicker(true)}>
-                                            <Text style={styles.dateLabel}>Başlangıç</Text>
-                                            <Text style={styles.dateValue}>{formatTarih(raporBaslangic)}</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity style={styles.reportDateButton} onPress={() => setShowRaporBitisPicker(true)}>
-                                            <Text style={styles.dateLabel}>Bitiş</Text>
-                                            <Text style={styles.dateValue}>{formatTarih(raporBitis)}</Text>
-                                        </TouchableOpacity>
+                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                                        <Text style={styles.modalSubtitle}>Tarih Aralığı:</Text>
+                                        <View style={[styles.dateRangeContainer, { width: '70%', marginTop: 0 }]}>
+                                            <TouchableOpacity style={[styles.reportDateButton, { paddingVertical: 4, paddingHorizontal: 8 }]} onPress={() => setShowRaporBaslangicPicker(true)}>
+                                                <Text style={{ fontSize: 13, fontWeight: 'bold' }}>{formatTarih(raporBaslangic)}</Text>
+                                            </TouchableOpacity>
+                                            <Text style={{ color: '#aaa', marginHorizontal: 4, alignSelf: 'center' }}>-</Text>
+                                            <TouchableOpacity style={[styles.reportDateButton, { paddingVertical: 4, paddingHorizontal: 8 }]} onPress={() => setShowRaporBitisPicker(true)}>
+                                                <Text style={{ fontSize: 13, fontWeight: 'bold' }}>{formatTarih(raporBitis)}</Text>
+                                            </TouchableOpacity>
+                                        </View>
                                     </View>
+
+                                    <Text style={{ marginTop: 2, marginBottom: 0, fontWeight: 'bold', fontSize: 13 }}>Ödev Durumu Seçin</Text>
+                                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', width: '100%', marginBottom: 5 }}>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', width: '33%', marginBottom: -10 }}>
+                                            <Switch style={{ transform: [{ scale: 0.65 }], marginLeft: -5 }} value={bilgiDurumBekliyor} onValueChange={setBilgiDurumBekliyor} />
+                                            <Text style={{ marginLeft: -2, fontSize: 11 }}>Bekliyor</Text>
+                                        </View>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', width: '33%', marginBottom: -10 }}>
+                                            <Switch style={{ transform: [{ scale: 0.65 }], marginLeft: -5 }} value={bilgiDurumYapildi} onValueChange={setBilgiDurumYapildi} />
+                                            <Text style={{ marginLeft: -2, fontSize: 11 }}>Yapıldı</Text>
+                                        </View>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', width: '33%', marginBottom: -10 }}>
+                                            <Switch style={{ transform: [{ scale: 0.65 }], marginLeft: -5 }} value={bilgiDurumYapilmadi} onValueChange={setBilgiDurumYapilmadi} />
+                                            <Text style={{ marginLeft: -2, fontSize: 11 }}>Yapılmadı</Text>
+                                        </View>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', width: '33%', marginBottom: 0 }}>
+                                            <Switch style={{ transform: [{ scale: 0.65 }], marginLeft: -5 }} value={bilgiDurumEksik} onValueChange={setBilgiDurumEksik} />
+                                            <Text style={{ marginLeft: -2, fontSize: 11 }}>Eksik</Text>
+                                        </View>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', width: '66%', marginBottom: 0 }}>
+                                            <Switch style={{ transform: [{ scale: 0.65 }], marginLeft: -5 }} value={bilgiDurumAtananlar} onValueChange={setBilgiDurumAtananlar} />
+                                            <Text style={{ marginLeft: -2, fontSize: 11 }}>Durum syf. atananlar</Text>
+                                        </View>
+                                    </View>
+
                                     <View style={styles.raporAksiyonlar}>
                                         <TouchableOpacity style={[styles.raporAksiyonButon, { backgroundColor: '#3498db' }]} onPress={() => odevRaporuOlustur('indir')} disabled={isGeneratingPDF}>
                                             <MaterialIcons name="file-download" size={24} color="white" />
                                             <Text style={styles.raporAksiyonText}>İndir / Paylaş   (PDF)</Text>
                                         </TouchableOpacity>
-                                       
-                                        {/* <View style={styles.raporPaylasımGrup}>
-                                            <TouchableOpacity style={[styles.paylasimButon, { backgroundColor: '#27ae60' }]} onPress={() => odevRaporuOlustur('ogrenci')} disabled={isGeneratingPDF}>
-                                                <MaterialIcons name="person" size={20} color="white" />
-                                                <Text style={styles.paylasimText}>Öğrenciye</Text>
-                                            </TouchableOpacity>
-                                            <TouchableOpacity style={[styles.paylasimButon, { backgroundColor: '#8e44ad' }]} onPress={() => odevRaporuOlustur('veli')} disabled={isGeneratingPDF}>
-                                                <MaterialIcons name="people" size={20} color="white" />
-                                                <Text style={styles.paylasimText}>1. Veliye</Text>
-                                            </TouchableOpacity>
-                                            <TouchableOpacity style={[styles.paylasimButon, { backgroundColor: '#d35400' }]} onPress={() => odevRaporuOlustur('veli2')} disabled={isGeneratingPDF}>
-                                                <MaterialIcons name="people" size={20} color="white" />
-                                                <Text style={styles.paylasimText}>2. Veliye</Text>
-                                            </TouchableOpacity>
-                                        </View> */}
                                     </View>
                                     {isGeneratingPDF && (
                                         <View style={{ alignItems: 'center', marginTop: 12 }}>
@@ -1726,13 +1850,35 @@ export default function OdevEkle() {
 
                                     {/* Ödev Listesi Gösterimi */}
                                     <View style={{
-                                        paddingBottom:12,  marginBottom:20, marginTop: 24, borderTopWidth: 1, borderTopColor: '#e2faccff', paddingTop: 6
+                                        paddingBottom:12,  marginBottom:20, marginTop: 10, borderTopWidth: 1, borderTopColor: '#e2faccff', paddingTop: 6
                                     }}>
                                         <Text style={[styles.modalSubtitle, { marginBottom: 12 }]}>Tarih Aralığındaki Ödevler</Text>
                                         {(() => {
                                             const filtrelenmisOdevler = odevler.filter(o => {
-                                                const oDate = new Date(o.verilmetarihi);
-                                                return oDate >= raporBaslangic && oDate <= raporBitis;
+                                                const aciklamaLower = o.aciklama ? o.aciklama.toLowerCase() : '';
+                                                const isRaporAtanmis = !o.aciklama || aciklamaLower.includes('rapor') || !aciklamaLower.includes('tarihinde verildi');
+                                                if (isRaporAtanmis && !bilgiDurumAtananlar) return false;
+
+                                                let inDateRange = false;
+                                                if (o.verilmetarihi) {
+                                                    const oDate = new Date(o.verilmetarihi);
+                                                    const basDate = new Date(raporBaslangic); basDate.setHours(0,0,0,0);
+                                                    const bitDate = new Date(raporBitis); bitDate.setHours(23,59,59,999);
+                                                    if (oDate >= basDate && oDate <= bitDate) {
+                                                        inDateRange = true;
+                                                    }
+                                                } else {
+                                                    if (isRaporAtanmis && bilgiDurumAtananlar) inDateRange = true;
+                                                }
+
+                                                let statusOk = false;
+                                                const durum = o.yapilmadurumu || 'Bekliyor';
+                                                if (durum === 'Bekliyor' && bilgiDurumBekliyor) statusOk = true;
+                                                if (durum === 'Yapıldı' && bilgiDurumYapildi) statusOk = true;
+                                                if (durum === 'Yapılmadı' && bilgiDurumYapilmadi) statusOk = true;
+                                                if (durum === 'Eksik' && bilgiDurumEksik) statusOk = true;
+
+                                                return inDateRange && statusOk;
                                             });
 
                                             if (filtrelenmisOdevler.length === 0) {
@@ -1752,7 +1898,10 @@ export default function OdevEkle() {
                                                             </Text>
                                                             <Text style={{ fontSize: 11, color: '#666' }}>{odev.odev} {odev.aciklama ? `(${odev.aciklama})` : ''}</Text>
                                                         </View>
-                                                        <Text style={[styles.detayColTarih, { flex: 2 }]}>{formatTarih(new Date(odev.teslimttarihi))}</Text>
+                                                        <View style={{ flex: 2, justifyContent: 'center' }}>
+                                                            <Text style={{ fontSize: 10, color: '#888' }}>V: {odev.verilmetarihi ? formatTarih(new Date(odev.verilmetarihi)) : '-'}</Text>
+                                                            <Text style={{ fontSize: 10, color: '#444', fontWeight: 'bold' }}>T: {odev.teslimttarihi ? formatTarih(new Date(odev.teslimttarihi)) : '-'}</Text>
+                                                        </View>
                                                         <View style={[styles.detayColDurum, { flex: 2 }]}>
                                                             <View style={[styles.detayDurumBadge, { backgroundColor: bg, borderColor: border, borderWidth: 1 }]}>
                                                                 <Text style={[styles.detayDurumText, { color: text }]}>
@@ -1985,17 +2134,39 @@ export default function OdevEkle() {
                             </TouchableOpacity>
                         </View>
 
-                        <Text style={{ marginTop: 10, marginBottom: 5, fontWeight: 'bold' }}>Tarih Aralığı Seçin</Text>
-                        <View style={styles.dateRangeContainer}>
-                            <TouchableOpacity style={styles.reportDateButton} onPress={() => setShowBilgiBaslangic(true)}>
-                                <MaterialIcons name="date-range" size={16} color="#666" />
-                                <Text style={styles.reportDateText}>{formatTarih(bilgiBaslangic.toISOString())}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 15, marginTop: 10 }}>
+                            <Text style={{ fontSize: 13, fontWeight: 'bold', marginRight: 10 }}>Tarih:</Text>
+                            <TouchableOpacity style={[styles.reportDateButton, { paddingVertical: 4, paddingHorizontal: 8 }]} onPress={() => setShowBilgiBaslangic(true)}>
+                                <Text style={[styles.reportDateText, { fontSize: 13, marginLeft: 0 }]}>{formatTarih(bilgiBaslangic.toISOString())}</Text>
                             </TouchableOpacity>
-                            <Text style={{ color: '#aaa', marginHorizontal: 4, alignSelf: 'center' }}>-</Text>
-                            <TouchableOpacity style={styles.reportDateButton} onPress={() => setShowBilgiBitis(true)}>
-                                <MaterialIcons name="date-range" size={16} color="#666" />
-                                <Text style={styles.reportDateText}>{formatTarih(bilgiBitis.toISOString())}</Text>
+                            <Text style={{ color: '#555', marginHorizontal: 6 }}>-</Text>
+                            <TouchableOpacity style={[styles.reportDateButton, { paddingVertical: 4, paddingHorizontal: 8 }]} onPress={() => setShowBilgiBitis(true)}>
+                                <Text style={[styles.reportDateText, { fontSize: 13, marginLeft: 0 }]}>{formatTarih(bilgiBitis.toISOString())}</Text>
                             </TouchableOpacity>
+                        </View>
+
+                        <Text style={{ marginTop: 2, marginBottom: 0, fontWeight: 'bold', fontSize: 13 }}>Ödev Durumu Seçin</Text>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', width: '100%', marginBottom: 5 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', width: '33%', marginBottom: -10 }}>
+                                <Switch style={{ transform: [{ scale: 0.65 }], marginLeft: -5 }} value={bilgiDurumBekliyor} onValueChange={setBilgiDurumBekliyor} />
+                                <Text style={{ marginLeft: -2, fontSize: 11 }}>Bekliyor</Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', width: '33%', marginBottom: -10 }}>
+                                <Switch style={{ transform: [{ scale: 0.65 }], marginLeft: -5 }} value={bilgiDurumYapildi} onValueChange={setBilgiDurumYapildi} />
+                                <Text style={{ marginLeft: -2, fontSize: 11 }}>Yapıldı</Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', width: '33%', marginBottom: -10 }}>
+                                <Switch style={{ transform: [{ scale: 0.65 }], marginLeft: -5 }} value={bilgiDurumYapilmadi} onValueChange={setBilgiDurumYapilmadi} />
+                                <Text style={{ marginLeft: -2, fontSize: 11 }}>Yapılmadı</Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', width: '33%', marginBottom: 0 }}>
+                                <Switch style={{ transform: [{ scale: 0.65 }], marginLeft: -5 }} value={bilgiDurumEksik} onValueChange={setBilgiDurumEksik} />
+                                <Text style={{ marginLeft: -2, fontSize: 11 }}>Eksik</Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', width: '66%', marginBottom: 0 }}>
+                                <Switch style={{ transform: [{ scale: 0.65 }], marginLeft: -5 }} value={bilgiDurumAtananlar} onValueChange={setBilgiDurumAtananlar} />
+                                <Text style={{ marginLeft: -2, fontSize: 11 }}>Durum syf. atananlar</Text>
+                            </View>
                         </View>
 
                         <Text style={{ marginTop: 15, marginBottom: 5, fontWeight: 'bold' }}>Alıcı Seçin</Text>
@@ -2040,16 +2211,34 @@ export default function OdevEkle() {
                         <ScrollView nestedScrollEnabled={true} style={{ maxHeight: 150, backgroundColor: '#f9f9f9', padding: 10, borderRadius: 8, marginBottom: 15, borderWidth: 1, borderColor: '#eee' }}>
                             {(() => {
                                 const onizlemeOdevler = odevler.filter(o => {
-                                    if (!o.verilmetarihi) return false;
-                                    const t = new Date(o.verilmetarihi).getTime();
-                                    const basDate = new Date(bilgiBaslangic);
-                                    basDate.setHours(0, 0, 0, 0);
-                                    const bitDate = new Date(bilgiBitis);
-                                    bitDate.setHours(23, 59, 59, 999);
-                                    const statusOk = o.yapilmadurumu !== 'Yapıldı';
-                                    return t >= basDate.getTime() && t <= bitDate.getTime() && statusOk;
+                                    const aciklamaLower = o.aciklama ? o.aciklama.toLowerCase() : '';
+                                    const isRaporAtanmis = !o.aciklama || aciklamaLower.includes('rapor') || !aciklamaLower.includes('tarihinde verildi');
+                                    if (isRaporAtanmis && !bilgiDurumAtananlar) return false;
+
+                                    let inDateRange = false;
+                                    if (o.verilmetarihi) {
+                                        const t = new Date(o.verilmetarihi).getTime();
+                                        const basDate = new Date(bilgiBaslangic);
+                                        basDate.setHours(0, 0, 0, 0);
+                                        const bitDate = new Date(bilgiBitis);
+                                        bitDate.setHours(23, 59, 59, 999);
+                                        if (t >= basDate.getTime() && t <= bitDate.getTime()) {
+                                            inDateRange = true;
+                                        }
+                                    } else {
+                                        if (isRaporAtanmis && bilgiDurumAtananlar) inDateRange = true;
+                                    }
+
+                                    let statusOk = false;
+                                    const durum = o.yapilmadurumu || 'Bekliyor';
+                                    if (durum === 'Bekliyor' && bilgiDurumBekliyor) statusOk = true;
+                                    if (durum === 'Yapıldı' && bilgiDurumYapildi) statusOk = true;
+                                    if (durum === 'Yapılmadı' && bilgiDurumYapilmadi) statusOk = true;
+                                    if (durum === 'Eksik' && bilgiDurumEksik) statusOk = true;
+
+                                    return inDateRange && statusOk;
                                 });
-                                if (onizlemeOdevler.length === 0) return <Text style={{ color: '#888', fontStyle: 'italic', fontSize: 12 }}>Bu tarih aralığında ödev bulunamadı.</Text>;
+                                if (onizlemeOdevler.length === 0) return <Text style={{ color: '#888', fontStyle: 'italic', fontSize: 12 }}>Bu kriterlere uygun ödev bulunamadı.</Text>;
                                 return onizlemeOdevler.map((o, idx) => (
                                     <View key={idx} style={{ marginBottom: 8, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: '#eee' }}>
                                         <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#333' }}>{o.kaynak}</Text>

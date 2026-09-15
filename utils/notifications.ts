@@ -29,13 +29,17 @@ export async function setupNotificationHandler() {
     // Android 8.0 (API 26) ve sonrasında bildirim kanalı tanımlamak zorunludur.
     if (Platform.OS === 'android') {
         const sound = await getSetting('notification_sound', '1');
-        await Notifications.setNotificationChannelAsync('default', {
-            name: 'default',
-            importance: Notifications.AndroidImportance.MAX, // Bildirimin önem derecesi (Ekranda açılır)
-            vibrationPattern: [0, 250, 250, 250],            // Titreşim ritmi
-            lightColor: '#FF231F7C',
-            sound: sound === '1' ? 'default' : undefined,    // Ses dosyası (default veya sessiz)
-        });
+        try {
+            await Notifications.setNotificationChannelAsync('default', {
+                name: 'default',
+                importance: Notifications.AndroidImportance.MAX, // Bildirimin önem derecesi (Ekranda açılır)
+                vibrationPattern: [0, 250, 250, 250],            // Titreşim ritmi
+                lightColor: '#FF231F7C',
+                sound: sound === '1' ? 'default' : undefined,    // Ses dosyası (default veya sessiz)
+            });
+        } catch (error) {
+            console.log('Not: Expo Go ortamında (SDK 53+) push bildirim özellikleri sınırlıdır.', error);
+        }
     }
 }
 

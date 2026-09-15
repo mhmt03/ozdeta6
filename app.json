@@ -44,7 +44,10 @@
           "icon": "./assets/derstakipicon.png",
           "color": "#ffffff"
         }
-      ]
+      ],
+      "expo-font",
+      "expo-sharing",
+      "expo-status-bar"
     ],
     "extra": {
       "eas": {
