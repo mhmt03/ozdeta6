@@ -401,9 +401,10 @@ export default function Ayarlar() {
 
                                 if (result.success) {
                                     // Kaydetme başarılı, paylaşım seçeneği sun
+                                    const klasorYolu = result.dosyaYolu ? result.dosyaYolu.substring(0, result.dosyaYolu.lastIndexOf('/') + 1) : '';
                                     Alert.alert(
                                         'Yedekleme Başarılı',
-                                        result.message,
+                                        `${result.message}\n\nKaydedilen Klasör:\n${klasorYolu}`,
                                         [
                                             {
                                                 text: 'Tamam'
