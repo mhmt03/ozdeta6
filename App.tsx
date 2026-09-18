@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, ActivityIndicator, Alert, Platform, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, ActivityIndicator, Alert, Platform, TouchableOpacity, Image } from 'react-native';
 import { FontAwesome5, MaterialIcons } from '@expo/vector-icons';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -94,7 +94,12 @@ export default function App() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#2196F3" />
+        <Image 
+          source={require('./assets/derstakipicon.png')} 
+          style={{ width: 150, height: 150, marginBottom: 20 }} 
+          resizeMode="contain" 
+        />
+        <ActivityIndicator size="large" color="#2c3e50" />
         <Text style={styles.loadingText}>Uygulama yükleniyor...</Text>
       </View>
     );
@@ -243,7 +248,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#a5f70eff',
+    backgroundColor: '#ffffff',
     padding: 20,
   },
   loadingText: {

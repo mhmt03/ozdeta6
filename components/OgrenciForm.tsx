@@ -1,7 +1,7 @@
 import React, { Dispatch, SetStateAction } from 'react';
 import { View, Switch, Text, TextInput, Keyboard, TouchableWithoutFeedback, StyleSheet, TouchableOpacity, ScrollView, Alert } from "react-native";
 import { OgrenciType } from '../types';
-import * as Contacts from 'expo-contacts';
+import * as Contacts from 'expo-contacts/legacy';
 import { MaterialIcons } from '@expo/vector-icons';
 
 type OgrenciFormProps = {
@@ -47,9 +47,9 @@ export default function OgrenciForm({ ogrenci, setOgrenci, onSave, onCancel }: O
             } else {
                 Alert.alert('İzin Reddedildi', 'Rehbere erişim izni verilmedi. Lütfen ayarlardan izin verin.');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Rehber hatası:', error);
-            Alert.alert('Hata', 'Rehberden kişi seçilemedi.');
+            Alert.alert('Hata', 'Rehberden kişi seçilemedi.\nDetay: ' + (error.message || 'Bilinmeyen hata'));
         }
     };
 
