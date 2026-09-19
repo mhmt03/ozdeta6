@@ -69,6 +69,33 @@ export default function DersRapor() {
     const [showPdfStartPicker, setShowPdfStartPicker] = useState(false);
     const [showPdfEndPicker, setShowPdfEndPicker] = useState(false);
 
+    // Liste Filtreleme State'leri
+    const [listStartDate, setListStartDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+    const [listEndDate, setListEndDate] = useState(new Date());
+    const [listAllDates, setListAllDates] = useState(true);
+    const [showListStartPicker, setShowListStartPicker] = useState(false);
+    const [showListEndPicker, setShowListEndPicker] = useState(false);
+
+    // Filtrelenmiş Listeler
+    const filteredDersler = listAllDates ? dersler : dersler.filter(d => {
+        const dDate = new Date(d.tarih);
+        dDate.setHours(0,0,0,0);
+        const sDate = new Date(listStartDate);
+        sDate.setHours(0,0,0,0);
+        const eDate = new Date(listEndDate);
+        eDate.setHours(23,59,59,999);
+        return dDate >= sDate && dDate <= eDate;
+    });
+
+    const filteredOdemeler = listAllDates ? odemeler : odemeler.filter(o => {
+        const oDate = new Date(o.odemetarih);
+        oDate.setHours(0,0,0,0);
+        const sDate = new Date(listStartDate);
+        sDate.setHours(0,0,0,0);
+        const eDate = new Date(listEndDate);
+        eDate.setHours(23,59,59,999);
+        return oDate >= sDate && oDate <= eDate;
+    });
 
     useEffect(() => {
         veriAl();
@@ -269,14 +296,14 @@ export default function DersRapor() {
 
     // Toplam ders ücreti hesapla
     const toplamDersUcreti = () => {
-        return dersler.reduce((toplam, ders) => {
+        return filteredDersler.reduce((toplam, ders) => {
             return toplam + (parseInt(ders.ucret) || 0);
         }, 0);
     };
 
     // Toplam ödeme miktarı hesapla
     const toplamOdeme = () => {
-        return odemeler.reduce((toplam, odeme) => {
+        return filteredOdemeler.reduce((toplam, odeme) => {
             return toplam + (parseInt(odeme.alinanucret) || 0);
         }, 0);
     };
@@ -557,12 +584,38 @@ export default function DersRapor() {
             </View>
 
             <ScrollView style={styles.content}>
+                {/* Tarih Filtresi */}
+                <View style={styles.listFilterContainer}>
+                    <View style={styles.listFilterRow}>
+                        <Text style={styles.listFilterLabel}>Tüm Kayıtlar</Text>
+                        <Switch
+                            value={listAllDates}
+                            onValueChange={setListAllDates}
+                            trackColor={{ false: '#ccc', true: '#3498db' }}
+                            thumbColor={'#fff'}
+                        />
+                    </View>
+                    {!listAllDates && (
+                        <View style={styles.listDatePickerRow}>
+                            <TouchableOpacity style={styles.listDatePickerBtn} onPress={() => setShowListStartPicker(true)}>
+                                <MaterialIcons name="date-range" size={16} color="#3498db" />
+                                <Text style={styles.listDatePickerText}>{formatTarih(listStartDate.toISOString())}</Text>
+                            </TouchableOpacity>
+                            <Text style={styles.listDateSeparator}>-</Text>
+                            <TouchableOpacity style={styles.listDatePickerBtn} onPress={() => setShowListEndPicker(true)}>
+                                <MaterialIcons name="date-range" size={16} color="#3498db" />
+                                <Text style={styles.listDatePickerText}>{formatTarih(listEndDate.toISOString())}</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                </View>
+
                 {/* Özet Bilgiler */}
                 {odemeGoster && (
                     <View style={styles.ozetContainer}>
                         <View style={styles.ozetItem}>
                             <Text style={styles.ozetLabel}>Toplam Ders</Text>
-                            <Text style={styles.ozetDeger}>{dersler.length}</Text>
+                            <Text style={styles.ozetDeger}>{filteredDersler.length}</Text>
                         </View>
                         <View style={styles.ozetItem}>
                             <Text style={styles.ozetLabel}>Ders Ücreti</Text>
@@ -596,10 +649,10 @@ export default function DersRapor() {
                 {/* Dersler Bölümü */}
                 {dersRaporAcik && (
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Yapılan Dersler ({dersler.length})</Text>
-                        {dersler.length > 0 ? (
+                        <Text style={styles.sectionTitle}>Yapılan Dersler ({filteredDersler.length})</Text>
+                        {filteredDersler.length > 0 ? (
                             <FlatList
-                                data={dersler}
+                                data={filteredDersler}
                                 renderItem={renderDers}
                                 keyExtractor={item => (item.dersId?.toString() || Math.random().toString())}
                                 scrollEnabled={false}
@@ -628,14 +681,14 @@ export default function DersRapor() {
                 {/* Ödemeler Bölümü */}
                 {odemeRaporAcik && (
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Alınan Ödemeler ({odemeler.length})</Text>
-                        {odemeler.length > 0 ? (
+                        <Text style={styles.sectionTitle}>Alınan Ödemeler ({filteredOdemeler.length})</Text>
+                        {filteredOdemeler.length > 0 ? (
                             <>
                                 <Text style={styles.secimBilgi}>
                                     * Ödemeye dokunarak seçebilirsiniz
                                 </Text>
                                 <FlatList
-                                    data={odemeler}
+                                    data={filteredOdemeler}
                                     renderItem={renderOdeme}
                                     keyExtractor={item => (item.odemeId?.toString() || Math.random().toString())}
                                     scrollEnabled={false}
@@ -926,6 +979,29 @@ export default function DersRapor() {
                     />
                 )}
             </Modal>
+
+            {showListStartPicker && (
+                <DateTimePicker
+                    value={listStartDate}
+                    mode="date"
+                    display="default"
+                    onChange={(event, selectedDate) => {
+                        setShowListStartPicker(false);
+                        if (selectedDate) setListStartDate(selectedDate);
+                    }}
+                />
+            )}
+            {showListEndPicker && (
+                <DateTimePicker
+                    value={listEndDate}
+                    mode="date"
+                    display="default"
+                    onChange={(event, selectedDate) => {
+                        setShowListEndPicker(false);
+                        if (selectedDate) setListEndDate(selectedDate);
+                    }}
+                />
+            )}
         </View>
     );
 }
@@ -1239,6 +1315,51 @@ const styles = StyleSheet.create({
     },
     kaydetButonText: {
         color: 'white',
+        fontWeight: 'bold',
+    },
+    listFilterContainer: {
+        backgroundColor: 'white',
+        borderRadius: 8,
+        padding: 10,
+        marginBottom: 10,
+        elevation: 2,
+    },
+    listFilterRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    listFilterLabel: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#2c3e50',
+    },
+    listDatePickerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginTop: 10,
+    },
+    listDatePickerBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#ecf0f1',
+        borderRadius: 6,
+        paddingVertical: 6,
+        paddingHorizontal: 10,
+        backgroundColor: '#fafbfc',
+        flex: 0.45,
+        justifyContent: 'center'
+    },
+    listDatePickerText: {
+        fontSize: 13,
+        marginLeft: 5,
+        color: '#2c3e50',
+    },
+    listDateSeparator: {
+        fontSize: 16,
+        color: '#7f8c8d',
         fontWeight: 'bold',
     },
 });

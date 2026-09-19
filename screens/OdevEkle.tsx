@@ -230,19 +230,23 @@ export default function OdevEkle() {
                     }
                 }
             } else {
+                const isOdevVer = yeniDurum === 'Ödev Ver';
                 if (seciliKonu.odevVarMi && seciliKonu.odevId) {
                     const mevcutOdev = odevler.find(o => o.odevId === seciliKonu.odevId);
                     if (mevcutOdev) {
                         const guncelOdev = {
                             ...mevcutOdev,
-                            yapilmadurumu: yeniDurum,
-                            kontroltarihi: yeniDurum === 'Yapıldı' ? new Date().toISOString().split('T')[0] : mevcutOdev.kontroltarihi
+                            yapilmadurumu: isOdevVer ? 'Bekliyor' : yeniDurum,
+                            kontroltarihi: yeniDurum === 'Yapıldı' ? new Date().toISOString().split('T')[0] : mevcutOdev.kontroltarihi,
+                            aciklama: isOdevVer ? `${formatTarih(new Date())} tarihinde verildi` : mevcutOdev.aciklama,
+                            verilmetarihi: isOdevVer ? new Date().toISOString().split('T')[0] : mevcutOdev.verilmetarihi,
+                            teslimttarihi: isOdevVer ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : mevcutOdev.teslimttarihi
                         };
                         const res = await odevGuncelle(seciliKonu.odevId, guncelOdev);
                         if (res.success) {
-                            Platform.OS === 'android' ? ToastAndroid.show(`Durum "${yeniDurum}" yapıldı`, ToastAndroid.SHORT) : Alert.alert('Başarılı', `Ödev durumu "${yeniDurum}" olarak güncellendi.`);
+                            Platform.OS === 'android' ? ToastAndroid.show(isOdevVer ? 'Ödev olarak verildi' : `Durum "${yeniDurum}" yapıldı`, ToastAndroid.SHORT) : Alert.alert('Başarılı', isOdevVer ? 'Ödev olarak verildi.' : `Ödev durumu "${yeniDurum}" olarak güncellendi.`);
                         } else {
-                            Platform.OS === 'android' ? ToastAndroid.show('Ödev durumu güncellenemedi.', ToastAndroid.SHORT) : Alert.alert('Hata', 'Ödev durumu güncellenemedi.');
+                            Platform.OS === 'android' ? ToastAndroid.show('Ödev güncellenemedi.', ToastAndroid.SHORT) : Alert.alert('Hata', 'Ödev güncellenemedi.');
                         }
                     }
                 } else {
@@ -252,12 +256,12 @@ export default function OdevEkle() {
                         odev: seciliKonu.icerik,
                         verilmetarihi: new Date().toISOString().split('T')[0],
                         teslimttarihi: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                        yapilmadurumu: yeniDurum,
-                        aciklama: 'Rapor sayfasından durum atandı'
+                        yapilmadurumu: isOdevVer ? 'Bekliyor' : yeniDurum,
+                        aciklama: isOdevVer ? `${formatTarih(new Date())} tarihinde verildi` : 'Rapor sayfasından durum atandı'
                     };
                     const res = await odevKaydet(yeniOdev);
                     if (res.success) {
-                        Platform.OS === 'android' ? ToastAndroid.show(`Durum "${yeniDurum}" yapıldı`, ToastAndroid.SHORT) : Alert.alert('Başarılı', `Ödev kaydedildi ve "${yeniDurum}" olarak işaretlendi.`);
+                        Platform.OS === 'android' ? ToastAndroid.show(isOdevVer ? 'Ödev olarak verildi' : `Durum "${yeniDurum}" yapıldı`, ToastAndroid.SHORT) : Alert.alert('Başarılı', isOdevVer ? 'Ödev olarak kaydedildi.' : `Ödev kaydedildi ve "${yeniDurum}" olarak işaretlendi.`);
                     } else {
                         Platform.OS === 'android' ? ToastAndroid.show('Ödev kaydedilemedi.', ToastAndroid.SHORT) : Alert.alert('Hata', 'Ödev kaydedilemedi.');
                     }
@@ -2275,7 +2279,7 @@ export default function OdevEkle() {
             >
                 <View style={styles.modalOverlay}>
                     <View style={[styles.reportModalContent, { height: 'auto', padding: 10, width: '90%' }]}>
-                        <View style={styles.modalHeader}>
+                        <View style={[styles.modalHeader, { paddingVertical: 8, paddingHorizontal: 12, borderBottomWidth: 0, paddingBottom: 6 }]}>
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.modalTitle}>Durum Ata</Text>
                                 <Text style={{ fontSize: 10, color: '#666', marginTop: 2 }}>
@@ -2287,12 +2291,31 @@ export default function OdevEkle() {
                             </TouchableOpacity>
                         </View>
 
-                        <View style={{ marginVertical: 15 }}>
-                            <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#333', marginBottom: 10 }}>
+                        <View style={{ marginVertical: 5, paddingHorizontal: 8 }}>
+                            <TouchableOpacity
+                                style={{
+                                    flexDirection: 'row',
+                                    backgroundColor: '#6a1b9a',
+                                    paddingVertical: 12,
+                                    borderRadius: 8,
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    marginBottom: 16,
+                                    elevation: 2,
+                                }}
+                                onPress={() => durumAta('Ödev Ver')}
+                            >
+                                <MaterialIcons name="assignment" size={18} color="white" style={{ marginRight: 8 }} />
+                                <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 14 }}>
+                                    Bu İçeriği Ödev Olarak Ver
+                                </Text>
+                            </TouchableOpacity>
+
+                            <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#333', marginBottom: 8 }}>
                                 Konu: <Text style={{ fontWeight: 'normal' }}>{seciliKonu?.icerik}</Text>
                             </Text>
 
-                            <Text style={{ fontSize: 13, color: '#7f8c8d', marginBottom: 15 }}>
+                            <Text style={{ fontSize: 12, color: '#7f8c8d', marginBottom: 12 }}>
                                 Lütfen bu içerik/konu için yeni durumu seçin:
                             </Text>
 

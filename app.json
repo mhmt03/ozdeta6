@@ -18,6 +18,9 @@
     },
     "android": {
       "package": "com.mhmt03.ozdeta",
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/derstakipicon.png",

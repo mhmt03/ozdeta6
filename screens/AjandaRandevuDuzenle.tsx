@@ -23,7 +23,7 @@ import { ogrencileriListele, ajandaGuncelle, randevuIptal, ajandaGrupGuncelle, a
 import { OgrenciType, AjandaType } from '../types';
 import { tekOgrenci } from '../utils/database';
 import { getSetting } from '../database/settingsOperations';
-import { scheduleRandevuNotification, cancelRandevuNotification } from '../utils/notifications';
+import { scheduleRandevuNotification, cancelRandevuNotification, rescheduleAllRandevuNotifications } from '../utils/notifications';
 
 export default function AjandaRandevuDuzenle({ route, navigation }: any) {
     const { randevu } = route.params;
@@ -93,12 +93,22 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
             const yerelTarihString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
             const saatStr = date.toTimeString().slice(0, 5);
 
+            let secilenOgrenciAdSoyad = randevu.ogrAdsoyad;
+            if (ogrenciTip === 'kayitli' && selectedOgrenci) {
+                const secilenOgr = ogrenciList.find(o => o.ogrenciId === selectedOgrenci);
+                if (secilenOgr) {
+                    secilenOgrenciAdSoyad = `${secilenOgr.ogrenciAd} ${secilenOgr.ogrenciSoyad}`;
+                }
+            } else if (ogrenciTip === 'kayıtsız') {
+                secilenOgrenciAdSoyad = kayıtsızInput;
+            }
+
             const updatedRandevu: AjandaType = {
                 ...randevu,
                 tarih: yerelTarihString,
                 saat: saatStr,
                 ogrenciId: ogrenciTip === 'kayitli' ? selectedOgrenci : null,
-                ogrAdsoyad: ogrenciTip === 'kayıtsız' ? kayıtsızInput : randevu.ogrAdsoyad,
+                ogrAdsoyad: secilenOgrenciAdSoyad,
                 kalanTekrarSayisi: degisiklikTipi === 'tumKayitlar' ? kalanTekrar.toString() : randevu.kalanTekrarSayisi,
                 tekrarsayisi: degisiklikTipi === 'tumKayitlar' ? kalanTekrar.toString() : (randevu.tekrarsayisi || '1'),
                 tamamlanma: randevu.tamamlanma || '0',
@@ -132,6 +142,8 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
                 if (!guncelleResult.success) {
                     throw new Error(guncelleResult.error);
                 }
+                // Tüm kayıtlar güncellendiği için bildirimleri yeniden planla
+                await rescheduleAllRandevuNotifications();
             }
 
             Alert.alert('Başarılı', 'Randevu kaydedildi');
@@ -280,16 +292,42 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
 
     return (
         <KeyboardAvoidingView
-            style={{ flex: 1 }}
+            style={{ flex: 1, backgroundColor: '#F3F4F6' }}
             behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
+            <ScrollView 
+                style={styles.container} 
+                contentContainerStyle={{ padding: 16, paddingBottom: Math.max(insets.bottom + 20, 100) }}
+                showsVerticalScrollIndicator={false}
+            >
+                {/* TARİH & SAAT KARTI */}
+                <View style={styles.card}>
+                    <View style={styles.cardHeader}>
+                        <MaterialIcons name="event" size={20} color="#4F46E5" />
+                        <Text style={styles.cardTitle}>Zaman Bilgileri</Text>
+                    </View>
+                    
+                    <View style={styles.row}>
+                        <View style={styles.column}>
+                            <Text style={styles.label}>Tarih</Text>
+                            <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.dateTimeButton}>
+                                <Text style={styles.dateTimeText}>{formatDateWithDay(date)}</Text>
+                                <MaterialIcons name="calendar-today" size={16} color="#6B7280" style={styles.inputIcon} />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
 
-            <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingBottom: Math.max(insets.bottom + 20, 100) }}>
-                <Text style={styles.label}>Tarih</Text>
-                <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.dateTimeButton}>
-                    {/* <Text>{date.toLocaleDateString()}</Text> */}
-                    <Text>{formatDateWithDay(date)}</Text>
-                </TouchableOpacity>
+                    <View style={styles.row}>
+                        <View style={styles.column}>
+                            <Text style={styles.label}>Saat</Text>
+                            <TouchableOpacity onPress={() => setShowTimePicker(true)} style={styles.dateTimeButton}>
+                                <Text style={styles.dateTimeText}>{date.toTimeString().slice(0, 5)}</Text>
+                                <MaterialIcons name="access-time" size={16} color="#6B7280" style={styles.inputIcon} />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+
                 {showDatePicker && (
                     <DateTimePicker
                         value={date}
@@ -301,11 +339,6 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
                         }}
                     />
                 )}
-
-                <Text style={styles.label}>Saat</Text>
-                <TouchableOpacity onPress={() => setShowTimePicker(true)} style={styles.dateTimeButton}>
-                    <Text>{date.toTimeString().slice(0, 5)}</Text>
-                </TouchableOpacity>
                 {showTimePicker && (
                     <DateTimePicker
                         value={date}
@@ -318,160 +351,174 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
                     />
                 )}
 
-                <View style={styles.row}>
-                    <View style={styles.column}>
-                        <Text style={styles.label}>Kalan Tekrar</Text>
-                        <View style={styles.stepInputContainer}>
-                            <TouchableOpacity
-                                style={styles.stepButton}
-                                onPress={() => {
-                                    setKalanTekrar((prev: number) => Math.max(1, prev - 1));
-                                    setDegisiklikTipi('tumKayitlar');
-                                }}
-                            >
-                                <MaterialIcons name="remove" size={20} color="#3498db" />
-                            </TouchableOpacity>
-                            <TextInput
-                                style={styles.inputStep}
-                                keyboardType="numeric"
-                                value={kalanTekrar.toString()}
-                                onChangeText={(t) => setKalanTekrar(parseInt(t) || 0)}
-                            />
-                            <TouchableOpacity
-                                style={styles.stepButton}
-                                onPress={() => {
-                                    setKalanTekrar((prev: number) => prev + 1);
-                                    setDegisiklikTipi('tumKayitlar');
-                                }}
-                            >
-                                <MaterialIcons name="add" size={20} color="#3498db" />
-                            </TouchableOpacity>
+                {/* TEKRAR VE PERİYOT KARTI */}
+                <View style={styles.card}>
+                    <View style={styles.cardHeader}>
+                        <MaterialIcons name="repeat" size={20} color="#4F46E5" />
+                        <Text style={styles.cardTitle}>Tekrar & Periyot</Text>
+                    </View>
+                    <View style={styles.row}>
+                        <View style={[styles.column, { marginRight: 8 }]}>
+                            <Text style={styles.label}>Kalan Tekrar</Text>
+                            <View style={styles.stepInputContainer}>
+                                <TouchableOpacity
+                                    style={styles.stepButton}
+                                    onPress={() => {
+                                        setKalanTekrar((prev: number) => Math.max(1, prev - 1));
+                                        setDegisiklikTipi('tumKayitlar');
+                                    }}
+                                >
+                                    <MaterialIcons name="remove" size={20} color="#4F46E5" />
+                                </TouchableOpacity>
+                                <TextInput
+                                    style={styles.inputStep}
+                                    keyboardType="numeric"
+                                    value={kalanTekrar.toString()}
+                                    onChangeText={(t) => setKalanTekrar(parseInt(t) || 0)}
+                                />
+                                <TouchableOpacity
+                                    style={styles.stepButton}
+                                    onPress={() => {
+                                        setKalanTekrar((prev: number) => prev + 1);
+                                        setDegisiklikTipi('tumKayitlar');
+                                    }}
+                                >
+                                    <MaterialIcons name="add" size={20} color="#4F46E5" />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        <View style={[styles.column, { marginLeft: 8 }]}>
+                            <Text style={styles.label}>Periyot (Gün)</Text>
+                            <View style={styles.inputContainer}>
+                                <TextInput
+                                    style={styles.inputSmall}
+                                    keyboardType="numeric"
+                                    value={periyot.toString()}
+                                    onChangeText={(t) => setPeriyot(parseInt(t) || 0)}
+                                />
+                                <MaterialIcons name="loop" size={16} color="#6B7280" style={styles.inputIcon} />
+                            </View>
                         </View>
                     </View>
+                </View>
 
-                    <View style={styles.column}>
-                        <Text style={styles.label}>Periyot (gün)</Text>
-                        <TextInput
-                            style={styles.inputSmall}
-                            keyboardType="numeric"
-                            value={periyot.toString()}
-                            onChangeText={(t) => setPeriyot(parseInt(t) || 0)}
-                        />
+                {/* ÖĞRENCİ KARTI */}
+                <View style={styles.card}>
+                    <View style={styles.cardHeader}>
+                        <FontAwesome5 name="user-graduate" size={18} color="#4F46E5" />
+                        <Text style={styles.cardTitle}>Öğrenci Bilgileri</Text>
+                    </View>
+                    <View style={styles.radioContainer}>
+                        <TouchableOpacity style={[styles.radioButton, ogrenciTip === 'kayitli' && styles.radioSelectedContainer]} onPress={() => setOgrenciTip('kayitli')}>
+                            <View style={[styles.radioCircle, ogrenciTip === 'kayitli' && styles.radioSelected]} />
+                            <Text style={[styles.radioLabel, ogrenciTip === 'kayitli' && styles.radioLabelSelected]}>Kayıtlı</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.radioButton, ogrenciTip === 'kayıtsız' && styles.radioSelectedContainer]} onPress={() => setOgrenciTip('kayıtsız')}>
+                            <View style={[styles.radioCircle, ogrenciTip === 'kayıtsız' && styles.radioSelected]} />
+                            <Text style={[styles.radioLabel, ogrenciTip === 'kayıtsız' && styles.radioLabelSelected]}>Kayıtsız</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {ogrenciTip === 'kayitli' ? (
+                        <View style={styles.pickerContainer}>
+                            <RNPickerSelect
+                                onValueChange={(value) => setSelectedOgrenci(value)}
+                                items={ogrenciList.map(o => ({ label: `${o.ogrenciAd} ${o.ogrenciSoyad}`, value: o.ogrenciId }))}
+                                value={selectedOgrenci}
+                                style={{
+                                    inputIOS: styles.pickerInput,
+                                    inputAndroid: styles.pickerInput,
+                                    iconContainer: { top: 12, right: 12 },
+                                }}
+                                Icon={() => <MaterialIcons name="arrow-drop-down" size={24} color="#6B7280" />}
+                            />
+                        </View>
+                    ) : (
+                        <View style={styles.inputContainer}>
+                            <MaterialIcons name="person-outline" size={20} color="#6B7280" style={{marginLeft: 10}}/>
+                            <TextInput
+                                placeholder="Öğrenci Adı Soyadı"
+                                placeholderTextColor="#9CA3AF"
+                                style={styles.input}
+                                value={kayıtsızInput}
+                                onChangeText={setKayitsizInput}
+                            />
+                        </View>
+                    )}
+                </View>
+
+                {/* DEĞİŞİKLİK TİPİ KARTI */}
+                <View style={styles.card}>
+                    <View style={styles.cardHeader}>
+                        <MaterialIcons name="edit" size={20} color="#4F46E5" />
+                        <Text style={styles.cardTitle}>Değişiklik Kapsamı</Text>
+                    </View>
+                    <View style={styles.radioContainer}>
+                        <TouchableOpacity style={[styles.radioButton, degisiklikTipi === 'sadeceBu' && styles.radioSelectedContainer]} onPress={() => setDegisiklikTipi('sadeceBu')}>
+                            <View style={[styles.radioCircle, degisiklikTipi === 'sadeceBu' && styles.radioSelected]} />
+                            <Text style={[styles.radioLabel, degisiklikTipi === 'sadeceBu' && styles.radioLabelSelected]}>Sadece Bu Kayıt</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.radioButton, degisiklikTipi === 'tumKayitlar' && styles.radioSelectedContainer]} onPress={() => setDegisiklikTipi('tumKayitlar')}>
+                            <View style={[styles.radioCircle, degisiklikTipi === 'tumKayitlar' && styles.radioSelected]} />
+                            <Text style={[styles.radioLabel, degisiklikTipi === 'tumKayitlar' && styles.radioLabelSelected]}>Sonraki Tüm Kayıtlar</Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
 
-                <Text style={styles.label}>Öğrenci</Text>
-                <View style={styles.radioContainer}>
-                    <TouchableOpacity style={styles.radioButton} onPress={() => setOgrenciTip('kayitli')}>
-                        <View style={[styles.radioCircle, ogrenciTip === 'kayitli' && styles.radioSelected]} />
-                        <Text style={styles.radioLabel}>Kayıtlı Öğrenci</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.radioButton} onPress={() => setOgrenciTip('kayıtsız')}>
-                        <View style={[styles.radioCircle, ogrenciTip === 'kayıtsız' && styles.radioSelected]} />
-                        <Text style={styles.radioLabel}>Kayıtsız Öğrenci</Text>
-                    </TouchableOpacity>
-                </View>
+                {/* BİLDİRİM AYARI KARTI */}
+                <View style={styles.card}>
+                    <View style={styles.cardHeader}>
+                        <MaterialIcons name="notifications-active" size={20} color="#4F46E5" />
+                        <Text style={styles.cardTitle}>Bildirim Ayarları</Text>
+                    </View>
 
-                {ogrenciTip === 'kayitli' ? (
-                    <RNPickerSelect
-                        onValueChange={(value) => setSelectedOgrenci(value)}
-                        items={ogrenciList.map(o => ({ label: `${o.ogrenciAd} ${o.ogrenciSoyad}`, value: o.ogrenciId }))}
-                        value={selectedOgrenci}
-                        style={{ inputIOS: styles.input, inputAndroid: styles.input }}
-                    />
-                ) : (
-                    <TextInput
-                        placeholder="Öğrenci adı soyadı"
-                        style={styles.input}
-                        value={kayıtsızInput}
-                        onChangeText={setKayitsizInput}
-                    />
-                )}
-
-                <Text style={styles.label}>Değişiklik Tipi</Text>
-                <View style={styles.radioContainer}>
-                    <TouchableOpacity style={styles.radioButton} onPress={() => setDegisiklikTipi('sadeceBu')}>
-                        <View style={[styles.radioCircle, degisiklikTipi === 'sadeceBu' && styles.radioSelected]} />
-                        <Text style={styles.radioLabel}>Sadece Bu Kayıt</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.radioButton} onPress={() => setDegisiklikTipi('tumKayitlar')}>
-                        <View style={[styles.radioCircle, degisiklikTipi === 'tumKayitlar' && styles.radioSelected]} />
-                        <Text style={styles.radioLabel}>Sıradaki Tüm Kayıtlar</Text>
-                    </TouchableOpacity>
-                </View>
-
-                {/* 🔔 BİLDİRİM AYARI BÖLÜMÜ */}
-                <View style={styles.bildirimSection}>
-                    <Text style={styles.label}>🔔 Bildirim Ayarı</Text>
-
-                    {/* Global bildirim kapalıysa uyarı */}
                     {!globalBildirimAcik && (
                         <View style={styles.bildirimUyariBox}>
-                            <MaterialIcons name="notifications-off" size={16} color="#e67e22" />
+                            <MaterialIcons name="notifications-off" size={18} color="#D97706" />
                             <Text style={styles.bildirimUyariText}>
-                                Bildirimler Ayarlar'dan kapalı.
+                                Genel bildirimler Ayarlar'dan kapalı durumda.
                             </Text>
                         </View>
                     )}
 
-                    {/* Açık/Kapalı toggle */}
                     <View style={styles.bildirimToggleRow}>
-                        <Text style={[
-                            styles.bildirimToggleLabel,
-                            !globalBildirimAcik && styles.disabledText
-                        ]}>
-                            Bu randevu için bildirim
+                        <Text style={[styles.bildirimToggleLabel, !globalBildirimAcik && styles.disabledText]}>
+                            Bu randevu için bildirim al
                         </Text>
                         <Switch
                             value={randevuBildirimIste}
-                            onValueChange={(val) => setRandevuBildirimIste(val)}
+                            onValueChange={setRandevuBildirimIste}
                             disabled={!globalBildirimAcik}
-                            trackColor={{ false: '#ccc', true: '#3498db' }}
-                            thumbColor={randevuBildirimIste ? '#2980b9' : '#f4f3f4'}
+                            trackColor={{ false: '#D1D5DB', true: '#C7D2FE' }}
+                            thumbColor={randevuBildirimIste ? '#4F46E5' : '#F9FAFB'}
                         />
                     </View>
 
-                    {/* Detaylar (sadece açıksa ve global açıksa) */}
                     {randevuBildirimIste && globalBildirimAcik && (
                         <View style={styles.bildirimDetayBox}>
-                            {/* Dakika sayacı */}
                             <View style={styles.dakikaRow}>
-                                <Text style={styles.bildirimToggleLabel}>Kaç dakika önce:</Text>
+                                <Text style={styles.bildirimToggleLabel}>Öncesinde uyar (dk):</Text>
                                 <View style={styles.dakikaControls}>
-                                    <TouchableOpacity
-                                        style={styles.dakikaBtn}
-                                        onPress={() => setBildirimDakika(prev => Math.max(1, prev - 5))}
-                                    >
-                                        <MaterialIcons name="remove" size={18} color="#e74c3c" />
+                                    <TouchableOpacity style={styles.dakikaBtn} onPress={() => setBildirimDakika(prev => Math.max(1, prev - 5))}>
+                                        <MaterialIcons name="remove" size={18} color="#EF4444" />
                                     </TouchableOpacity>
                                     <Text style={styles.dakikaValue}>{bildirimDakika}</Text>
-                                    <TouchableOpacity
-                                        style={styles.dakikaBtn}
-                                        onPress={() => setBildirimDakika(prev => prev + 5)}
-                                    >
-                                        <MaterialIcons name="add" size={18} color="#2ecc71" />
+                                    <TouchableOpacity style={styles.dakikaBtn} onPress={() => setBildirimDakika(prev => prev + 5)}>
+                                        <MaterialIcons name="add" size={18} color="#10B981" />
                                     </TouchableOpacity>
                                 </View>
                             </View>
 
-                            {/* Ses seçimi */}
-                            <View style={styles.bildirimToggleRow}>
-                                <Text style={styles.bildirimToggleLabel}>Bildirim türü:</Text>
+                            <View style={[styles.dakikaRow, { marginTop: 12 }]}>
+                                <Text style={styles.bildirimToggleLabel}>Ses durumu:</Text>
                                 <View style={styles.sesSecenekler}>
-                                    <TouchableOpacity
-                                        style={[styles.sesButon, bildirimSesli && styles.sesButonAktif]}
-                                        onPress={() => setBildirimSesli(true)}
-                                    >
-                                        <MaterialIcons name="volume-up" size={16}
-                                            color={bildirimSesli ? 'white' : '#7f8c8d'} />
+                                    <TouchableOpacity style={[styles.sesButon, bildirimSesli && styles.sesButonAktif]} onPress={() => setBildirimSesli(true)}>
+                                        <MaterialIcons name="volume-up" size={18} color={bildirimSesli ? 'white' : '#6B7280'} />
                                         <Text style={[styles.sesButonText, bildirimSesli && styles.sesButonTextAktif]}>Sesli</Text>
                                     </TouchableOpacity>
-                                    <TouchableOpacity
-                                        style={[styles.sesButon, !bildirimSesli && styles.sesButonAktif]}
-                                        onPress={() => setBildirimSesli(false)}
-                                    >
-                                        <MaterialIcons name="notifications-none" size={16}
-                                            color={!bildirimSesli ? 'white' : '#7f8c8d'} />
+                                    <TouchableOpacity style={[styles.sesButon, !bildirimSesli && styles.sesButonAktif]} onPress={() => setBildirimSesli(false)}>
+                                        <MaterialIcons name="volume-off" size={18} color={!bildirimSesli ? 'white' : '#6B7280'} />
                                         <Text style={[styles.sesButonText, !bildirimSesli && styles.sesButonTextAktif]}>Sessiz</Text>
                                     </TouchableOpacity>
                                 </View>
@@ -480,63 +527,64 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
                     )}
                 </View>
 
-                <View style={styles.buttonGrid}>
-                    <TouchableOpacity style={[styles.buttonSmall, { backgroundColor: '#3498db' }]} onPress={handleKaydet}>
-                        <MaterialIcons name="save" size={18} color="white" />
-                        <Text style={styles.buttonText}>Kaydet</Text>
+                {/* AKSİYON BUTONLARI */}
+                <View style={styles.actionCard}>
+                    <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#4F46E5' }]} onPress={handleKaydet}>
+                        <MaterialIcons name="save" size={20} color="white" />
+                        <Text style={styles.actionButtonText}>Kaydet</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={[styles.buttonSmall, { backgroundColor: '#95a5a6' }]} onPress={() => navigation.goBack()}>
-                        <Entypo name="cross" size={18} color="white" />
-                        <Text style={styles.buttonText}>Vazgeç</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[styles.buttonSmall, styles.iptalButon]}
-                        onPress={randevuIptalEt}
-                    >
-                        <MaterialIcons name="cancel" size={18} color="white" />
-                        <Text style={styles.buttonText}>Randevu İptal</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[styles.buttonSmall, { backgroundColor: '#e74c3c' }]}
-                        onPress={handleSil}
-                    >
-                        <MaterialIcons name="delete" size={18} color="white" />
-                        <Text style={styles.buttonText}>Randevu Sil</Text>
+                    <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#6B7280' }]} onPress={() => navigation.goBack()}>
+                        <MaterialIcons name="close" size={20} color="white" />
+                        <Text style={styles.actionButtonText}>Vazgeç</Text>
                     </TouchableOpacity>
                 </View>
-                <Text style={styles.label}>Mesaj Hedefi</Text>
-                <View style={styles.radioContainer}>
-
-                    <TouchableOpacity style={styles.radioButton} onPress={() => setMesajHedef('veli')}>
-                        <View style={[styles.radioCircle, mesajHedef === 'veli' && styles.radioSelected]} />
-                        <Text style={styles.radioLabel}>Veliye</Text>
+                
+                <View style={styles.actionCard}>
+                    <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#F59E0B' }]} onPress={randevuIptalEt}>
+                        <MaterialIcons name="event-busy" size={20} color="white" />
+                        <Text style={styles.actionButtonText}>Randevuyu İptal Et</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.radioButton} onPress={() => setMesajHedef('ogrenci')}>
-                        <View style={[styles.radioCircle, mesajHedef === 'ogrenci' && styles.radioSelected]} />
-                        <Text style={styles.radioLabel}>Öğrenciye</Text>
+
+                    <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#EF4444' }]} onPress={handleSil}>
+                        <MaterialIcons name="delete-forever" size={20} color="white" />
+                        <Text style={styles.actionButtonText}>Tamamen Sil</Text>
                     </TouchableOpacity>
                 </View>
 
-                <View style={styles.buttonGrid}>
+                {/* MESAJLAŞMA KARTI */}
+                <View style={[styles.card, { marginTop: 8 }]}>
+                    <View style={styles.cardHeader}>
+                        <MaterialIcons name="message" size={20} color="#4F46E5" />
+                        <Text style={styles.cardTitle}>Hızlı Mesaj Gönder</Text>
+                    </View>
+                    
+                    <Text style={styles.label}>Mesaj Hedefi</Text>
+                    <View style={styles.radioContainer}>
+                        <TouchableOpacity style={[styles.radioButton, mesajHedef === 'veli' && styles.radioSelectedContainer]} onPress={() => setMesajHedef('veli')}>
+                            <View style={[styles.radioCircle, mesajHedef === 'veli' && styles.radioSelected]} />
+                            <Text style={[styles.radioLabel, mesajHedef === 'veli' && styles.radioLabelSelected]}>Veliye</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.radioButton, mesajHedef === 'ogrenci' && styles.radioSelectedContainer]} onPress={() => setMesajHedef('ogrenci')}>
+                            <View style={[styles.radioCircle, mesajHedef === 'ogrenci' && styles.radioSelected]} />
+                            <Text style={[styles.radioLabel, mesajHedef === 'ogrenci' && styles.radioLabelSelected]}>Öğrenciye</Text>
+                        </TouchableOpacity>
+                    </View>
 
+                    <View style={styles.messageButtonsContainer}>
+                        <TouchableOpacity style={[styles.messageBtn, { backgroundColor: '#10B981' }]} onPress={gonderSms}>
+                            <MaterialIcons name="sms" size={20} color="white" />
+                            <Text style={styles.messageBtnText}>SMS</Text>
+                        </TouchableOpacity>
 
-                    <TouchableOpacity style={[styles.buttonSmall, { backgroundColor: '#27ae60' }]} onPress={gonderSms}>
-                        <MaterialIcons name="sms" size={18} color="white" />
-                        <Text style={styles.buttonText}>SMS</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity style={[styles.buttonSmall, { backgroundColor: '#075E54' }]} onPress={gonderWhatsApp}>
-                        <FontAwesome5 name="whatsapp" size={18} color="white" />
-                        <Text style={styles.buttonText}>WhatsApp</Text>
-                    </TouchableOpacity>
-
-
+                        <TouchableOpacity style={[styles.messageBtn, { backgroundColor: '#25D366' }]} onPress={gonderWhatsApp}>
+                            <FontAwesome5 name="whatsapp" size={20} color="white" />
+                            <Text style={styles.messageBtnText}>WhatsApp</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
+
             </ScrollView>
-
         </KeyboardAvoidingView>
     );
 }
@@ -544,148 +592,245 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f7f7f7',
-        paddingTop: 16,
-        paddingBottom: 16,
+        backgroundColor: '#F3F4F6',
     },
-    label: { fontWeight: 'bold', marginTop: 15 },
-    input: {
-        backgroundColor: 'white',
-        padding: 8,
-        borderRadius: 8,
-        marginTop: 5,
-        borderWidth: 1,
-        borderColor: '#ced4da',
-        color: '#2c3e50',
-        elevation: 1,
+    card: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 16,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 3,
     },
-    inputSmall: {
-        backgroundColor: 'white',
-        padding: 8,
-        borderRadius: 8,
+    cardHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F3F4F6',
+        paddingBottom: 12,
+    },
+    cardTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#111827',
+        marginLeft: 8,
+    },
+    label: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#4B5563',
+        marginBottom: 6,
+    },
+    row: { 
+        flexDirection: 'row', 
+        justifyContent: 'space-between', 
+        marginBottom: 12 
+    },
+    column: { 
+        flex: 1 
+    },
+    dateTimeButton: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        backgroundColor: '#F9FAFB',
         borderWidth: 1,
-        borderColor: '#ccc',
-        marginTop: 5,
-        width: 100,
-        textAlign: 'center'
+        borderColor: '#E5E7EB',
+        borderRadius: 12,
+        padding: 12,
+    },
+    dateTimeText: {
+        fontSize: 15,
+        color: '#111827',
+        fontWeight: '500',
+    },
+    inputIcon: {
+        opacity: 0.7,
+        marginRight: 4,
     },
     stepInputContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 5,
-        backgroundColor: 'white',
-        borderRadius: 8,
+        backgroundColor: '#F9FAFB',
+        borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#ccc',
+        borderColor: '#E5E7EB',
         overflow: 'hidden',
     },
     stepButton: {
-        padding: 10,
-        backgroundColor: '#f0f7ff',
+        padding: 12,
+        backgroundColor: '#EEF2FF',
     },
     inputStep: {
         flex: 1,
-        height: 40,
         textAlign: 'center',
         fontSize: 16,
         fontWeight: 'bold',
-        color: '#333',
+        color: '#111827',
     },
-    row: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
-    column: { flex: 1, marginHorizontal: 5 },
-    radioContainer: { flexDirection: 'row', marginTop: 10 },
-    radioButton: { flexDirection: 'row', alignItems: 'center', marginRight: 20 },
-    radioCircle: {
-        height: 18,
-        width: 18,
-        borderRadius: 9,
-        borderWidth: 2,
-        borderColor: '#3498db',
-        marginRight: 5,
-    },
-    radioSelected: { backgroundColor: '#3498db' },
-    radioLabel: { fontSize: 14 },
-    buttonGrid: {
+    inputContainer: {
         flexDirection: 'row',
-        flexWrap: 'wrap',
+        alignItems: 'center',
+        backgroundColor: '#F9FAFB',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        flex: 1,
+    },
+    inputSmall: {
+        flex: 1,
+        padding: 12,
+        textAlign: 'center',
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#111827',
+    },
+    pickerContainer: {
+        backgroundColor: '#F9FAFB',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        marginTop: 4,
+    },
+    pickerInput: {
+        fontSize: 15,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        color: '#111827',
+        paddingRight: 40,
+    },
+    input: {
+        flex: 1,
+        paddingVertical: 12,
+        paddingHorizontal: 12,
+        fontSize: 15,
+        color: '#111827',
+    },
+    radioContainer: { 
+        flexDirection: 'row', 
+        marginBottom: 12,
+        gap: 8,
+    },
+    radioButton: { 
+        flex: 1,
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        backgroundColor: '#F9FAFB',
+        paddingVertical: 8,
+        paddingHorizontal: 4,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+    },
+    radioSelectedContainer: {
+        backgroundColor: '#EEF2FF',
+        borderColor: '#4F46E5',
+    },
+    radioCircle: {
+        height: 16,
+        width: 16,
+        borderRadius: 8,
+        borderWidth: 2,
+        borderColor: '#9CA3AF',
+        marginRight: 6,
+    },
+    radioSelected: { 
+        borderColor: '#4F46E5',
+        backgroundColor: '#4F46E5',
+    },
+    radioLabel: { 
+        fontSize: 12,
+        color: '#4B5563',
+        fontWeight: '500',
+    },
+    radioLabelSelected: {
+        color: '#4F46E5',
+        fontWeight: '600',
+    },
+    actionCard: {
+        flexDirection: 'row',
         justifyContent: 'space-between',
-        marginTop: 25,
+        marginBottom: 12,
+        gap: 12,
     },
-    iptalButon: {
-        backgroundColor: '#f39c12',
-    },
-    buttonSmall: {
+    actionButton: {
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 10,
-        paddingHorizontal: 12,
-        borderRadius: 8,
-        marginBottom: 12,
-        width: '47%',
+        paddingVertical: 14,
+        borderRadius: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+        gap: 6,
     },
-    buttonText: { color: 'white', marginLeft: 5, fontWeight: 'bold', fontSize: 13 },
-    dateTimeButton: {
-        backgroundColor: 'white',
-        padding: 12,
-        borderRadius: 8,
-        marginTop: 5,
-        borderWidth: 1,
-        borderColor: '#ccc',
+    actionButtonText: { 
+        color: 'white', 
+        fontWeight: 'bold', 
+        fontSize: 15 
+    },
+    messageButtonsContainer: {
+        flexDirection: 'row',
+        gap: 12,
+        marginTop: 16,
+    },
+    messageBtn: {
+        flex: 1,
+        flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        paddingVertical: 12,
+        borderRadius: 12,
+        gap: 8,
     },
-
-    // 🔔 Bildirim stilleri
-    bildirimSection: {
-        marginTop: 20,
-        backgroundColor: 'white',
-        borderRadius: 10,
-        padding: 14,
-        borderWidth: 1,
-        borderColor: '#ecf0f1',
-        elevation: 1,
+    messageBtnText: {
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: 15,
     },
     bildirimUyariBox: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#fef9e7',
-        borderRadius: 6,
-        padding: 8,
-        marginTop: 6,
-        marginBottom: 8,
-        gap: 6,
-        borderLeftWidth: 3,
-        borderLeftColor: '#e67e22',
+        backgroundColor: '#FFFBEB',
+        borderRadius: 8,
+        padding: 10,
+        marginBottom: 12,
+        gap: 8,
+        borderLeftWidth: 4,
+        borderLeftColor: '#F59E0B',
     },
     bildirimUyariText: {
         flex: 1,
-        fontSize: 12,
-        color: '#e67e22',
+        fontSize: 13,
+        color: '#B45309',
+        fontWeight: '500',
     },
     bildirimToggleRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginTop: 10,
     },
     bildirimToggleLabel: {
         fontSize: 14,
-        color: '#2c3e50',
-        fontWeight: '500',
+        color: '#111827',
+        fontWeight: '600',
     },
     disabledText: {
-        color: '#bdc3c7',
+        color: '#9CA3AF',
     },
     bildirimDetayBox: {
-        marginTop: 12,
+        marginTop: 16,
+        paddingTop: 16,
         borderTopWidth: 1,
-        borderTopColor: '#ecf0f1',
-        paddingTop: 10,
+        borderTopColor: '#F3F4F6',
     },
     dakikaRow: {
         flexDirection: 'row',
@@ -695,21 +840,20 @@ const styles = StyleSheet.create({
     dakikaControls: {
         flexDirection: 'row',
         alignItems: 'center',
+        backgroundColor: '#F9FAFB',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
     },
     dakikaBtn: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: '#ecf0f1',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginHorizontal: 8,
+        padding: 8,
+        paddingHorizontal: 12,
     },
     dakikaValue: {
-        fontSize: 16,
+        fontSize: 15,
         fontWeight: 'bold',
-        color: '#2c3e50',
-        minWidth: 28,
+        color: '#111827',
+        minWidth: 32,
         textAlign: 'center',
     },
     sesSecenekler: {
@@ -719,22 +863,22 @@ const styles = StyleSheet.create({
     sesButon: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 6,
+        paddingVertical: 8,
         paddingHorizontal: 12,
-        borderRadius: 16,
+        borderRadius: 20,
         borderWidth: 1,
-        borderColor: '#bdc3c7',
+        borderColor: '#E5E7EB',
         gap: 4,
-        backgroundColor: '#f4f6f7',
+        backgroundColor: '#F9FAFB',
     },
     sesButonAktif: {
-        backgroundColor: '#3498db',
-        borderColor: '#3498db',
+        backgroundColor: '#4F46E5',
+        borderColor: '#4F46E5',
     },
     sesButonText: {
-        fontSize: 12,
-        color: '#7f8c8d',
-        fontWeight: '500',
+        fontSize: 13,
+        color: '#6B7280',
+        fontWeight: '600',
     },
     sesButonTextAktif: {
         color: 'white',

@@ -346,33 +346,12 @@ export default function AjandaKayitEkle() {
                     </Text>
                 </View>
 
-                {/* 📅 TARİH SEÇİCİ BÖLÜMÜ */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>📅 Randevu Tarihi</Text>
-
-                    <TouchableOpacity
-                        style={styles.dateButton}
-                        onPress={() => setShowDatePicker(true)}
-                    >
-                        <MaterialIcons name="calendar-today" size={24} color="#3498db" />
-                        <Text style={styles.dateButtonText}>
-                            {selectedDate.toLocaleDateString('tr-TR', {
-                                weekday: 'long',
-                                day: 'numeric',
-                                month: 'long',
-                                year: 'numeric'
-                            })}
-                        </Text>
-                        <MaterialIcons name="chevron-right" size={24} color="#bdc3c7" />
-                    </TouchableOpacity>
-                </View>
-
                 {/* 👤 ÖĞRENCİ SEÇİMİ BÖLÜMÜ */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>👤 Öğrenci</Text>
 
                     {/* Radio Button Container */}
-                    <View style={styles.radioContainer}>
+                    <View style={[styles.radioContainer, {marginBottom: 8}]}>
                         {/* Kayıtlı Öğrenci Radio */}
                         <TouchableOpacity
                             style={styles.radioItem}
@@ -406,11 +385,11 @@ export default function AjandaKayitEkle() {
                     {isRegisteredStudent ? (
                         // Kayıtlı öğrenci: Dropdown benzeri seçici
                         <TouchableOpacity
-                            style={styles.ogrenciSelector}
+                            style={[styles.ogrenciSelector, {padding: 10}]}
                             onPress={() => setShowOgrenciModal(true)}
                             disabled={ogrenciLoading} // Loading sırasında disable
                         >
-                            <Ionicons name="person" size={24} color="#3498db" />
+                            <Ionicons name="person" size={20} color="#3498db" />
                             <Text style={[
                                 styles.ogrenciSelectorText,
                                 !selectedOgrenci && styles.placeholderText
@@ -420,95 +399,109 @@ export default function AjandaKayitEkle() {
                                     : ogrenciLoading ? 'Öğrenciler yükleniyor...' : 'Öğrenci seçiniz'
                                 }
                             </Text>
-                            <MaterialIcons name="arrow-drop-down" size={24} color="#bdc3c7" />
+                            <MaterialIcons name="arrow-drop-down" size={20} color="#bdc3c7" />
                         </TouchableOpacity>
                     ) : (
                         // Kayıtsız öğrenci: Text input
-                        <View style={styles.inputContainer}>
-                            <Ionicons name="person-outline" size={24} color="#3498db" />
+                        <View style={[styles.inputContainer, {paddingVertical: 0}]}>
+                            <Ionicons name="person-outline" size={20} color="#3498db" />
                             <TextInput
-                                style={styles.textInput}
+                                style={[styles.textInput, {paddingVertical: 8}]}
                                 placeholder="Öğrenci adı ve soyadı"
                                 value={unregisteredName}
-                                onChangeText={setUnregisteredName} // Her karakter değişiminde state güncelle
-                                autoCapitalize="words" // Kelime başlarını büyük harf yap
-                                autoCorrect={false} // Otomatik düzeltme kapalı
+                                onChangeText={setUnregisteredName}
+                                autoCapitalize="words"
+                                autoCorrect={false}
                             />
                         </View>
                     )}
                 </View>
 
-                {/* 🕐 SAAT SEÇİCİ BÖLÜMÜ */}
+                {/* 📅 ZAMAN BÖLÜMÜ */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>🕐 Randevu Saati</Text>
+                    <Text style={styles.sectionTitle}>📅 Zaman</Text>
+                    <View style={{flexDirection: 'row', gap: 10}}>
+                        <TouchableOpacity
+                            style={[styles.dateButton, {flex: 1, padding: 10}]}
+                            onPress={() => setShowDatePicker(true)}
+                        >
+                            <MaterialIcons name="calendar-today" size={20} color="#3498db" />
+                            <View style={{flex: 1, marginLeft: 10, justifyContent: 'center'}}>
+                                <Text style={{fontSize: 13, color: '#2c3e50', fontWeight: '500'}}>
+                                    {selectedDate.toLocaleDateString('tr-TR', {
+                                        day: 'numeric',
+                                        month: 'short',
+                                        year: 'numeric'
+                                    })}
+                                </Text>
+                                <Text style={{fontSize: 10, color: '#7f8c8d', marginTop: 1, fontWeight: '500'}}>
+                                    {selectedDate.toLocaleDateString('tr-TR', { weekday: 'long' })}
+                                </Text>
+                            </View>
+                        </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={styles.timeButton}
-                        onPress={() => setShowTimePicker(true)}
-                    >
-                        <MaterialIcons name="access-time" size={24} color="#3498db" />
-                        <Text style={styles.timeButtonText}>
-                            {`${selectedTime.getHours().toString().padStart(2, '0')}:${selectedTime.getMinutes().toString().padStart(2, '0')}`}
-                        </Text>
-                        <MaterialIcons name="chevron-right" size={24} color="#bdc3c7" />
-                    </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.timeButton, {flex: 0.6, padding: 10}]}
+                            onPress={() => setShowTimePicker(true)}
+                        >
+                            <MaterialIcons name="access-time" size={20} color="#3498db" />
+                            <Text style={[styles.timeButtonText, {fontSize: 15}]}>
+                                {`${selectedTime.getHours().toString().padStart(2, '0')}:${selectedTime.getMinutes().toString().padStart(2, '0')}`}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 {/* 🔄 TEKRAR AYARLARI BÖLÜMÜ */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>🔄 Tekrar Ayarları</Text>
 
-                    {/* Tekrar Sayısı */}
-                    <View style={styles.counterContainer}>
-                        <Text style={styles.counterLabel}>Tekrar Sayısı:</Text>
-                        <View style={styles.counterControls}>
-                            <TouchableOpacity
-                                style={styles.counterButton}
-                                onPress={decreaseTekrar}
-                            >
-                                <MaterialIcons name="remove" size={20} color="#e74c3c" />
-                            </TouchableOpacity>
-
-                            <Text style={styles.counterValue}>{tekrarSayisi}</Text>
-
-                            <TouchableOpacity
-                                style={styles.counterButton}
-                                onPress={increaseTekrar}
-                            >
-                                <MaterialIcons name="add" size={20} color="#2ecc71" />
-                            </TouchableOpacity>
+                    <View style={{flexDirection: 'row', justifyContent: 'space-between', gap: 10}}>
+                        {/* Tekrar Sayısı */}
+                        <View style={styles.compactCounterContainer}>
+                            <Text style={styles.compactCounterLabel}>Tekrar:</Text>
+                            <View style={styles.counterControls}>
+                                <TouchableOpacity
+                                    style={styles.compactCounterButton}
+                                    onPress={decreaseTekrar}
+                                >
+                                    <MaterialIcons name="remove" size={18} color="#e74c3c" />
+                                </TouchableOpacity>
+                                <Text style={styles.compactCounterValue}>{tekrarSayisi}</Text>
+                                <TouchableOpacity
+                                    style={styles.compactCounterButton}
+                                    onPress={increaseTekrar}
+                                >
+                                    <MaterialIcons name="add" size={18} color="#2ecc71" />
+                                </TouchableOpacity>
+                            </View>
                         </View>
-                    </View>
 
-                    {/* Periyot (Gün Aralığı) */}
-                    <View style={styles.counterContainer}>
-                        <Text style={styles.counterLabel}>Periyot (Gün):</Text>
-                        <View style={styles.counterControls}>
-                            <TouchableOpacity
-                                style={styles.counterButton}
-                                onPress={decreasePeriyot}
-                            >
-                                <MaterialIcons name="remove" size={20} color="#e74c3c" />
-                            </TouchableOpacity>
-
-                            <Text style={styles.counterValue}>{periyot}</Text>
-
-                            <TouchableOpacity
-                                style={styles.counterButton}
-                                onPress={increasePeriyot}
-                            >
-                                <MaterialIcons name="add" size={20} color="#2ecc71" />
-                            </TouchableOpacity>
+                        {/* Periyot (Gün Aralığı) */}
+                        <View style={styles.compactCounterContainer}>
+                            <Text style={styles.compactCounterLabel}>Periyot(Gün):</Text>
+                            <View style={styles.counterControls}>
+                                <TouchableOpacity
+                                    style={styles.compactCounterButton}
+                                    onPress={decreasePeriyot}
+                                >
+                                    <MaterialIcons name="remove" size={18} color="#e74c3c" />
+                                </TouchableOpacity>
+                                <Text style={styles.compactCounterValue}>{periyot}</Text>
+                                <TouchableOpacity
+                                    style={styles.compactCounterButton}
+                                    onPress={increasePeriyot}
+                                >
+                                    <MaterialIcons name="add" size={18} color="#2ecc71" />
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     </View>
 
                     {/* Tekrar Özeti */}
-                    <View style={styles.summaryContainer}>
-                        <Text style={styles.summaryText}>
-                            📋 {tekrarSayisi} hafta boyunca, {periyot} günde bir tekrarlanacak
-                        </Text>
-                        <Text style={styles.summarySubText}>
-                            Toplam {tekrarSayisi} randevu oluşturulacak
+                    <View style={[styles.summaryContainer, {marginTop: 8, padding: 8}]}>
+                        <Text style={[styles.summaryText, {fontSize: 12}]}>
+                            📋 {tekrarSayisi} kere, {periyot} günde bir ({tekrarSayisi} randevu)
                         </Text>
                     </View>
                 </View>
@@ -759,8 +752,8 @@ const styles = StyleSheet.create({
     section: {
         backgroundColor: 'white',
         marginHorizontal: 15,
-        marginBottom: 10,
-        padding: 15,
+        marginBottom: 8,
+        padding: 10,
         borderRadius: 10,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
@@ -769,10 +762,10 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
     sectionTitle: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: 'bold',
         color: '#2c3e50',
-        marginBottom: 12,
+        marginBottom: 8,
     },
 
     // 📅 Tarih seçici button
@@ -921,6 +914,39 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#2c3e50',
         minWidth: 30,
+        textAlign: 'center',
+    },
+    compactCounterContainer: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: '#fafbfc',
+        borderWidth: 1,
+        borderColor: '#ecf0f1',
+        borderRadius: 8,
+        paddingVertical: 6,
+        paddingHorizontal: 8,
+    },
+    compactCounterLabel: {
+        fontSize: 13,
+        color: '#2c3e50',
+        fontWeight: '500',
+    },
+    compactCounterButton: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: '#ecf0f1',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginHorizontal: 4,
+    },
+    compactCounterValue: {
+        fontSize: 15,
+        fontWeight: 'bold',
+        color: '#2c3e50',
+        minWidth: 20,
         textAlign: 'center',
     },
 

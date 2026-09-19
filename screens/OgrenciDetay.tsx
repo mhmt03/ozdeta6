@@ -43,8 +43,8 @@ export default function OgrenciDetay() {
 
     // Ajanda kartı state'leri
     const [ajandaSwitch, setAjandaSwitch] = useState(false); // default kapalı
-    const [ajandaBaslangic, setAjandaBaslangic] = useState(new Date());
-    const [ajandaBitis, setAjandaBitis] = useState(new Date());
+    const [ajandaBaslangic, setAjandaBaslangic] = useState(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)); // 1 hafta öncesi
+    const [ajandaBitis, setAjandaBitis] = useState(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)); // 2 hafta sonrası
     const [ajandaBaslangicPicker, setAjandaBaslangicPicker] = useState(false);
     const [ajandaBitisPicker, setAjandaBitisPicker] = useState(false);
     const [ajandaKayitlari, setAjandaKayitlari] = useState<AjandaWithOgrenciType[]>([]);
@@ -631,7 +631,7 @@ export default function OgrenciDetay() {
                                         <View style={styles.ajandaListItemLeft}>
                                             <MaterialIcons name="event" size={16} color="#2196F3" />
                                             <Text style={styles.ajandaListItemText}>
-                                                {item.tarih} {item.saat}
+                                                {item.tarih} {new Date(item.tarih).toLocaleDateString('tr-TR', { weekday: 'long' })} - {item.saat}
                                             </Text>
                                         </View>
                                         <MaterialIcons name="chevron-right" size={20} color="#999" />
@@ -641,6 +641,15 @@ export default function OgrenciDetay() {
                         )}
                     </View>
                 )}
+
+                {/* Ajandaya Git Butonu (Kart Dışında) */}
+                <TouchableOpacity
+                    style={[styles.ajandayaGitButon, { marginBottom: 20 }]}
+                    onPress={() => navigation.navigate('Ajanda')}
+                >
+                    <MaterialIcons name="event-note" size={18} color="#1976d2" />
+                    <Text style={styles.ajandayaGitButonText}>Ajandaya Git</Text>
+                </TouchableOpacity>
             </ScrollView>
 
             {/* Ders Popup */}
@@ -1327,6 +1336,23 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         fontSize: 15,
         marginLeft: 8,
+    },
+    ajandayaGitButon: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 15,
+        paddingVertical: 10,
+        backgroundColor: '#e3f2fd',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#bbdefb',
+    },
+    ajandayaGitButonText: {
+        marginLeft: 8,
+        color: '#1976d2',
+        fontWeight: '600',
+        fontSize: 14,
     },
     ajandaListContainer: {
         marginTop: 5,
