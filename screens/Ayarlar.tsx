@@ -502,28 +502,77 @@ export default function Ayarlar() {
                                 const db = await ensureDatabaseReady();
                                 let targetDbPath = db.databasePath;
                                 
-                                if (!targetDbPath.startsWith('/')) {
-                                    targetDbPath = `${FileSystem.documentDirectory}${targetDbPath}`;
+                                if (!targetDbPath.startsWith('file://') && targetDbPath.startsWith('/')) {
+                                    targetDbPath = `file://${targetDbPath}`;
                                 }
 
-                                // Güvenlik yedeği alma
+                                // Güvenlik yedeği alma (Expo Go okuma engelini aşmak için serializeAsync kullanıyoruz)
                                 try {
                                     const guvenlikYedekAdi = `guvenlik_yedek_${detayliTarihFormatla()}.db`;
-                                    // @ts-ignore - expo-file-system cacheDirectory
+                                    // @ts-ignore
                                     const guvenlikYedekYolu = FileSystem.cacheDirectory + guvenlikYedekAdi;
 
-                                    await FileSystem.copyAsync({
-                                        from: targetDbPath,
-                                        to: guvenlikYedekYolu
+                                    console.log('Güvenlik yedeği alınıyor...');
+                                    const uint8ArrayToBase64 = (bytes: Uint8Array): string => {
+                                        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+                                        let base64 = '';
+                                        const len = bytes.length;
+                                        for (let i = 0; i < len; i += 3) {
+                                            const b1 = bytes[i];
+                                            const b2 = i + 1 < len ? bytes[i + 1] : 0;
+                                            const b3 = i + 2 < len ? bytes[i + 2] : 0;
+                                            const enc1 = b1 >> 2;
+                                            const enc2 = ((b1 & 3) << 4) | (b2 >> 4);
+                                            const enc3 = ((b2 & 15) << 2) | (b3 >> 6);
+                                            const enc4 = b3 & 63;
+                                            base64 += chars[enc1] + chars[enc2] + (i + 1 < len ? chars[enc3] : '=') + (i + 2 < len ? chars[enc4] : '=');
+                                        }
+                                        return base64;
+                                    };
+
+                                    // @ts-ignore
+                                    const dbUint8Array = await db.serializeAsync('main');
+                                    const dbContent = uint8ArrayToBase64(dbUint8Array);
+                                    
+                                    await FileSystem.writeAsStringAsync(guvenlikYedekYolu, dbContent, {
+                                        // @ts-ignore
+                                        encoding: FileSystem.EncodingType.Base64
                                     });
+                                    console.log('Güvenlik yedeği başarılı:', guvenlikYedekYolu);
                                 } catch (backupError) {
                                     console.warn('Güvenlik yedeği alınamadı:', backupError);
                                 }
 
-                                await FileSystem.copyAsync({
-                                    from: fileUri ?? '',
-                                    to: targetDbPath
-                                });
+                                // Geri yükleme işlemi
+                                // Veritabanı bağlantısını kapat ki dosya kilitli (locked) olmasın
+                                try {
+                                    await db.closeAsync();
+                                } catch(e) {
+                                    console.log('DB kapatılırken hata (önemsiz):', e);
+                                }
+
+                                // Expo Go yazma kısıtlamasını aşmak için downloadAsync kullanıyoruz (veya uploadAsync).
+                                // downloadAsync, yerel file:// URI'lerinden kopyalama yapabilir ve bazen kısıtlamaları aşar.
+                                console.log('Yeni veritabanı kopyalanıyor:', fileUri, '->', targetDbPath);
+                                try {
+                                    await FileSystem.downloadAsync(fileUri ?? '', targetDbPath);
+                                } catch (copyError) {
+                                    console.error('downloadAsync hatası:', copyError);
+                                    // Eğer downloadAsync de kısıtlamaya takılırsa fallback olarak yazmayı deneriz.
+                                    try {
+                                        const newDbContent = await FileSystem.readAsStringAsync(fileUri ?? '', {
+                                            // @ts-ignore
+                                            encoding: FileSystem.EncodingType.Base64
+                                        });
+                                        await FileSystem.writeAsStringAsync(targetDbPath, newDbContent, {
+                                            // @ts-ignore
+                                            encoding: FileSystem.EncodingType.Base64
+                                        });
+                                    } catch (writeError) {
+                                        console.error('Yazma hatası:', writeError);
+                                        throw new Error('Expo Go güvenlik kısıtlaması nedeniyle veritabanı üzerine yazılamadı. Gerçek cihazda veya derlenmiş uygulamada (EAS Build) bu işlem sorunsuz çalışacaktır.');
+                                    }
+                                }
 
                                 Alert.alert(
                                     'Geri Yükleme Başarılı',
