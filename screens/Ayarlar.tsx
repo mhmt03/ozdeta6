@@ -359,38 +359,96 @@ export default function Ayarlar() {
         }
     };
 
+    const yedekIsleminiBaslat = async (aksiyon: 'indir' | 'paylas') => {
+        try {
+            setLoading(true);
+            console.log('Veritabanı bulundu, serializeAsync kullanılarak yedekleniyor...');
+
+            const uint8ArrayToBase64 = (bytes: Uint8Array): string => {
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+                let base64 = '';
+                const len = bytes.length;
+                for (let i = 0; i < len; i += 3) {
+                    const b1 = bytes[i];
+                    const b2 = i + 1 < len ? bytes[i + 1] : 0;
+                    const b3 = i + 2 < len ? bytes[i + 2] : 0;
+                    
+                    const enc1 = b1 >> 2;
+                    const enc2 = ((b1 & 3) << 4) | (b2 >> 4);
+                    const enc3 = ((b2 & 15) << 2) | (b3 >> 6);
+                    const enc4 = b3 & 63;
+                    
+                    base64 += chars[enc1] + chars[enc2] + 
+                              (i + 1 < len ? chars[enc3] : '=') + 
+                              (i + 2 < len ? chars[enc4] : '=');
+                }
+                return base64;
+            };
+
+            const db = await ensureDatabaseReady();
+            // @ts-ignore - expo-sqlite serializeAsync function
+            const dbUint8Array = await db.serializeAsync('main');
+            
+            const dbContent = uint8ArrayToBase64(dbUint8Array);
+            const yedekDosyaAdi = `ozdeta_veritabani_${detayliTarihFormatla()}.db`;
+
+            if (aksiyon === 'paylas') {
+                const result = await akilliDosyaKaydet(yedekDosyaAdi, dbContent, 'application/x-sqlite3');
+                if (result.success) {
+                    Alert.alert('Başarılı', 'Dosya paylaşım menüsü açıldı.');
+                } else {
+                    Alert.alert('Hata', result.error || 'Dosya paylaşılamadı');
+                }
+            } else if (aksiyon === 'indir') {
+                if (Platform.OS === 'android') {
+                    try {
+                        const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+                        if (permissions.granted) {
+                            const directoryUri = permissions.directoryUri;
+                            const fileUri = await FileSystem.StorageAccessFramework.createFileAsync(
+                                directoryUri,
+                                yedekDosyaAdi,
+                                'application/x-sqlite3'
+                            );
+                            await FileSystem.writeAsStringAsync(fileUri, dbContent, {
+                                // @ts-ignore
+                                encoding: FileSystem.EncodingType.Base64
+                            });
+                            Alert.alert('Başarılı', 'Yedek dosyası seçtiğiniz klasöre kaydedildi.\nDosya yöneticinizden kolayca ulaşabilirsiniz.');
+                        } else {
+                            Alert.alert('İptal Edildi', 'Klasör seçilmediği için indirme işlemi iptal edildi.');
+                        }
+                    } catch (safError) {
+                        console.error('SAF Error:', safError);
+                        const result = await akilliDosyaKaydet(yedekDosyaAdi, dbContent, 'application/x-sqlite3');
+                        if (result.success) {
+                            Alert.alert('Bilgi', 'Klasöre kaydetme desteklenmediği için paylaşım menüsü açıldı.');
+                        }
+                    }
+                } else {
+                    const result = await akilliDosyaKaydet(yedekDosyaAdi, dbContent, 'application/x-sqlite3');
+                    if (result.success) {
+                        Alert.alert('Bilgi', 'Lütfen "Dosyalara Kaydet" seçeneğini kullanın.');
+                    } else {
+                        Alert.alert('Hata', result.error || 'Dosya kaydedilemedi');
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Veritabanı yedekleme hatası:', error);
+            Alert.alert('Hata', 'Veritabanı yedekleme işlemi başarısız oldu: ' + (error as any).message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     /**
-     * SQLite veritabanını .db dosyası olarak yedekleme - İndirilenler klasörüne kaydetme eklendi
+     * SQLite veritabanını .db dosyası olarak yedekleme
      */
     const veritabaniDbYedekle = async () => {
         try {
-            setLoading(true);
-
             Alert.alert(
                 'Veritabanı Yedekle',
-                'Veritabanı yedeklenecek. Devam edilsin mi?',
-                [
-                    { text: 'İptal', style: 'cancel' },
-                    {
-                        text: 'Evet',
-                        onPress: async () => {
-                            try {
-                                const dbName = 'ozdeta.db';
-                                
-                                const db = await ensureDatabaseReady();
-                                let sourceDbPath = db.databasePath;
-                                
-                                if (!sourceDbPath.startsWith('file://') && sourceDbPath.startsWith('/')) {
-                                    sourceDbPath = `file://${sourceDbPath}`;
-                                }
-
-                                console.log('DB path obtained directly from db:', sourceDbPath);
-
-                                const dbInfo = await FileSystem.getInfoAsync(sourceDbPath);
-                                if (!dbInfo.exists) {
-                                    // Bazen path tam absolut gelmeyebilir, document dir ile birleştirmeyi deneyelim (her ihtimale karşı)
-                                    if (!sourceDbPath.startsWith('/')) {
-                                        sourceDbPath = `${FileSystem.documentDirectory}${sourceDbPath}`;
                 'Yedek dosyasını ne yapmak istersiniz?',
                 [
                     { text: 'İptal', style: 'cancel' },
