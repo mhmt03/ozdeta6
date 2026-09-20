@@ -22,6 +22,7 @@ import { useNavigation } from '@react-navigation/native';
 import * as Sharing from 'expo-sharing';
 import * as XLSX from 'xlsx';
 import * as Notifications from 'expo-notifications';
+import * as SQLite from 'expo-sqlite';
 
 // Veritabanı fonksiyonları
 import {
@@ -29,6 +30,7 @@ import {
     ogrencininOdemeleri,
     tumYapilanDersler,
     tumOdemeleriGetir,
+    ensureDatabaseReady,
     veritabaniTemizle,
     getDersler,
     getOdemeler,
@@ -358,7 +360,7 @@ export default function Ayarlar() {
     };
 
     /**
-     * SQLite veritabanını .db dosyası olarak yedekleme - DÜZELTİLDİ
+     * SQLite veritabanını .db dosyası olarak yedekleme - İndirilenler klasörüne kaydetme eklendi
      */
     const veritabaniDbYedekle = async () => {
         try {
@@ -366,80 +368,45 @@ export default function Ayarlar() {
 
             Alert.alert(
                 'Veritabanı Yedekle',
-                'veritabanı yedeklenecek. Devam edilsin mi?',
+                'Veritabanı yedeklenecek. Devam edilsin mi?',
                 [
                     { text: 'İptal', style: 'cancel' },
                     {
                         text: 'Evet',
                         onPress: async () => {
                             try {
-                                // SQLite veritabanı dosya yolu
                                 const dbName = 'ozdeta.db';
-                                // @ts-ignore - expo-file-system documentDirectory
-                                const sourceDbPath = FileSystem.documentDirectory + 'SQLite/' + dbName;
+                                
+                                const db = await ensureDatabaseReady();
+                                let sourceDbPath = db.databasePath;
+                                
+                                if (!sourceDbPath.startsWith('file://') && sourceDbPath.startsWith('/')) {
+                                    sourceDbPath = `file://${sourceDbPath}`;
+                                }
 
-                                // Yedek dosya adı
-                                const yedekDosyaAdi = `ozdeta_veritabani_${detayliTarihFormatla()}.db`;
+                                console.log('DB path obtained directly from db:', sourceDbPath);
 
-                                // Veritabanı dosyasını kontrol et
                                 const dbInfo = await FileSystem.getInfoAsync(sourceDbPath);
                                 if (!dbInfo.exists) {
-                                    Alert.alert('Hata', 'Veritabanı dosyası bulunamadı');
-                                    return;
-                                }
-
-                                const dbContent = await FileSystem.readAsStringAsync(sourceDbPath, {
-                                    encoding: 'base64' as any
-                                });
-
-                                // Doğrudan uygulama klasörüne kaydet
-                                const result = await dosyayiDirektKaydet(
-                                    yedekDosyaAdi,
-                                    dbContent,
-                                    'application/x-sqlite3'
-                                );
-
-                                if (result.success) {
-                                    // Kaydetme başarılı, paylaşım seçeneği sun
-                                    const klasorYolu = result.dosyaYolu ? result.dosyaYolu.substring(0, result.dosyaYolu.lastIndexOf('/') + 1) : '';
-                                    Alert.alert(
-                                        'Yedekleme Başarılı',
-                                        `${result.message}\n\nKaydedilen Klasör:\n${klasorYolu}`,
-                                        [
-                                            {
-                                                text: 'Tamam'
-                                            },
-                                            {
-                                                text: 'Paylaş',
-                                                onPress: async () => {
-                                                    if (await Sharing.isAvailableAsync()) {
-                                                        await Sharing.shareAsync(result.dosyaYolu!, {
-                                                            mimeType: 'application/x-sqlite3',
-                                                            dialogTitle: 'Veritabanı Yedek Dosyası'
-                                                        });
-                                                    }
-                                                }
-                                            }
-                                        ]
-                                    );
-                                } else {
-                                    Alert.alert('Hata', result.error || 'Dosya kaydedilemedi');
-                                }
-
-                            } catch (error) {
-                                console.error('Veritabanı yedekleme hatası:', error);
-                                Alert.alert('Hata', 'Veritabanı yedekleme işlemi başarısız oldu: ' + (error as any).message);
-                            } finally {
-                                setLoading(false);
-                            }
-                        }
+                                    // Bazen path tam absolut gelmeyebilir, document dir ile birleştirmeyi deneyelim (her ihtimale karşı)
+                                    if (!sourceDbPath.startsWith('/')) {
+                                        sourceDbPath = `${FileSystem.documentDirectory}${sourceDbPath}`;
+                'Yedek dosyasını ne yapmak istersiniz?',
+                [
+                    { text: 'İptal', style: 'cancel' },
+                    {
+                        text: 'Cihaza İndir',
+                        onPress: () => yedekIsleminiBaslat('indir')
+                    },
+                    {
+                        text: 'Doğrudan Paylaş',
+                        onPress: () => yedekIsleminiBaslat('paylas')
                     }
                 ]
             );
         } catch (error) {
             console.error('Yedekleme hazırlık hatası:', error);
             Alert.alert('Hata', 'Yedekleme başlatılamadı');
-            setLoading(false);
         }
     };
 
@@ -474,9 +441,12 @@ export default function Ayarlar() {
                                 const fileUri = result.assets?.[0]?.uri;
 
                                 // Hedef veritabanı yolunu belirle
-                                const dbName = 'ozdeta.db';
-                                // @ts-ignore - expo-file-system documentDirectory
-                                const targetDbPath = FileSystem.documentDirectory + 'SQLite/' + dbName;
+                                const db = await ensureDatabaseReady();
+                                let targetDbPath = db.databasePath;
+                                
+                                if (!targetDbPath.startsWith('/')) {
+                                    targetDbPath = `${FileSystem.documentDirectory}${targetDbPath}`;
+                                }
 
                                 // Güvenlik yedeği alma
                                 try {
@@ -1675,7 +1645,7 @@ export default function Ayarlar() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f8f9fa',
+        backgroundColor: '#F8FAFC', // Modern soft background
         paddingTop: 16,
     },
     loadingOverlay: {
@@ -1684,15 +1654,16 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: 'rgba(15, 23, 42, 0.6)', // Sleeker backdrop blur equivalent
         justifyContent: 'center',
         alignItems: 'center',
         zIndex: 1000,
     },
     loadingText: {
         color: 'white',
-        marginTop: 10,
+        marginTop: 12,
         fontSize: 16,
+        fontWeight: '600',
     },
     scrollView: {
         flex: 1,
@@ -1708,206 +1679,238 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontSize: 24,
-        fontWeight: 'bold',
-        color: '#333',
+        fontWeight: '800',
+        color: '#0F172A',
         marginLeft: 10,
     },
     section: {
-        backgroundColor: 'white',
-        marginHorizontal: 15,
-        marginBottom: 15,
-        borderRadius: 10,
-        padding: 15,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        backgroundColor: '#FFFFFF',
+        marginHorizontal: 16,
+        marginBottom: 14, // Azaltıldı
+        borderRadius: 18,
+        padding: 14, // Azaltıldı
+        elevation: 4,
+        shadowColor: '#64748B', 
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 10,
+        borderWidth: 1,
+        borderColor: '#F1F5F9',
     },
     sectionTitle: {
         fontSize: 18,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 15,
-        paddingBottom: 5,
-        borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
+        fontWeight: '800',
+        color: '#0F172A',
+        marginBottom: 12, // Azaltıldı
+        letterSpacing: 0.3,
     },
     ayarItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 5,
-        borderRadius: 8,
-        marginBottom: 8,
-        backgroundColor: '#f8f9fa',
+        paddingVertical: 12, // Azaltıldı
+        paddingHorizontal: 12, // Azaltıldı
+        borderRadius: 12,
+        marginBottom: 8, // Azaltıldı
+        backgroundColor: '#FFFFFF',
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        shadowColor: '#64748B',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 4,
+        elevation: 1,
     },
     ayarText: {
         flex: 1,
-        marginLeft: 15,
+        marginLeft: 16,
     },
     ayarBaslik: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: 2,
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#1E293B',
+        marginBottom: 4,
     },
     ayarAciklama: {
-        fontSize: 14,
-        color: '#666',
+        fontSize: 13,
+        color: '#64748B',
         lineHeight: 18,
     },
     bilgiItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 5,
+        paddingVertical: 12, // Azaltıldı
+        paddingHorizontal: 8,
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: 'rgba(15, 23, 42, 0.5)',
         justifyContent: 'center',
         alignItems: 'center',
     },
     modalContent: {
-        backgroundColor: 'white',
-        borderRadius: 15,
-        width: '90%',
-        maxHeight: '80%',
-        elevation: 10,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 24,
+        width: '92%',
+        maxHeight: '85%',
+        elevation: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.15,
+        shadowRadius: 20,
+        overflow: 'hidden', // to keep header/footer rounded
     },
     borcModalContent: {
-        height: '70%',
+        height: '75%',
     },
     modalHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         padding: 20,
+        backgroundColor: '#F8FAFC',
         borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
+        borderBottomColor: '#E2E8F0',
     },
     modalTitle: {
         fontSize: 18,
-        fontWeight: 'bold',
-        color: '#333',
+        fontWeight: '800',
+        color: '#0F172A',
         flex: 1,
     },
     modalBody: {
-        padding: 20,
+        padding: 20, // Azaltıldı
     },
     modalAciklama: {
-        fontSize: 16,
-        color: '#666',
-        marginBottom: 20,
+        fontSize: 15,
+        color: '#475569',
+        marginBottom: 16, // Azaltıldı
         textAlign: 'center',
+        lineHeight: 22,
     },
     raporBilgi: {
-        fontSize: 14,
-        color: '#666',
-        marginTop: 10,
+        fontSize: 13,
+        color: '#64748B',
+        marginTop: 10, // Azaltıldı
         fontStyle: 'italic',
+        lineHeight: 20,
     },
     tarihContainer: {
-        marginBottom: 15,
+        marginBottom: 12, // Azaltıldı
     },
     tarihLabel: {
         fontSize: 14,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: 8,
+        fontWeight: '700',
+        color: '#334155',
+        marginBottom: 6, // Azaltıldı
     },
     tarihButton: {
         flexDirection: 'row',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        padding: 12,
-        backgroundColor: '#f8f9fa',
+        borderColor: '#CBD5E1',
+        borderRadius: 12,
+        padding: 12, // Azaltıldı
+        backgroundColor: '#F8FAFC',
     },
     tarihText: {
-        marginLeft: 10,
-        fontSize: 16,
-        color: '#333',
+        marginLeft: 12,
+        fontSize: 15,
+        color: '#0F172A',
+        fontWeight: '600',
     },
     modalFooter: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        padding: 20,
+        padding: 16, // Azaltıldı
         borderTopWidth: 1,
-        borderTopColor: '#e0e0e0',
+        borderTopColor: '#E2E8F0',
+        backgroundColor: '#F8FAFC',
     },
     modalButton: {
         flex: 1,
-        padding: 12,
-        borderRadius: 8,
+        paddingVertical: 12, // Azaltıldı
+        borderRadius: 12,
         alignItems: 'center',
-        marginHorizontal: 5,
+        marginHorizontal: 6,
     },
     cancelButton: {
-        backgroundColor: '#f0f0f0',
+        backgroundColor: '#F1F5F9',
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
     },
     cancelButtonText: {
-        color: '#666',
-        fontWeight: '600',
+        color: '#475569',
+        fontWeight: '700',
         fontSize: 16,
     },
     createButton: {
-        backgroundColor: '#2196F3',
+        backgroundColor: '#3B82F6',
+        shadowColor: '#3B82F6',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4,
     },
     createButtonText: {
-        color: 'white',
-        fontWeight: '600',
+        color: '#FFFFFF',
+        fontWeight: '700',
         fontSize: 16,
     },
     borcListe: {
         flex: 1,
-        paddingHorizontal: 20,
+        paddingHorizontal: 16, // Azaltıldı
+        paddingTop: 10,
     },
     borcItem: {
-        backgroundColor: '#fff',
-        borderRadius: 8,
-        padding: 15,
-        marginBottom: 10,
-        borderLeftWidth: 4,
-        borderLeftColor: '#F44336',
-        elevation: 1,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 14,
+        padding: 14, // Azaltıldı
+        marginBottom: 10, // Azaltıldı
+        borderLeftWidth: 5,
+        borderLeftColor: '#EF4444',
+        shadowColor: '#64748B',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+        elevation: 2,
+        borderWidth: 1,
+        borderColor: '#F1F5F9',
     },
     borcHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 8,
+        marginBottom: 6, // Azaltıldı
     },
     borcOgrenciAd: {
         fontSize: 16,
-        fontWeight: 'bold',
-        color: '#333',
+        fontWeight: '800',
+        color: '#0F172A',
         flex: 1,
     },
     borcMiktar: {
         fontSize: 18,
-        fontWeight: 'bold',
-        color: '#F44336',
+        fontWeight: '800',
+        color: '#EF4444',
     },
     borcDetay: {
-        marginBottom: 10,
+        marginBottom: 12,
     },
     borcDetayText: {
         fontSize: 14,
-        color: '#666',
-        marginBottom: 2,
+        color: '#64748B',
+        marginBottom: 4,
+        fontWeight: '500',
     },
     borcOgrenciGitButon: {
-        backgroundColor: '#2196F3',
-        padding: 8,
-        borderRadius: 6,
+        backgroundColor: '#EFF6FF',
+        paddingVertical: 10,
+        borderRadius: 10,
         alignItems: 'center',
     },
     borcOgrenciGitText: {
-        color: 'white',
-        fontWeight: '600',
+        color: '#3B82F6',
+        fontWeight: '700',
         fontSize: 14,
     },
     borcBosListe: {
@@ -1917,81 +1920,94 @@ const styles = StyleSheet.create({
         padding: 40,
     },
     borcBosText: {
-        color: '#666',
+        color: '#94A3B8',
         fontSize: 16,
         textAlign: 'center',
-        marginTop: 10,
-        fontWeight: '500',
+        marginTop: 12,
+        fontWeight: '600',
+        lineHeight: 24,
     },
     borcToplamFooter: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 15,
-        borderTopWidth: 2,
-        borderTopColor: '#f0f0f0',
-        backgroundColor: '#fff9f9',
-        borderBottomLeftRadius: 15,
-        borderBottomRightRadius: 15,
+        padding: 16, // Azaltıldı
+        borderTopWidth: 1,
+        borderTopColor: '#FCA5A5',
+        backgroundColor: '#FEF2F2',
     },
     borcToplamLabel: {
         fontSize: 16,
-        fontWeight: 'bold',
-        color: '#333',
+        fontWeight: '800',
+        color: '#7F1D1D',
     },
     borcToplamMiktar: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#F44336',
+        fontSize: 22,
+        fontWeight: '900',
+        color: '#DC2626',
     },
     modalBodyScroll: {
-        maxHeight: 400,
-        paddingHorizontal: 20,
-        paddingBottom: 20,
+        maxHeight: '65%',
+        paddingHorizontal: 20, // Azaltıldı
+        paddingBottom: 20, // Azaltıldı
+        paddingTop: 10,
     },
     checkboxList: {
-        marginBottom: 15,
+        marginBottom: 12, // Azaltıldı
+        backgroundColor: '#F8FAFC',
+        borderRadius: 16,
+        padding: 8, // Azaltıldı
+        borderWidth: 1,
+        borderColor: '#F1F5F9',
     },
     checkboxContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 8,
+        paddingVertical: 10, // Azaltıldı
+        paddingHorizontal: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F1F5F9',
     },
     checkboxText: {
-        marginLeft: 10,
-        fontSize: 16,
-        color: '#333',
+        marginLeft: 12,
+        fontSize: 15,
+        color: '#334155',
+        fontWeight: '600',
     },
     uyariBox: {
         flexDirection: 'row',
-        backgroundColor: '#FFF3E0',
-        padding: 10,
-        borderRadius: 8,
+        backgroundColor: '#FFF7ED',
+        padding: 14, // Azaltıldı
+        borderRadius: 12,
         marginTop: 10,
         alignItems: 'flex-start',
+        borderWidth: 1,
+        borderColor: '#FFEDD5',
     },
     uyariText: {
-        fontSize: 12,
-        color: '#E65100',
-        marginLeft: 8,
+        fontSize: 13,
+        color: '#C2410C',
+        marginLeft: 10,
         flex: 1,
+        fontWeight: '500',
+        lineHeight: 18, // Azaltıldı
     },
     ayarItemRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingVertical: 12,
+        paddingVertical: 12, // Azaltıldı
         borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
+        borderBottomColor: '#F1F5F9',
     },
     ayarTextRow: {
         flex: 1,
-        marginRight: 10,
+        marginRight: 16,
     },
     ayarItemSub: {
         paddingVertical: 12,
         borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
+        borderBottomColor: '#F1F5F9',
     },
     counterControlsInline: {
         flexDirection: 'row',
@@ -2003,15 +2019,15 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: '#f0f0f0',
+        backgroundColor: '#F1F5F9',
         justifyContent: 'center',
         alignItems: 'center',
         marginHorizontal: 10,
     },
     counterValText: {
         fontSize: 16,
-        fontWeight: 'bold',
-        color: '#333',
+        fontWeight: '800',
+        color: '#0F172A',
         minWidth: 50,
         textAlign: 'center',
     },
