@@ -34,7 +34,8 @@ import {
     veritabaniTemizle,
     getDersler,
     getOdemeler,
-    ogrenciNotlari
+    ogrenciNotlari,
+    closeDatabase
 } from '../utils/database';
 import { ogrenciAjandaGetir } from '../utils/ajandaDatabase';
 import { getSetting, saveSetting } from '../database/settingsOperations';
@@ -546,40 +547,27 @@ export default function Ayarlar() {
                                 // Geri yükleme işlemi
                                 // Veritabanı bağlantısını kapat ki dosya kilitli (locked) olmasın
                                 try {
-                                    await db.closeAsync();
+                                    await closeDatabase();
                                 } catch(e) {
                                     console.log('DB kapatılırken hata (önemsiz):', e);
                                 }
 
-                                // Expo Go yazma kısıtlamasını aşmak için downloadAsync kullanıyoruz (veya uploadAsync).
-                                // downloadAsync, yerel file:// URI'lerinden kopyalama yapabilir ve bazen kısıtlamaları aşar.
                                 console.log('Yeni veritabanı kopyalanıyor:', fileUri, '->', targetDbPath);
                                 try {
-                                    await FileSystem.downloadAsync(fileUri ?? '', targetDbPath);
+                                    await FileSystem.copyAsync({
+                                        from: fileUri ?? '',
+                                        to: targetDbPath
+                                    });
                                 } catch (copyError) {
-                                    console.error('downloadAsync hatası:', copyError);
-                                    // Eğer downloadAsync de kısıtlamaya takılırsa fallback olarak yazmayı deneriz.
-                                    try {
-                                        const newDbContent = await FileSystem.readAsStringAsync(fileUri ?? '', {
-                                            // @ts-ignore
-                                            encoding: FileSystem.EncodingType.Base64
-                                        });
-                                        await FileSystem.writeAsStringAsync(targetDbPath, newDbContent, {
-                                            // @ts-ignore
-                                            encoding: FileSystem.EncodingType.Base64
-                                        });
-                                    } catch (writeError) {
-                                        console.error('Yazma hatası:', writeError);
-                                        throw new Error('Expo Go güvenlik kısıtlaması nedeniyle veritabanı üzerine yazılamadı. Gerçek cihazda veya derlenmiş uygulamada (EAS Build) bu işlem sorunsuz çalışacaktır.');
-                                    }
+                                    console.error('copyAsync hatası:', copyError);
+                                    throw new Error('Veritabanı kopyalanamadı.');
                                 }
 
                                 Alert.alert(
                                     'Geri Yükleme Başarılı',
-                                    'Veritabanı başarıyla geri yüklendi. Değişikliklerin etkili olması için uygulamayı yeniden başlatmanız önerilir.'
+                                    'Veritabanı başarıyla geri yüklendi. Değişikliklerin etkili olması için uygulamanın tamamen yeniden başlatılması gerekiyor. Lütfen uygulamayı kapatıp açın.',
+                                    [{ text: 'Tamam', style: 'default' }]
                                 );
-
-                                borcluOgrencileriHesapla();
 
                             } catch (error) {
                                 console.error('Geri yükleme hatası:', error);

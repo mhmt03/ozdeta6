@@ -1,5 +1,5 @@
 import * as SQLite from 'expo-sqlite';
-
+import * as FileSystem from 'expo-file-system';
 /**
  * Global veritabanı bağlantı referansı.
  * Tekil (Singleton) bağlantı yönetimi sağlamak için kullanılır.
@@ -389,8 +389,56 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
     if (db) return db;
 
     try {
-        // SQLite veritabanını asenkron olarak aç
-        db = await SQLite.openDatabaseAsync(DATABASE_NAME);
+        // Expo Go kısıtlamalarını tamamen aşmak için veritabanını her zaman uygulamanın Document dizininde tutacağız.
+        // Eğer veritabanı Document dizininde yoksa ve eski (gizli) dizinde varsa, veriyi taşıyacağız.
+        let targetDirectory = '';
+        if (FileSystem.documentDirectory) {
+            targetDirectory = FileSystem.documentDirectory.endsWith('/') 
+                ? FileSystem.documentDirectory.slice(0, -1) 
+                : FileSystem.documentDirectory;
+                
+            const dbPath = `${targetDirectory}/${DATABASE_NAME}`;
+            const dbInfo = await FileSystem.getInfoAsync(dbPath);
+            
+            if (!dbInfo.exists) {
+                try {
+                    // Eski veritabanını aç (varsayılan gizli klasördeki)
+                    let oldDb = await SQLite.openDatabaseAsync(DATABASE_NAME);
+                    // Tablolar var mı diye kontrol et (içi boş sıfır db oluşmuş olabilir)
+                    const check = await oldDb.getFirstAsync<{count: number}>("SELECT count(*) as count FROM sqlite_master WHERE type='table' AND name='ogrenciler'");
+                    if (check && check.count > 0) {
+                        console.log('Eski kısıtlı veritabanı bulundu, güvenli klasöre taşınıyor...');
+                        const uint8ArrayToBase64 = (bytes: Uint8Array): string => {
+                            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+                            let base64 = '';
+                            const len = bytes.length;
+                            for (let i = 0; i < len; i += 3) {
+                                const b1 = bytes[i]; const b2 = i + 1 < len ? bytes[i + 1] : 0; const b3 = i + 2 < len ? bytes[i + 2] : 0;
+                                base64 += chars[b1 >> 2] + chars[((b1 & 3) << 4) | (b2 >> 4)] + (i + 1 < len ? chars[((b2 & 15) << 2) | (b3 >> 6)] : '=') + (i + 2 < len ? chars[b3 & 63] : '=');
+                            }
+                            return base64;
+                        };
+                        // @ts-ignore
+                        const dbBytes = await oldDb.serializeAsync('main');
+                        const base64Content = uint8ArrayToBase64(dbBytes);
+                        await FileSystem.writeAsStringAsync(dbPath, base64Content, {
+                            // @ts-ignore
+                            encoding: FileSystem.EncodingType.Base64
+                        });
+                        console.log('Veritabanı güvenli klasöre (DocumentDirectory) başarıyla taşındı.');
+                    }
+                    await oldDb.closeAsync();
+                } catch (e) {
+                    console.log('Eski veritabanı taşınırken hata (önemsiz):', e);
+                }
+            }
+            
+            // Veritabanını güvenli klasörden aç
+            db = await SQLite.openDatabaseAsync(DATABASE_NAME, undefined, targetDirectory);
+        } else {
+            // Geri dönüş (fallback) - Eğer documentDirectory yoksa (örneğin web ortamında)
+            db = await SQLite.openDatabaseAsync(DATABASE_NAME);
+        }
 
         // Eğer veritabanı şifreleme parolası belirtilmişse pragma key uygula
         if (DB_PASSWORD.trim()) {
