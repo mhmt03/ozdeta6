@@ -1347,26 +1347,24 @@ export default function OdevEkle() {
                             {filtreTarihAcik && (
                                 <View style={{padding: 10, borderTopWidth: 1, borderTopColor: '#eee'}}>
                                     {/* Tarih Seçimi */}
-                                    <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10}}>
+                                    <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6}}>
                                         <View style={{flex: 1, marginRight: 8}}>
-                                            <Text style={{fontSize: 11, color: '#666', marginBottom: 2}}>Başlangıç</Text>
                                             <TouchableOpacity 
-                                                style={[styles.dateButton, { padding: 6, height: 32 }]} 
+                                                style={[styles.dateButton, { padding: 4, height: 28 }]} 
                                                 onPress={() => setShowFiltreBaslangic(true)}
                                             >
                                                 <MaterialIcons name="event" size={14} color="#666" />
-                                                <Text style={[styles.dateText, { fontSize: 12 }]}>{formatTarih(filtreBaslangic.toISOString())}</Text>
+                                                <Text style={[styles.dateText, { fontSize: 11 }]}>Başk: {formatTarih(filtreBaslangic.toISOString())}</Text>
                                             </TouchableOpacity>
                                         </View>
                                         
                                         <View style={{flex: 1}}>
-                                            <Text style={{fontSize: 11, color: '#666', marginBottom: 2}}>Bitiş</Text>
                                             <TouchableOpacity 
-                                                style={[styles.dateButton, { padding: 6, height: 32 }]} 
+                                                style={[styles.dateButton, { padding: 4, height: 28 }]} 
                                                 onPress={() => setShowFiltreBitis(true)}
                                             >
                                                 <MaterialIcons name="event" size={14} color="#666" />
-                                                <Text style={[styles.dateText, { fontSize: 12 }]}>{formatTarih(filtreBitis.toISOString())}</Text>
+                                                <Text style={[styles.dateText, { fontSize: 11 }]}>Bitiş: {formatTarih(filtreBitis.toISOString())}</Text>
                                             </TouchableOpacity>
                                         </View>
                                     </View>
@@ -2657,10 +2655,10 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         backgroundColor: 'white',
-        paddingVertical: 6,
-        paddingHorizontal: 1,
-        borderRadius: 8,
-        marginBottom: 5,
+        paddingVertical: 4,
+        paddingHorizontal: 6,
+        borderRadius: 6,
+        marginBottom: 2,
         elevation: 2,
     },
     switchControl: {

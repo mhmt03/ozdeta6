@@ -90,7 +90,7 @@ const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle, onSil, onDuzenle 
                         })
                     }
                 >
-                    <MaterialIcons name="save" size={14} color="white" />
+                    <MaterialIcons name="save" size={12} color="white" />
                     <Text style={styles.guncelleText}>Gncll</Text>
                 </TouchableOpacity>
                
@@ -100,7 +100,7 @@ const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle, onSil, onDuzenle 
                         style={styles.duzenleButon}
                         onPress={() => onDuzenle(item)}
                     >
-                        <MaterialIcons name="edit" size={14} color="white" />
+                        <MaterialIcons name="edit" size={12} color="white" />
                         <Text style={styles.duzenleText}>Düzenle</Text>
                     </TouchableOpacity>
                 )}
@@ -113,7 +113,7 @@ const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle, onSil, onDuzenle 
                         style={styles.silButon}
                         onPress={silOnayla}
                     >
-                        <MaterialIcons name="delete" size={14} color="white" />
+                        <MaterialIcons name="delete" size={12} color="white" />
                         <Text style={styles.silText}>Sil</Text>
                     </TouchableOpacity>
                 )}
@@ -124,42 +124,41 @@ const OdevItem: React.FC<OdevItemProps> = ({ item, onGuncelle, onSil, onDuzenle 
 
 const styles = StyleSheet.create({
     odevItem: {
-        padding: 5,
-        marginBottom: 5,
+        padding: 4,
+        marginBottom: 4,
         backgroundColor: '#f8f9fa',
         borderRadius: 6,
         borderWidth: 1,
         borderColor: '#e1e8ed',
     },
-    odevKonu: { fontSize: 12, fontWeight: 'bold', marginBottom: 4, color: '#2c3e50' },
-    odevKaynak: { fontSize: 12, fontWeight: 'normal', marginBottom: 4, color: '#5da7f1ff' },
+    odevKonu: { fontSize: 11, fontWeight: 'bold', marginBottom: 2, color: '#2c3e50' },
+    odevKaynak: { fontSize: 11, fontWeight: 'normal', marginBottom: 2, color: '#5da7f1ff' },
     odevTarihler: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 6,
-        gap: 6,
+        marginBottom: 4,
+        gap: 4,
     },
     dateTextContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         flex: 1,
     },
-    dateText: { fontSize: 12, color: '#666' },
+    dateText: { fontSize: 10, color: '#666' },
     altAksiyonSatiri: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
+        gap: 4,
         marginTop: 2,
     },
     durumContainer: {
         flex: 1,
         justifyContent:'flex-start',
-        borderRadius: 16,
-        height: 34,
+        borderRadius: 8,
+        height: 26,
         overflow: 'hidden',
         padding: 0,
         margin: 0,
-        
     },
     durumPicker: {
         flex: 1,
@@ -168,42 +167,42 @@ const styles = StyleSheet.create({
         fontSize: 7,
         textDecorationColor: "red",
         padding: 0,
-        marginTop: -15,
-        marginBottom:-10,
+        marginTop: -18,
+        marginBottom: -10,
     },
     duzenleButon: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#9b59b6',
-        paddingVertical: 8,
-        paddingHorizontal: 8,
-        borderRadius: 6,
-        height: 38,
+        paddingVertical: 4,
+        paddingHorizontal: 6,
+        borderRadius: 4,
+        height: 26,
     },
-    duzenleText: { color: 'white', marginLeft: 2, fontWeight: 'bold', fontSize: 8 },
+    duzenleText: { color: 'white', marginLeft: 2, fontWeight: 'bold', fontSize: 9 },
     guncelleButon: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#3498db',
-        paddingVertical: 8,
-        paddingHorizontal: 8,
-        borderRadius: 6,
-        height: 38,
+        paddingVertical: 4,
+        paddingHorizontal: 6,
+        borderRadius: 4,
+        height: 26,
     },
-    guncelleText: { color: 'white', marginLeft: 2, fontWeight: 'bold', fontSize: 8 },
+    guncelleText: { color: 'white', marginLeft: 2, fontWeight: 'bold', fontSize: 9 },
     silButon: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#e74c3c',
-        paddingVertical: 8,
-        paddingHorizontal: 8,
-        borderRadius: 6,
-        height: 38,
+        paddingVertical: 4,
+        paddingHorizontal: 6,
+        borderRadius: 4,
+        height: 26,
     },
-    silText: { color: 'white', marginLeft: 2, fontWeight: 'bold', fontSize: 8 },
+    silText: { color: 'white', marginLeft: 2, fontWeight: 'bold', fontSize: 9 },
 });
 
 export default OdevItem;
