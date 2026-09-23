@@ -400,9 +400,13 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
                 ? FileSystem.documentDirectory.slice(0, -1) 
                 // @ts-ignore
                 : FileSystem.documentDirectory;
-                
+            
             const dbPath = `${targetDirectory}/${DATABASE_NAME}`;
             const dbInfo = await FileSystem.getInfoAsync(dbPath);
+            
+            // expo-sqlite C++ tarafı (openDatabaseAsync targetDirectory parametresi)
+            // file:// URI formatını desteklemediği için sadece SQLite'a verirken bunu temizliyoruz.
+            const sqliteDirectory = targetDirectory.replace('file://', '');
             
             if (!dbInfo.exists) {
                 try {
@@ -438,7 +442,7 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
             }
             
             // Veritabanını güvenli klasörden aç
-            db = await SQLite.openDatabaseAsync(DATABASE_NAME, undefined, targetDirectory);
+            db = await SQLite.openDatabaseAsync(DATABASE_NAME, undefined, sqliteDirectory);
         } else {
             // Geri dönüş (fallback) - Eğer documentDirectory yoksa (örneğin web ortamında)
             db = await SQLite.openDatabaseAsync(DATABASE_NAME);
