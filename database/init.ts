@@ -392,9 +392,13 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
         // Expo Go kısıtlamalarını tamamen aşmak için veritabanını her zaman uygulamanın Document dizininde tutacağız.
         // Eğer veritabanı Document dizininde yoksa ve eski (gizli) dizinde varsa, veriyi taşıyacağız.
         let targetDirectory = '';
+        // @ts-ignore
         if (FileSystem.documentDirectory) {
+            // @ts-ignore
             targetDirectory = FileSystem.documentDirectory.endsWith('/') 
+                // @ts-ignore
                 ? FileSystem.documentDirectory.slice(0, -1) 
+                // @ts-ignore
                 : FileSystem.documentDirectory;
                 
             const dbPath = `${targetDirectory}/${DATABASE_NAME}`;

@@ -131,6 +131,7 @@ export default function App() {
   }
   return (
     <NavigationContainer>
+      {/* @ts-ignore */}
       <StatusBar style="light" translucent={true} backgroundColor="transparent" />
       <Stack.Navigator
         initialRouteName='AnaSayfa'

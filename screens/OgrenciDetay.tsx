@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Modal, TextInput, Platform, ToastAndroid } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useIsFocused } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -49,6 +49,9 @@ export default function OgrenciDetay() {
     const [ajandaBitisPicker, setAjandaBitisPicker] = useState(false);
     const [ajandaKayitlari, setAjandaKayitlari] = useState<AjandaWithOgrenciType[]>([]);
     const [ajandaYukleniyor, setAjandaYukleniyor] = useState(false);
+    const [enYakinIleriRandevu, setEnYakinIleriRandevu] = useState<AjandaWithOgrenciType | null>(null);
+    const [enYakinGecmisRandevu, setEnYakinGecmisRandevu] = useState<AjandaWithOgrenciType | null>(null);
+    const isFocused = useIsFocused();
 
 
     // Telefon arama fonksiyonu
@@ -184,12 +187,72 @@ export default function OgrenciDetay() {
         }
     };
 
+    // En yakın randevuları (geçmiş ve gelecek) getirme
+    const fetchEnYakinRandevu = async () => {
+        if (!ogrenci.ogrenciId) return;
+        try {
+            const today = new Date();
+            
+            const prevYear = new Date();
+            prevYear.setFullYear(today.getFullYear() - 1);
+            const prevYearStr = prevYear.toISOString().split('T')[0];
+            
+            const nextYear = new Date();
+            nextYear.setFullYear(today.getFullYear() + 1);
+            const nextYearStr = nextYear.toISOString().split('T')[0];
+            
+            const sonuc = await ogrenciAjandaGetir(ogrenci.ogrenciId, prevYearStr, nextYearStr);
+            if (sonuc.success && sonuc.data && sonuc.data.length > 0) {
+                const now = new Date();
+                
+                let closestFuture: AjandaWithOgrenciType | null = null;
+                let closestPast: AjandaWithOgrenciType | null = null;
+                let minDiffFuture = Infinity;
+                let minDiffPast = Infinity;
+                
+                sonuc.data.forEach((randevu: AjandaWithOgrenciType) => {
+                    if (randevu.tarih && randevu.iptal !== 1) { 
+                        const timeStr = randevu.saat || "00:00";
+                        const rDate = new Date(`${randevu.tarih}T${timeStr}`);
+                        
+                        const diff = rDate.getTime() - now.getTime();
+                        
+                        if (diff >= 0) {
+                            // Gelecek randevu
+                            // Tamamlandı durumuna bakılmaksızın saati geçmemiş en yakın randevu
+                            if (diff < minDiffFuture) { 
+                                minDiffFuture = diff;
+                                closestFuture = randevu;
+                            }
+                        } else {
+                            // Geçmiş randevu
+                            // Geçmiş randevularda en yakın olan (farkı mutlak değerce en küçük olan)
+                            const absDiff = Math.abs(diff);
+                            if (absDiff < minDiffPast) {
+                                minDiffPast = absDiff;
+                                closestPast = randevu;
+                            }
+                        }
+                    }
+                });
+                
+                setEnYakinIleriRandevu(closestFuture);
+                setEnYakinGecmisRandevu(closestPast);
+            }
+        } catch(e) {
+            console.error("En yakin randevu hatasi", e);
+        }
+    };
+
     // Sayfa açıldığında verileri yükle
     React.useEffect(() => {
-        kalanUcretiHesapla();
-        fetchSonDers();
-        fetchBekleyenOdevler();
-    }, [ogrenci.ogrenciId]);
+        if (isFocused) {
+            kalanUcretiHesapla();
+            fetchSonDers();
+            fetchBekleyenOdevler();
+            fetchEnYakinRandevu();
+        }
+    }, [isFocused, ogrenci.ogrenciId]);
 
 
     // Ders popup kapatma fonksiyonu
@@ -640,6 +703,43 @@ export default function OgrenciDetay() {
                             </View>
                         )}
                     </View>
+                )}
+
+                {/* En Yakın Geçmiş ve Gelecek Randevular */}
+                {enYakinIleriRandevu && (
+                    <TouchableOpacity
+                        style={[styles.ajandayaGitButon, { marginBottom: 10, backgroundColor: '#4caf50', justifyContent: 'space-between', paddingHorizontal: 16 }]}
+                        onPress={() => navigation.navigate('AjandaRandevuDuzenle', { randevu: enYakinIleriRandevu })}
+                    >
+                        <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                            <MaterialIcons name="event-available" size={24} color="white" style={{marginRight: 12}} />
+                            <View>
+                                <Text style={[styles.ajandayaGitButonText, {color: 'white', fontSize: 11, fontWeight: 'normal'}]}>Gelecek Randevu</Text>
+                                <Text style={[styles.ajandayaGitButonText, {color: 'white', fontSize: 13, fontWeight: 'bold'}]}>
+                                    {new Date(enYakinIleriRandevu.tarih).toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' })} - {enYakinIleriRandevu.saat}
+                                </Text>
+                            </View>
+                        </View>
+                        <MaterialIcons name="chevron-right" size={24} color="white" />
+                    </TouchableOpacity>
+                )}
+
+                {enYakinGecmisRandevu && (
+                    <TouchableOpacity
+                        style={[styles.ajandayaGitButon, { marginBottom: 10, backgroundColor: '#f57c00', justifyContent: 'space-between', paddingHorizontal: 16 }]}
+                        onPress={() => navigation.navigate('AjandaRandevuDuzenle', { randevu: enYakinGecmisRandevu })}
+                    >
+                        <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                            <MaterialIcons name="history" size={24} color="white" style={{marginRight: 12}} />
+                            <View>
+                                <Text style={[styles.ajandayaGitButonText, {color: 'white', fontSize: 11, fontWeight: 'normal'}]}>Son Geçmiş Randevu</Text>
+                                <Text style={[styles.ajandayaGitButonText, {color: 'white', fontSize: 13, fontWeight: 'bold'}]}>
+                                    {new Date(enYakinGecmisRandevu.tarih).toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' })} - {enYakinGecmisRandevu.saat}
+                                </Text>
+                            </View>
+                        </View>
+                        <MaterialIcons name="chevron-right" size={24} color="white" />
+                    </TouchableOpacity>
                 )}
 
                 {/* Ajandaya Git Butonu (Kart Dışında) */}

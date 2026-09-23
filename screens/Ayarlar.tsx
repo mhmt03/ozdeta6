@@ -35,7 +35,12 @@ import {
     getDersler,
     getOdemeler,
     ogrenciNotlari,
-    closeDatabase
+    closeDatabase,
+    tumOdevleriGetir,
+    tumKaynaklariGetir,
+    ogrenciOdevleri,
+    kaynakListesi,
+    getTumKaynaklar
 } from '../utils/database';
 import { ogrenciAjandaGetir } from '../utils/ajandaDatabase';
 import { getSetting, saveSetting } from '../database/settingsOperations';
@@ -598,6 +603,9 @@ export default function Ayarlar() {
             const derslerResult = await tumYapilanDersler();
             const ogrencilerResult = await ogrencileriListele(true);
             const odemelerResult = await tumOdemeleriGetir();
+            const odevlerResult = await tumOdevleriGetir();
+            const kaynaklarResult = await tumKaynaklariGetir();
+            const tumGlobalKaynaklarResult = await getTumKaynaklar();
 
             if (!derslerResult.success || !ogrencilerResult.success || !odemelerResult.success) {
                 Alert.alert('Hata', 'Veriler alınamadı');
@@ -607,6 +615,9 @@ export default function Ayarlar() {
             const tumDersler = derslerResult.yapilanDersler || [];
             const tumOgrenciler = ogrencilerResult.data || [];
             const tumOdemeler = odemelerResult.odemeler || [];
+            const tumOdevler = odevlerResult.data || [];
+            const tumKaynaklarAssigned = kaynaklarResult.data || [];
+            const tumGlobalKaynaklar = tumGlobalKaynaklarResult.data || [];
 
             // Tarih aralığına göre dersleri filtrele
             const filtreliDersler = tumDersler.filter(ders => {
@@ -622,6 +633,15 @@ export default function Ayarlar() {
                 const baslangic = new Date(baslangicStr);
                 const bitis = new Date(bitisStr);
                 return odemeTarihi >= baslangic && odemeTarihi <= bitis;
+            });
+
+            // Tarih aralığına göre ödevleri filtrele
+            const filtreliOdevler = tumOdevler.filter((odev: any) => {
+                if (!odev.verilmetarihi) return false;
+                const odevTarihi = new Date(odev.verilmetarihi);
+                const baslangic = new Date(baslangicStr);
+                const bitis = new Date(bitisStr);
+                return odevTarihi >= baslangic && odevTarihi <= bitis;
             });
 
             // Excel Workbook oluştur
@@ -723,6 +743,61 @@ export default function Ayarlar() {
 
             const odemelerWorksheet = XLSX.utils.aoa_to_sheet(odemelerData);
             XLSX.utils.book_append_sheet(workbook, odemelerWorksheet, 'Ödemeler');
+
+            // ÖDEVLER sayfası
+            const odevlerData: any[][] = [
+                ['ÖDEV RAPORU'],
+                [`Tarih Aralığı: ${baslangicStr} - ${bitisStr}`],
+                [`Oluşturulma Tarihi: ${new Date().toLocaleString('tr-TR')}`],
+                [''],
+                ['Tarih', 'Öğrenci', 'Kaynak', 'Ödev/Konu', 'Durum', 'Teslim Tarihi']
+            ];
+
+            filtreliOdevler.forEach((odev: any) => {
+                odevlerData.push([
+                    odev.verilmetarihi || '-',
+                    odev.ogrenciAdSoyad || 'Belirtilmemiş',
+                    odev.kaynak || '-',
+                    odev.odev || '-',
+                    odev.yapilmadurumu || 'Bekliyor',
+                    odev.teslimttarihi || '-'
+                ]);
+            });
+            const odevlerWorksheet = XLSX.utils.aoa_to_sheet(odevlerData);
+            XLSX.utils.book_append_sheet(workbook, odevlerWorksheet, 'Ödevler');
+
+            // KAYNAKLAR (Öğrenci Atamaları) sayfası
+            const ogrKaynaklarData: any[][] = [
+                ['ÖĞRENCİ KAYNAK ATAMALARI'],
+                [`Oluşturulma Tarihi: ${new Date().toLocaleString('tr-TR')}`],
+                [''],
+                ['Öğrenci', 'Atanan Kaynak Adı']
+            ];
+            tumKaynaklarAssigned.forEach(k => {
+                ogrKaynaklarData.push([
+                    k.ogrenciAdSoyad || '-',
+                    k.kaynak || '-'
+                ]);
+            });
+            const ogrKaynaklarWorksheet = XLSX.utils.aoa_to_sheet(ogrKaynaklarData);
+            XLSX.utils.book_append_sheet(workbook, ogrKaynaklarWorksheet, 'Atanan Kaynaklar');
+
+            // GLOBAL KAYNAKLAR sayfası
+            const globalKaynaklarData: any[][] = [
+                ['GLOBAL KAYNAK LİSTESİ'],
+                [`Oluşturulma Tarihi: ${new Date().toLocaleString('tr-TR')}`],
+                [''],
+                ['ID', 'Kaynak Adı', 'Türü']
+            ];
+            tumGlobalKaynaklar.forEach(k => {
+                globalKaynaklarData.push([
+                    k.id,
+                    k.ad || '-',
+                    k.tur || '-'
+                ]);
+            });
+            const globalKaynaklarWorksheet = XLSX.utils.aoa_to_sheet(globalKaynaklarData);
+            XLSX.utils.book_append_sheet(workbook, globalKaynaklarWorksheet, 'Global Kaynaklar');
 
             // Excel dosyasını base64 formatında oluştur
             const excelBuffer = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
@@ -877,17 +952,21 @@ export default function Ayarlar() {
             const adSoyad = `${ogrenci.ogrenciAd} ${ogrenci.ogrenciSoyad}`;
 
             // Tüm verileri paralel olarak çek
-            const [derslerData, odemelerData, notlarData, ajandaData] = await Promise.all([
+            const [derslerData, odemelerData, notlarData, ajandaData, odevlerData, kaynaklarData] = await Promise.all([
                 getDersler(ogrenciId),
                 getOdemeler(ogrenciId),
                 ogrenciNotlari(ogrenciId),
-                ogrenciAjandaGetir(ogrenciId, '2020-01-01', '2099-12-31')
+                ogrenciAjandaGetir(ogrenciId, '2020-01-01', '2099-12-31'),
+                ogrenciOdevleri(ogrenciId),
+                kaynakListesi(ogrenciId)
             ]);
 
             const dersler = derslerData || [];
             const odemeler = odemelerData || [];
             const notlar = notlarData?.data || [];
             const randevular = ajandaData?.data || [];
+            const odevler = odevlerData?.data || [];
+            const kaynaklar = kaynaklarData?.data || [];
 
             // Excel Workbook oluştur
             const workbook = XLSX.utils.book_new();
@@ -990,6 +1069,40 @@ export default function Ayarlar() {
             const notlarSheet = XLSX.utils.aoa_to_sheet(notlarSheetData);
             XLSX.utils.book_append_sheet(workbook, notlarSheet, 'Notlar');
 
+            // 6. ÖDEVLER sayfası
+            const odevlerSheetData: any[][] = [
+                [`${adSoyad} - ÖDEV RAPORU`],
+                [`Toplam Ödev: ${odevler.length}`],
+                [''],
+                ['Verilme Tarihi', 'Kaynak', 'Ödev/Konu', 'Durum', 'Teslim Tarihi']
+            ];
+            odevler.forEach((odev: any) => {
+                odevlerSheetData.push([
+                    odev.verilmetarihi || '-',
+                    odev.kaynak || '-',
+                    odev.odev || '-',
+                    odev.yapilmadurumu || 'Bekliyor',
+                    odev.teslimttarihi || '-'
+                ]);
+            });
+            const odevlerSheet = XLSX.utils.aoa_to_sheet(odevlerSheetData);
+            XLSX.utils.book_append_sheet(workbook, odevlerSheet, 'Ödevler');
+
+            // 7. KAYNAKLAR sayfası
+            const kaynaklarSheetData: any[][] = [
+                [`${adSoyad} - KAYNAK ATAMALARI`],
+                [`Toplam Atanan Kaynak: ${kaynaklar.length}`],
+                [''],
+                ['Kaynak Adı']
+            ];
+            kaynaklar.forEach((k: any) => {
+                kaynaklarSheetData.push([
+                    k.kaynak || '-'
+                ]);
+            });
+            const kaynaklarSheet = XLSX.utils.aoa_to_sheet(kaynaklarSheetData);
+            XLSX.utils.book_append_sheet(workbook, kaynaklarSheet, 'Kaynaklar');
+
             // ÖZET sayfası
             const ozetData: any[][] = [
                 [`${adSoyad} - ÖZET RAPOR`],
@@ -1003,6 +1116,8 @@ export default function Ayarlar() {
                 ['Kalan Borç', `${toplamDersUcreti - toplamOdeme} TL`],
                 ['Toplam Randevu', randevular.length],
                 ['Toplam Not', notlar.length],
+                ['Toplam Ödev', odevler.length],
+                ['Atanan Kaynak', kaynaklar.length],
             ];
             const ozetSheet = XLSX.utils.aoa_to_sheet(ozetData);
             XLSX.utils.book_append_sheet(workbook, ozetSheet, 'Özet');
@@ -1384,7 +1499,7 @@ export default function Ayarlar() {
                             </View>
 
                             <Text style={styles.raporBilgi}>
-                                • Excel raporu sayfaları: Dersler, Ödemeler, Öğrenciler, Borçlu Öğrenciler
+                                • Excel raporu sayfaları: Dersler, Ödemeler, Öğrenciler, Borçlu Öğrenciler, Ödevler, Atanan Kaynaklar, Global Kaynaklar
                             </Text>
                         </View>
 

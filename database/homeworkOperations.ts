@@ -198,6 +198,38 @@ export async function ogrenciOdevleri(ogrenciId: number) {
     }
 }
 
+export async function tumOdevleriGetir() {
+    try {
+        const db = await ensureDatabaseReady();
+        const result = await db.getAllAsync<OdevType>(
+            `SELECT o.*, og.ogrenciAd || ' ' || og.ogrenciSoyad as ogrenciAdSoyad 
+             FROM odevler o 
+             LEFT JOIN ogrenciler og ON o.ogrenciId = og.ogrenciId 
+             ORDER BY o.verilmetarihi DESC`
+        );
+        return { success: true, data: result || [] };
+    } catch (error: any) {
+        console.error("Tüm ödevleri alma hatası:", error);
+        return { success: false, error: error.message, data: [] };
+    }
+}
+
+export async function tumKaynaklariGetir() {
+    try {
+        const db = await ensureDatabaseReady();
+        const result = await db.getAllAsync<{ kaynakId: number; ogrenciId: number; kaynak: string; ogrenciAdSoyad?: string }>(
+            `SELECT k.*, og.ogrenciAd || ' ' || og.ogrenciSoyad as ogrenciAdSoyad 
+             FROM kaynaklar k
+             LEFT JOIN ogrenciler og ON k.ogrenciId = og.ogrenciId
+             ORDER BY og.ogrenciAd ASC, k.kaynak ASC`
+        );
+        return { success: true, data: result || [] };
+    } catch (error: any) {
+        console.error("Tüm kaynakları alma hatası:", error);
+        return { success: false, error: error.message, data: [] };
+    }
+}
+
 export async function getBekleyenOdevSayisi(ogrenciId: number): Promise<number> {
     try {
         const db = await ensureDatabaseReady();

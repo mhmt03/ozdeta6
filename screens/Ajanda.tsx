@@ -22,6 +22,7 @@ import {
     Switch,
     useWindowDimensions,
     ScrollView,
+    PanResponder
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
@@ -38,6 +39,7 @@ interface CalendarDayType {
     isCurrentMonth: boolean;
     isToday: boolean;
     hasEvent: boolean;
+    eventCount?: number;
 }
 
 /* ---------------------- Sabitler ve yardımcı fonksiyonlar --------------------- */
@@ -105,6 +107,48 @@ export default function Ajanda() {
     const [sevenDayData, setSevenDayData] = useState<{ [key: string]: AjandaWithOgrenciType[] }>({});
     const [sevenDayDates, setSevenDayDates] = useState<string[]>([]);
 
+    // Kaydırma jestleri (Swipe) için PanResponder
+    const panResponder = React.useMemo(() =>
+        PanResponder.create({
+            onMoveShouldSetPanResponder: (evt, gestureState) => {
+                // Sadece belirgin kaydırmalarda (swipe) aktif ol
+                return Math.abs(gestureState.dx) > 10 || Math.abs(gestureState.dy) > 10;
+            },
+            onPanResponderRelease: (evt, gestureState) => {
+                const { dx, dy } = gestureState;
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    // Yatay kaydırma
+                    if (dx > 50) {
+                        // Sağa kaydırma -> Önceki gün
+                        setSelectedDate(prev => {
+                            const next = new Date(prev);
+                            next.setDate(next.getDate() - 1);
+                            return next;
+                        });
+                    } else if (dx < -50) {
+                        // Sola kaydırma -> Sonraki gün
+                        setSelectedDate(prev => {
+                            const next = new Date(prev);
+                            next.setDate(next.getDate() + 1);
+                            return next;
+                        });
+                    }
+                } else {
+                    // Dikey kaydırma
+                    if (dy > 50) {
+                        // Aşağı kaydırma -> Önceki ay / hafta
+                        if (isWeekView) changeWeek(-1);
+                        else changeMonth(-1);
+                    } else if (dy < -50) {
+                        // Yukarı kaydırma -> Sonraki ay / hafta
+                        if (isWeekView) changeWeek(1);
+                        else changeMonth(1);
+                    }
+                }
+            },
+        }),
+    [isWeekView]);
+
     /* useEffect: component mount / dependency değişimi */
     useEffect(() => {
         const loadSettings = async () => {
@@ -118,12 +162,14 @@ export default function Ajanda() {
         // DB init sadece bir kere yapılmalı; burada çalıştırıyoruz
         initDatabase();
 
-        // Takvim hücrelerini üret (ay/hafta görünümüne göre)
-        if (isWeekView) {
-            generateWeekDays();
-        } else {
-            generateCalendarDaysMonth();
-        }
+        const loadCalendar = async () => {
+            if (isWeekView) {
+                await generateWeekDays();
+            } else {
+                await generateCalendarDaysMonth();
+            }
+        };
+        loadCalendar();
     }, [currentMonth, currentWeek, isWeekView, selectedDate]);
 
     // Focus olduğunda verileri güncelle
@@ -209,7 +255,7 @@ export default function Ajanda() {
     /* --------------------------- Takvim üretme fonksiyonları ------------------- */
 
     // Ay görünümü: 42 hücre (6x7) dolduruyoruz. Küçük hücrelerle daha az yer kaplar.
-    const generateCalendarDaysMonth = () => {
+    const generateCalendarDaysMonth = async () => {
         const year = currentMonth.getFullYear();
         const month = currentMonth.getMonth();
         const firstDayOfMonth = new Date(year, month, 1);
@@ -228,7 +274,7 @@ export default function Ajanda() {
         for (let i = startDayIndex - 1; i >= 0; i--) {
             const date = new Date(prevYear, prevMonth, prevMonthLastDay - i);
             date.setHours(12, 0, 0, 0);
-            days.push({ date, isCurrentMonth: false, isToday: false, hasEvent: false });
+            days.push({ date, isCurrentMonth: false, isToday: false, hasEvent: false, eventCount: 0 });
         }
 
         // Bu ay günleri
@@ -240,6 +286,7 @@ export default function Ajanda() {
                 isCurrentMonth: true,
                 isToday: date.getTime() === today.getTime(),
                 hasEvent: false,
+                eventCount: 0
             });
         }
 
@@ -250,14 +297,33 @@ export default function Ajanda() {
         for (let i = 1; i <= remaining; i++) {
             const date = new Date(nextYear, nextMonth, i);
             date.setHours(12, 0, 0, 0);
-            days.push({ date, isCurrentMonth: false, isToday: false, hasEvent: false });
+            days.push({ date, isCurrentMonth: false, isToday: false, hasEvent: false, eventCount: 0 });
+        }
+
+        if (days.length > 0) {
+            const startDateStr = `${days[0].date.getFullYear()}-${String(days[0].date.getMonth() + 1).padStart(2, '0')}-${String(days[0].date.getDate()).padStart(2, '0')}`;
+            const endDateStr = `${days[days.length - 1].date.getFullYear()}-${String(days[days.length - 1].date.getMonth() + 1).padStart(2, '0')}-${String(days[days.length - 1].date.getDate()).padStart(2, '0')}`;
+            
+            try {
+                const eventsRes = await tarihAraligiAjandaGetir(startDateStr, endDateStr);
+                if (eventsRes?.success && eventsRes.data) {
+                    const eventData = eventsRes.data as AjandaWithOgrenciType[];
+                    days.forEach(day => {
+                        const dateStr = `${day.date.getFullYear()}-${String(day.date.getMonth() + 1).padStart(2, '0')}-${String(day.date.getDate()).padStart(2, '0')}`;
+                        const count = eventData.filter(e => e.tarih === dateStr).length;
+                        day.eventCount = count;
+                    });
+                }
+            } catch (error) {
+                console.error("Takvim randevu sayilari alinamadi", error);
+            }
         }
 
         setCalendarDays(days);
     };
 
     // Hafta görünümü: 7 hücre
-    const generateWeekDays = () => {
+    const generateWeekDays = async () => {
         const days: CalendarDayType[] = [];
         const monday = new Date(currentWeek);
         for (let i = 0; i < 7; i++) {
@@ -269,8 +335,29 @@ export default function Ajanda() {
                 isCurrentMonth: true,
                 isToday: new Date().toDateString() === date.toDateString(),
                 hasEvent: false,
+                eventCount: 0
             });
         }
+
+        if (days.length > 0) {
+            const startDateStr = `${days[0].date.getFullYear()}-${String(days[0].date.getMonth() + 1).padStart(2, '0')}-${String(days[0].date.getDate()).padStart(2, '0')}`;
+            const endDateStr = `${days[days.length - 1].date.getFullYear()}-${String(days[days.length - 1].date.getMonth() + 1).padStart(2, '0')}-${String(days[days.length - 1].date.getDate()).padStart(2, '0')}`;
+            
+            try {
+                const eventsRes = await tarihAraligiAjandaGetir(startDateStr, endDateStr);
+                if (eventsRes?.success && eventsRes.data) {
+                    const eventData = eventsRes.data as AjandaWithOgrenciType[];
+                    days.forEach(day => {
+                        const dateStr = `${day.date.getFullYear()}-${String(day.date.getMonth() + 1).padStart(2, '0')}-${String(day.date.getDate()).padStart(2, '0')}`;
+                        const count = eventData.filter(e => e.tarih === dateStr).length;
+                        day.eventCount = count;
+                    });
+                }
+            } catch (error) {
+                console.error("Takvim randevu sayilari alinamadi", error);
+            }
+        }
+
         setCalendarDays(days);
     };
 
@@ -278,24 +365,34 @@ export default function Ajanda() {
 
     // Ayı/haftayı değiştir
     const changeMonth = (direction: number) => {
-        const next = new Date(currentMonth);
-        next.setMonth(next.getMonth() + direction);
-        setCurrentMonth(next);
+        setCurrentMonth(prevMonth => {
+            const next = new Date(prevMonth);
+            next.setMonth(next.getMonth() + direction);
+            
+            // seçili gün farklı aydaysa ayın 1.'sine taşı
+            setSelectedDate(prevSel => {
+                if (prevSel.getMonth() !== next.getMonth() || prevSel.getFullYear() !== next.getFullYear()) {
+                    return new Date(next.getFullYear(), next.getMonth(), 1, 12, 0, 0);
+                }
+                return prevSel;
+            });
 
-        // seçili gün farklı aydaysa ayın 1.'sine taşı (veya uygun ay seçimi)
-        if (selectedDate.getMonth() !== next.getMonth() || selectedDate.getFullYear() !== next.getFullYear()) {
-            setSelectedDate(new Date(next.getFullYear(), next.getMonth(), 1, 12, 0, 0));
-        }
+            return next;
+        });
     };
 
     const changeWeek = (direction: number) => {
-        const next = new Date(currentWeek);
-        next.setDate(currentWeek.getDate() + direction * 7);
-        setCurrentWeek(next);
+        setCurrentWeek(prevWeek => {
+            const next = new Date(prevWeek);
+            next.setDate(prevWeek.getDate() + direction * 7);
+            return next;
+        });
 
-        const newSel = new Date(selectedDate);
-        newSel.setDate(selectedDate.getDate() + direction * 7);
-        setSelectedDate(newSel);
+        setSelectedDate(prevSel => {
+            const newSel = new Date(prevSel);
+            newSel.setDate(prevSel.getDate() + direction * 7);
+            return newSel;
+        });
     };
 
     // Görünüm toggle'ı: hafta/ay
@@ -389,6 +486,11 @@ export default function Ajanda() {
                 <Text style={[styles.dayText, !day.isCurrentMonth && styles.nonCurrentMonthText, day.isToday && styles.todayText, isSelected && styles.selectedDayText]}>
                     {dayNumber}
                 </Text>
+                {day.eventCount && day.eventCount > 0 ? (
+                    <View style={styles.eventCountBadge}>
+                        <Text style={styles.eventCountText}>{day.eventCount}</Text>
+                    </View>
+                ) : null}
             </TouchableOpacity>
         );
     };
@@ -460,7 +562,7 @@ export default function Ajanda() {
                 </View>
 
                 {/* Takvim ızgarası: maxHeight sınırlı -> randevu listesi aşağıda görünür */}
-                <View style={styles.calendarGrid}>
+                <View style={styles.calendarGrid} {...panResponder.panHandlers}>
                     {calendarDays.map((day, index) => renderCalendarDay(day, index))}
                 </View>
 
@@ -638,17 +740,17 @@ export default function Ajanda() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#dae8f5ff',
+        backgroundColor: '#F8F9FA', // modern soft light gray
         justifyContent: 'flex-start',
-        padding: 1,
-        paddingTop: 1,
-        
+        padding: 0,
+        paddingTop: 0,
+        marginTop: -10, // Üstteki boşluğu azaltmak için
     },
     centerContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#15e427ff',
+        backgroundColor: '#F8F9FA',
     },
     loadingText: {
         marginTop: 1,
@@ -658,23 +760,25 @@ const styles = StyleSheet.create({
 
     takvimContainer: {
         marginTop: 0,
-        backgroundColor: '#dae8f5ff',
-        padding: 0, // küçültüldü -> header daha kompakt
-        borderBottomLeftRadius: 24,
-        borderBottomRightRadius: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.06,
-        shadowRadius: 3,
-        elevation: 2,
-        maxHeight: 380, // azaltıldı -> takvim daha tepede, randevu listesi görünür olur,
+        backgroundColor: '#FFFFFF', // clean white
+        padding: 0, 
+        borderBottomLeftRadius: 30,
+        borderBottomRightRadius: 30,
+        shadowColor: '#4A5568',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 6,
+        elevation: 4,
+        maxHeight: 370, // daha da azaltıldı, sarkmayı önlemek için
     },
 
     ustBar: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 1, // azaltıldı,
+        marginBottom: 2, 
+        paddingHorizontal: 8,
+        paddingTop: 2,
         backgroundColor: 'transparent',
     },
     switchContainer: {
@@ -688,15 +792,15 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
     bugunButton: {
-        backgroundColor: '#ecf0f1',
-        paddingHorizontal: 8,
-        paddingVertical: 5,
-        borderRadius: 14,
-        marginRight:22,
+        backgroundColor: '#F1F5F9',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+        marginRight: 10,
     },
     bugunButtonText: {
-        fontSize: 11, // küçültüldü
-        color: '#2c3e50',
+        fontSize: 11, 
+        color: '#475569',
         fontWeight: '600',
     },
 
@@ -704,22 +808,23 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 6,
+        marginBottom: 2,
+        paddingHorizontal: 10,
     },
     navButton: {
-        padding: 6,
-        borderRadius: 12,
-        margin: 1,
-        width: 50,
-        height:30,
-        backgroundColor: '#6fddf8ff',
+        padding: 4,
+        borderRadius: 10,
+        margin: 0,
+        width: 40,
+        height: 28,
+        backgroundColor: '#EFF6FF',
         justifyContent: 'center',
         alignItems: 'center',
     },
     ayText: {
-        fontSize: 14, // küçültüldü
+        fontSize: 13, 
         fontWeight: '700',
-        color: '#2c3e50',
+        color: '#1E293B',
         textAlign: 'center',
         flex: 1,
     },
@@ -727,10 +832,10 @@ const styles = StyleSheet.create({
     weekDaysContainer: {
         flexDirection: 'row',
         justifyContent: 'space-around',
-        marginBottom: 4, // azaltıldı
+        marginBottom: 2, 
         borderBottomWidth: 1,
-        borderBottomColor: '#ecf0f1',
-        paddingBottom: 4,
+        borderBottomColor: '#F1F5F9',
+        paddingBottom: 2,
     },
     weekDayText: {
         fontSize: 10,
@@ -744,6 +849,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         flexWrap: 'wrap',
         justifyContent: 'space-between',
+        paddingHorizontal: 4,
     },
 
     calendarDay: {
@@ -751,44 +857,63 @@ const styles = StyleSheet.create({
         height: CELL_HEIGHT,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 4,
-        borderRadius: 6,
+        marginBottom: 2,
+        borderRadius: 8,
     },
     nonCurrentMonthDay: {
-        opacity: 0.55,
+        opacity: 0.4,
     },
     selectedDay: {
-        backgroundColor: '#3498db',
+        backgroundColor: '#6366F1', // elegant indigo
     },
     today: {
         borderWidth: 1,
-        borderColor: '#e74c3c',
+        borderColor: '#F43F5E', // soft rose
     },
     dayText: {
-        fontSize: 10, // küçültüldü
-        color: '#2c3e50',
+        fontSize: 10, 
+        color: '#334155',
         fontWeight: '600',
     },
     nonCurrentMonthText: {
-        color: '#bdc3c7',
+        color: '#94A3B8',
     },
     selectedDayText: {
         color: 'white',
-        fontWeight: '700',
+        fontWeight: 'bold',
     },
     todayText: {
-        color: '#e74c3c',
-        fontWeight: '700',
+        color: '#F43F5E',
+        fontWeight: 'bold',
+    },
+    eventCountBadge: {
+        position: 'absolute',
+        top: 1,
+        right: 1,
+        backgroundColor: '#F43F5E',
+        borderRadius: 7,
+        width: 14,
+        height: 14,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    eventCountText: {
+        color: 'white',
+        fontSize: 9,
+        fontWeight: 'bold',
     },
 
     selectedDateContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: 6,
-        marginTop: 4,
-        backgroundColor: '#ecf0f1',
-        borderRadius: 8,
+        paddingVertical: 4,
+        paddingHorizontal: 10,
+        marginTop: 2,
+        backgroundColor: '#F8FAFC',
+        borderRadius: 12,
+        marginHorizontal: 8,
+        marginBottom: 4,
     },
     selectedDateText: {
         fontSize: 12,
