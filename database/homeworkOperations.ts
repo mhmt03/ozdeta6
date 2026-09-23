@@ -257,10 +257,26 @@ export async function getTumKaynaklar() {
 export async function tumKaynakGuncelle(id: number, ad: string, tur: string) {
     try {
         const db = await ensureDatabaseReady();
+        
+        // Mevcut (eski) adı al, böylece odevler ve kaynaklar tablolarındaki eşleşen kayıtları da güncelleyebiliriz
+        const oldRow = await db.getFirstAsync<{ ad: string }>(`SELECT ad FROM tum_kaynaklar WHERE id=?`, [id]);
+        
         const result = await db.runAsync(
             `UPDATE tum_kaynaklar SET ad=?, tur=? WHERE id=?`,
             [ad, tur, id]
         );
+        
+        // Eğer isim değiştiyse ve başarıyla güncellendiyse, öğrencilere verilmiş olan ödevleri ve atanmış kaynakları da senkronize et
+        if (result.changes > 0 && oldRow && oldRow.ad !== ad) {
+            try {
+                await db.runAsync(`UPDATE odevler SET kaynak=? WHERE kaynak=?`, [ad, oldRow.ad]);
+                await db.runAsync(`UPDATE kaynaklar SET kaynak=? WHERE kaynak=?`, [ad, oldRow.ad]);
+                console.log(`Otomatik senkronizasyon: '${oldRow.ad}' kaynağına ait geçmiş kayıtlar '${ad}' olarak güncellendi.`);
+            } catch(syncError) {
+                console.warn('Senkronizasyon uyarısı:', syncError);
+            }
+        }
+        
         return { success: result.changes > 0 };
     } catch (error: any) {
         console.error("Global kaynak güncelleme hatası:", error);
@@ -323,10 +339,31 @@ export async function kaynakIcerikSiraGuncelle(iceriklerListesi: { id: number; s
 export async function kaynakIcerikGuncelle(id: number, yeniIcerik: string, sayfa_no: string = '') {
     try {
         const db = await ensureDatabaseReady();
+        
+        // Eski içeriği ve ait olduğu kaynağın adını al, böylece senkronizasyon yapabiliriz
+        const oldRow = await db.getFirstAsync<{ icerik: string; kaynakId: number }>(`SELECT icerik, kaynakId FROM kaynak_icerikleri WHERE id=?`, [id]);
+        
         const result = await db.runAsync(
             `UPDATE kaynak_icerikleri SET icerik=?, sayfa_no=? WHERE id=?`,
             [yeniIcerik, sayfa_no, id]
         );
+        
+        // Eğer içerik metni değiştiyse, bu metne sahip olan ve aynı kaynağa ait olan ödevleri bulup otomatik güncelle
+        if (result.changes > 0 && oldRow && oldRow.icerik !== yeniIcerik) {
+            try {
+                const kaynakRow = await db.getFirstAsync<{ ad: string }>(`SELECT ad FROM tum_kaynaklar WHERE id=?`, [oldRow.kaynakId]);
+                if (kaynakRow) {
+                    await db.runAsync(
+                        `UPDATE odevler SET odev=? WHERE kaynak=? AND odev=?`,
+                        [yeniIcerik, kaynakRow.ad, oldRow.icerik]
+                    );
+                    console.log(`Otomatik senkronizasyon: '${kaynakRow.ad}' kaynağındaki '${oldRow.icerik}' ödevleri '${yeniIcerik}' olarak güncellendi.`);
+                }
+            } catch(syncError) {
+                console.warn('İçerik senkronizasyon uyarısı:', syncError);
+            }
+        }
+        
         return { success: result.changes > 0 };
     } catch (error: any) {
         console.error("Kaynak içerik güncelleme hatası:", error);
