@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import {
     View,
     Text,
@@ -57,6 +57,16 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
         }
         loadBildirimAyarlari();
     }, []);
+
+    useLayoutEffect(() => {
+        navigation.setOptions({
+            headerRight: () => (
+                <TouchableOpacity onPress={() => navigation.navigate('Ajanda')} style={{ marginRight: 15 }}>
+                    <MaterialIcons name="event" size={26} color="#aef013ff" />
+                </TouchableOpacity>
+            ),
+        });
+    }, [navigation]);
 
     // Global bildirim ayarları + bu randevu için varsayılan değerleri yükle
     const loadBildirimAyarlari = async () => {
@@ -307,24 +317,20 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
                         <Text style={styles.cardTitle}>Zaman Bilgileri</Text>
                     </View>
                     
-                    <View style={styles.row}>
-                        <View style={styles.column}>
-                            <Text style={styles.label}>Tarih</Text>
-                            <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.dateTimeButton}>
-                                <Text style={styles.dateTimeText}>{formatDateWithDay(date)}</Text>
-                                <MaterialIcons name="calendar-today" size={16} color="#6B7280" style={styles.inputIcon} />
-                            </TouchableOpacity>
-                        </View>
+                    <View style={[styles.row, { alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }]}>
+                        <Text style={[styles.label, { marginBottom: 0 }]}>Tarih:</Text>
+                        <TouchableOpacity onPress={() => setShowDatePicker(true)} style={[styles.dateTimeButton, { flex: 0.7, paddingVertical: 8 }]}>
+                            <Text style={styles.dateTimeText}>{formatDateWithDay(date)}</Text>
+                            <MaterialIcons name="calendar-today" size={16} color="#6B7280" style={styles.inputIcon} />
+                        </TouchableOpacity>
                     </View>
 
-                    <View style={styles.row}>
-                        <View style={styles.column}>
-                            <Text style={styles.label}>Saat</Text>
-                            <TouchableOpacity onPress={() => setShowTimePicker(true)} style={styles.dateTimeButton}>
-                                <Text style={styles.dateTimeText}>{date.toTimeString().slice(0, 5)}</Text>
-                                <MaterialIcons name="access-time" size={16} color="#6B7280" style={styles.inputIcon} />
-                            </TouchableOpacity>
-                        </View>
+                    <View style={[styles.row, { alignItems: 'center', justifyContent: 'space-between' }]}>
+                        <Text style={[styles.label, { marginBottom: 0 }]}>Saat:</Text>
+                        <TouchableOpacity onPress={() => setShowTimePicker(true)} style={[styles.dateTimeButton, { flex: 0.7, paddingVertical: 8 }]}>
+                            <Text style={styles.dateTimeText}>{date.toTimeString().slice(0, 5)}</Text>
+                            <MaterialIcons name="access-time" size={16} color="#6B7280" style={styles.inputIcon} />
+                        </TouchableOpacity>
                     </View>
                 </View>
 
@@ -350,6 +356,51 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
                         }}
                     />
                 )}
+
+                {/* ÖĞRENCİ KARTI */}
+                <View style={styles.card}>
+                    <View style={styles.cardHeader}>
+                        <FontAwesome5 name="user-graduate" size={18} color="#4F46E5" />
+                        <Text style={styles.cardTitle}>Öğrenci Bilgileri</Text>
+                    </View>
+                    <View style={[styles.radioContainer, { marginBottom: 8 }]}>
+                        <TouchableOpacity style={[styles.radioButton, ogrenciTip === 'kayitli' && styles.radioSelectedContainer]} onPress={() => setOgrenciTip('kayitli')}>
+                            <View style={[styles.radioCircle, ogrenciTip === 'kayitli' && styles.radioSelected]} />
+                            <Text style={[styles.radioLabel, ogrenciTip === 'kayitli' && styles.radioLabelSelected]}>Kayıtlı</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.radioButton, ogrenciTip === 'kayıtsız' && styles.radioSelectedContainer]} onPress={() => setOgrenciTip('kayıtsız')}>
+                            <View style={[styles.radioCircle, ogrenciTip === 'kayıtsız' && styles.radioSelected]} />
+                            <Text style={[styles.radioLabel, ogrenciTip === 'kayıtsız' && styles.radioLabelSelected]}>Kayıtsız</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {ogrenciTip === 'kayitli' ? (
+                        <View style={styles.pickerContainer}>
+                            <RNPickerSelect
+                                onValueChange={(value) => setSelectedOgrenci(value)}
+                                items={ogrenciList.map(o => ({ label: `${o.ogrenciAd} ${o.ogrenciSoyad}`, value: o.ogrenciId }))}
+                                value={selectedOgrenci}
+                                style={{
+                                    inputIOS: { ...styles.pickerInput, paddingVertical: 8 },
+                                    inputAndroid: { ...styles.pickerInput, paddingVertical: 8 },
+                                    iconContainer: { top: 8, right: 12 },
+                                }}
+                                Icon={() => <MaterialIcons name="arrow-drop-down" size={24} color="#6B7280" />}
+                            />
+                        </View>
+                    ) : (
+                        <View style={styles.inputContainer}>
+                            <MaterialIcons name="person-outline" size={20} color="#6B7280" style={{marginLeft: 10}}/>
+                            <TextInput
+                                placeholder="Öğrenci Adı Soyadı"
+                                placeholderTextColor="#9CA3AF"
+                                style={[styles.input, { paddingVertical: 8 }]}
+                                value={kayıtsızInput}
+                                onChangeText={setKayitsizInput}
+                            />
+                        </View>
+                    )}
+                </View>
 
                 {/* TEKRAR VE PERİYOT KARTI */}
                 <View style={styles.card}>
@@ -403,71 +454,8 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
                     </View>
                 </View>
 
-                {/* ÖĞRENCİ KARTI */}
-                <View style={styles.card}>
-                    <View style={styles.cardHeader}>
-                        <FontAwesome5 name="user-graduate" size={18} color="#4F46E5" />
-                        <Text style={styles.cardTitle}>Öğrenci Bilgileri</Text>
-                    </View>
-                    <View style={styles.radioContainer}>
-                        <TouchableOpacity style={[styles.radioButton, ogrenciTip === 'kayitli' && styles.radioSelectedContainer]} onPress={() => setOgrenciTip('kayitli')}>
-                            <View style={[styles.radioCircle, ogrenciTip === 'kayitli' && styles.radioSelected]} />
-                            <Text style={[styles.radioLabel, ogrenciTip === 'kayitli' && styles.radioLabelSelected]}>Kayıtlı</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.radioButton, ogrenciTip === 'kayıtsız' && styles.radioSelectedContainer]} onPress={() => setOgrenciTip('kayıtsız')}>
-                            <View style={[styles.radioCircle, ogrenciTip === 'kayıtsız' && styles.radioSelected]} />
-                            <Text style={[styles.radioLabel, ogrenciTip === 'kayıtsız' && styles.radioLabelSelected]}>Kayıtsız</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    {ogrenciTip === 'kayitli' ? (
-                        <View style={styles.pickerContainer}>
-                            <RNPickerSelect
-                                onValueChange={(value) => setSelectedOgrenci(value)}
-                                items={ogrenciList.map(o => ({ label: `${o.ogrenciAd} ${o.ogrenciSoyad}`, value: o.ogrenciId }))}
-                                value={selectedOgrenci}
-                                style={{
-                                    inputIOS: styles.pickerInput,
-                                    inputAndroid: styles.pickerInput,
-                                    iconContainer: { top: 12, right: 12 },
-                                }}
-                                Icon={() => <MaterialIcons name="arrow-drop-down" size={24} color="#6B7280" />}
-                            />
-                        </View>
-                    ) : (
-                        <View style={styles.inputContainer}>
-                            <MaterialIcons name="person-outline" size={20} color="#6B7280" style={{marginLeft: 10}}/>
-                            <TextInput
-                                placeholder="Öğrenci Adı Soyadı"
-                                placeholderTextColor="#9CA3AF"
-                                style={styles.input}
-                                value={kayıtsızInput}
-                                onChangeText={setKayitsizInput}
-                            />
-                        </View>
-                    )}
-                </View>
-
-                {/* DEĞİŞİKLİK TİPİ KARTI */}
-                <View style={styles.card}>
-                    <View style={styles.cardHeader}>
-                        <MaterialIcons name="edit" size={20} color="#4F46E5" />
-                        <Text style={styles.cardTitle}>Değişiklik Kapsamı</Text>
-                    </View>
-                    <View style={styles.radioContainer}>
-                        <TouchableOpacity style={[styles.radioButton, degisiklikTipi === 'sadeceBu' && styles.radioSelectedContainer]} onPress={() => setDegisiklikTipi('sadeceBu')}>
-                            <View style={[styles.radioCircle, degisiklikTipi === 'sadeceBu' && styles.radioSelected]} />
-                            <Text style={[styles.radioLabel, degisiklikTipi === 'sadeceBu' && styles.radioLabelSelected]}>Sadece Bu Kayıt</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.radioButton, degisiklikTipi === 'tumKayitlar' && styles.radioSelectedContainer]} onPress={() => setDegisiklikTipi('tumKayitlar')}>
-                            <View style={[styles.radioCircle, degisiklikTipi === 'tumKayitlar' && styles.radioSelected]} />
-                            <Text style={[styles.radioLabel, degisiklikTipi === 'tumKayitlar' && styles.radioLabelSelected]}>Sonraki Tüm Kayıtlar</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-
                 {/* BİLDİRİM AYARI KARTI */}
-                <View style={styles.card}>
+                <View style={[styles.card, { padding: 10 }]}>
                     <View style={styles.cardHeader}>
                         <MaterialIcons name="notifications-active" size={20} color="#4F46E5" />
                         <Text style={styles.cardTitle}>Bildirim Ayarları</Text>
@@ -527,28 +515,46 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
                     )}
                 </View>
 
+                {/* DEĞİŞİKLİK TİPİ KARTI */}
+                <View style={styles.card}>
+                    <View style={styles.cardHeader}>
+                        <MaterialIcons name="edit" size={20} color="#4F46E5" />
+                        <Text style={styles.cardTitle}>Değişiklik Kapsamı</Text>
+                    </View>
+                    <View style={[styles.radioContainer, { marginBottom: 0 }]}>
+                        <TouchableOpacity style={[styles.radioButton, degisiklikTipi === 'sadeceBu' && styles.radioSelectedContainer]} onPress={() => setDegisiklikTipi('sadeceBu')}>
+                            <View style={[styles.radioCircle, degisiklikTipi === 'sadeceBu' && styles.radioSelected]} />
+                            <Text style={[styles.radioLabel, degisiklikTipi === 'sadeceBu' && styles.radioLabelSelected]}>Sadece Bu Kayıt</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.radioButton, degisiklikTipi === 'tumKayitlar' && styles.radioSelectedContainer]} onPress={() => setDegisiklikTipi('tumKayitlar')}>
+                            <View style={[styles.radioCircle, degisiklikTipi === 'tumKayitlar' && styles.radioSelected]} />
+                            <Text style={[styles.radioLabel, degisiklikTipi === 'tumKayitlar' && styles.radioLabelSelected]}>Sonraki Tüm Kayıtlar</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
                 {/* AKSİYON BUTONLARI */}
-                <View style={styles.actionCard}>
-                    <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#4F46E5' }]} onPress={handleKaydet}>
+                <View style={[styles.actionCard, { justifyContent: 'center', gap: 24 }]}>
+                    <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#4F46E5', width: '45%', flex: 0 }]} onPress={handleKaydet}>
                         <MaterialIcons name="save" size={20} color="white" />
                         <Text style={styles.actionButtonText}>Kaydet</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#6B7280' }]} onPress={() => navigation.goBack()}>
+                    <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#6B7280', width: '45%', flex: 0 }]} onPress={() => navigation.goBack()}>
                         <MaterialIcons name="close" size={20} color="white" />
                         <Text style={styles.actionButtonText}>Vazgeç</Text>
                     </TouchableOpacity>
                 </View>
                 
-                <View style={styles.actionCard}>
-                    <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#F59E0B' }]} onPress={randevuIptalEt}>
+                <View style={[styles.actionCard, { justifyContent: 'center', gap: 24 }]}>
+                    <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#F59E0B', width: '45%', flex: 0 }]} onPress={randevuIptalEt}>
                         <MaterialIcons name="event-busy" size={20} color="white" />
-                        <Text style={styles.actionButtonText}>Randevuyu İptal Et</Text>
+                        <Text style={styles.actionButtonText}>İptal Et</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#EF4444' }]} onPress={handleSil}>
+                    <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#EF4444', width: '45%', flex: 0 }]} onPress={handleSil}>
                         <MaterialIcons name="delete-forever" size={20} color="white" />
-                        <Text style={styles.actionButtonText}>Tamamen Sil</Text>
+                        <Text style={styles.actionButtonText}>Sil</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -559,7 +565,6 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
                         <Text style={styles.cardTitle}>Hızlı Mesaj Gönder</Text>
                     </View>
                     
-                    <Text style={styles.label}>Mesaj Hedefi</Text>
                     <View style={styles.radioContainer}>
                         <TouchableOpacity style={[styles.radioButton, mesajHedef === 'veli' && styles.radioSelectedContainer]} onPress={() => setMesajHedef('veli')}>
                             <View style={[styles.radioCircle, mesajHedef === 'veli' && styles.radioSelected]} />
@@ -571,7 +576,7 @@ export default function AjandaRandevuDuzenle({ route, navigation }: any) {
                         </TouchableOpacity>
                     </View>
 
-                    <View style={styles.messageButtonsContainer}>
+                    <View style={[styles.messageButtonsContainer, { marginTop: 8 }]}>
                         <TouchableOpacity style={[styles.messageBtn, { backgroundColor: '#10B981' }]} onPress={gonderSms}>
                             <MaterialIcons name="sms" size={20} color="white" />
                             <Text style={styles.messageBtnText}>SMS</Text>
@@ -597,8 +602,8 @@ const styles = StyleSheet.create({
     card: {
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
-        padding: 16,
-        marginBottom: 16,
+        padding: 12,
+        marginBottom: 10,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
@@ -608,10 +613,10 @@ const styles = StyleSheet.create({
     cardHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 16,
+        marginBottom: 10,
         borderBottomWidth: 1,
         borderBottomColor: '#F3F4F6',
-        paddingBottom: 12,
+        paddingBottom: 8,
     },
     cardTitle: {
         fontSize: 16,
