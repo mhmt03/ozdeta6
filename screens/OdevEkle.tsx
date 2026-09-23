@@ -178,7 +178,12 @@ export default function OdevEkle() {
 
 
     // Filtreleme State'leri
-    const [durumFiltresi, setDurumFiltresi] = useState<'hepsi' | 'Yapıldı' | 'Yapılmadı' | 'Eksik' | 'Bekliyor'>('hepsi');
+    const [durumFiltresi, setDurumFiltresi] = useState({
+        'Bekliyor': true,
+        'Yapıldı': true,
+        'Yapılmadı': true,
+        'Eksik': true
+    });
     const [tarihSiralamasi, setTarihSiralamasi] = useState<'azalan' | 'artan'>('azalan'); // azalan: yeniden eskiye, artan: eskiden yeniye
 
     // Tarih Filtresi State'leri
@@ -191,7 +196,8 @@ export default function OdevEkle() {
     // Filtrelenmiş ve Sıralanmış Ödevler
     const filtrelenmisOdevler = odevler
         .filter(odev => {
-            if (durumFiltresi !== 'hepsi' && odev.yapilmadurumu !== durumFiltresi) return false;
+            const durum = odev.yapilmadurumu as keyof typeof durumFiltresi;
+            if (durumFiltresi[durum] === false) return false;
             
             if (filtreTarihAcik) {
                 const odevTarihi = new Date(odev.verilmetarihi).getTime();
@@ -208,17 +214,6 @@ export default function OdevEkle() {
             const timeB = new Date(b.verilmetarihi).getTime();
             return tarihSiralamasi === 'azalan' ? timeB - timeA : timeA - timeB;
         });
-
-    const durumFiltresiDegistir = () => {
-        const siradaki: Record<string, 'hepsi' | 'Yapıldı' | 'Yapılmadı' | 'Eksik' | 'Bekliyor'> = {
-            'hepsi': 'Bekliyor',
-            'Bekliyor': 'Yapıldı',
-            'Yapıldı': 'Yapılmadı',
-            'Yapılmadı': 'Eksik',
-            'Eksik': 'hepsi'
-        };
-        setDurumFiltresi(siradaki[durumFiltresi]);
-    };
 
     const tarihSiralamasiDegistir = () => {
         setTarihSiralamasi(prev => prev === 'azalan' ? 'artan' : 'azalan');
@@ -1334,43 +1329,64 @@ export default function OdevEkle() {
                             </View>
                         )}
 
-                        {/* Tarih Filtresi Kartı */}
+                        {/* Filtre Kartı (Tarih & Durum) */}
                         <View style={styles.filtreKart}>
                             <TouchableOpacity 
-                                style={styles.filtreKartBaslik} 
+                                style={[styles.filtreKartBaslik, { paddingVertical: 10, paddingHorizontal: 12 }]} 
                                 onPress={() => setFiltreTarihAcik(!filtreTarihAcik)}
                             >
                                 <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                                    <MaterialIcons name="date-range" size={20} color="#333" />
-                                    <Text style={{marginLeft: 8, fontWeight: 'bold', color: '#333'}}>
-                                        Tarih Aralığı Filtresi {filtreTarihAcik ? '(Aktif)' : '(Tüm Tarihler)'}
+                                    <MaterialIcons name="filter-list" size={18} color="#333" />
+                                    <Text style={{marginLeft: 6, fontWeight: 'bold', color: '#333', fontSize: 13}}>
+                                        Filtrele {filtreTarihAcik ? '(Açık)' : '(Tüm Tarihler & Tüm Durumlar)'}
                                     </Text>
                                 </View>
-                                <MaterialIcons name={filtreTarihAcik ? "keyboard-arrow-up" : "keyboard-arrow-down"} size={24} color="#666" />
+                                <MaterialIcons name={filtreTarihAcik ? "keyboard-arrow-up" : "keyboard-arrow-down"} size={20} color="#666" />
                             </TouchableOpacity>
 
                             {filtreTarihAcik && (
-                                <View style={{padding: 15, borderTopWidth: 1, borderTopColor: '#eee', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
-                                    <View style={{flex: 1, marginRight: 10}}>
-                                        <Text style={{fontSize: 12, color: '#666', marginBottom: 5}}>Başlangıç</Text>
-                                        <TouchableOpacity 
-                                            style={styles.dateButton} 
-                                            onPress={() => setShowFiltreBaslangic(true)}
-                                        >
-                                            <MaterialIcons name="event" size={16} color="#666" />
-                                            <Text style={styles.dateText}>{formatTarih(filtreBaslangic.toISOString())}</Text>
-                                        </TouchableOpacity>
+                                <View style={{padding: 10, borderTopWidth: 1, borderTopColor: '#eee'}}>
+                                    {/* Tarih Seçimi */}
+                                    <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10}}>
+                                        <View style={{flex: 1, marginRight: 8}}>
+                                            <Text style={{fontSize: 11, color: '#666', marginBottom: 2}}>Başlangıç</Text>
+                                            <TouchableOpacity 
+                                                style={[styles.dateButton, { padding: 6, height: 32 }]} 
+                                                onPress={() => setShowFiltreBaslangic(true)}
+                                            >
+                                                <MaterialIcons name="event" size={14} color="#666" />
+                                                <Text style={[styles.dateText, { fontSize: 12 }]}>{formatTarih(filtreBaslangic.toISOString())}</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                        
+                                        <View style={{flex: 1}}>
+                                            <Text style={{fontSize: 11, color: '#666', marginBottom: 2}}>Bitiş</Text>
+                                            <TouchableOpacity 
+                                                style={[styles.dateButton, { padding: 6, height: 32 }]} 
+                                                onPress={() => setShowFiltreBitis(true)}
+                                            >
+                                                <MaterialIcons name="event" size={14} color="#666" />
+                                                <Text style={[styles.dateText, { fontSize: 12 }]}>{formatTarih(filtreBitis.toISOString())}</Text>
+                                            </TouchableOpacity>
+                                        </View>
                                     </View>
                                     
-                                    <View style={{flex: 1}}>
-                                        <Text style={{fontSize: 12, color: '#666', marginBottom: 5}}>Bitiş</Text>
-                                        <TouchableOpacity 
-                                            style={styles.dateButton} 
-                                            onPress={() => setShowFiltreBitis(true)}
-                                        >
-                                            <MaterialIcons name="event" size={16} color="#666" />
-                                            <Text style={styles.dateText}>{formatTarih(filtreBitis.toISOString())}</Text>
-                                        </TouchableOpacity>
+                                    {/* Durum Checkbox'ları */}
+                                    <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 6}}>
+                                        {['Bekliyor', 'Yapıldı', 'Yapılmadı', 'Eksik'].map((durum) => (
+                                            <TouchableOpacity 
+                                                key={durum}
+                                                style={{flexDirection: 'row', alignItems: 'center', backgroundColor: '#f0f0f0', paddingHorizontal: 6, paddingVertical: 4, borderRadius: 4}}
+                                                onPress={() => setDurumFiltresi(prev => ({ ...prev, [durum]: !prev[durum as keyof typeof prev] }))}
+                                            >
+                                                <MaterialIcons 
+                                                    name={durumFiltresi[durum as keyof typeof durumFiltresi] ? "check-box" : "check-box-outline-blank"} 
+                                                    size={16} 
+                                                    color={durumFiltresi[durum as keyof typeof durumFiltresi] ? "#2ecc71" : "#999"} 
+                                                />
+                                                <Text style={{marginLeft: 4, fontSize: 11, color: '#333'}}>{durum}</Text>
+                                            </TouchableOpacity>
+                                        ))}
                                     </View>
                                 </View>
                             )}
@@ -1408,16 +1424,6 @@ export default function OdevEkle() {
 
                                 {/* Filtreleme Butonları */}
                                 <View style={styles.filtreButonlariGrup}>
-                                    <TouchableOpacity
-                                        style={styles.filtreButon}
-                                        onPress={durumFiltresiDegistir}
-                                    >
-                                        <MaterialIcons name="filter-list" size={14} color="#333" />
-                                        <Text style={styles.filtreButonText}>
-                                            {durumFiltresi === 'hepsi' ? 'Tümü' : durumFiltresi}
-                                        </Text>
-                                    </TouchableOpacity>
-
                                     <TouchableOpacity
                                         style={styles.filtreButon}
                                         onPress={tarihSiralamasiDegistir}
