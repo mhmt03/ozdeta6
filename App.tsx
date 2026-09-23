@@ -1,9 +1,16 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, ActivityIndicator, Alert, Platform, TouchableOpacity, Image } from 'react-native';
+import { StyleSheet, Text, View, ActivityIndicator, Alert, Platform, TouchableOpacity, Image, LogBox } from 'react-native';
 import { FontAwesome5, MaterialIcons } from '@expo/vector-icons';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useEffect, useState } from 'react';
+
+// Expo Go'daki desteklenmeyen/kaldırılan özellik uyarılarını gizleyelim
+LogBox.ignoreLogs([
+  'expo-notifications: Android Push notifications',
+  '`expo-notifications` functionality is not fully supported in Expo Go',
+  'InteractionManager has been deprecated',
+]);
 import React from 'react';
 
 import AnaSayfa from './screens/AnaSayfa';

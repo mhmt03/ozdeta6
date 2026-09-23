@@ -38,7 +38,8 @@ export async function setupNotificationHandler() {
                 sound: sound === '1' ? 'default' : undefined,    // Ses dosyası (default veya sessiz)
             });
         } catch (error) {
-            console.log('Not: Expo Go ortamında (SDK 53+) push bildirim özellikleri sınırlıdır.', error);
+            // Expo Go ortamında bu metod desteklenmediği için çökme hatası atar, bunu sessizce yutuyoruz.
+            // console.log('Not: Expo Go ortamında (SDK 53+) push bildirim özellikleri sınırlıdır.');
         }
     }
 }
