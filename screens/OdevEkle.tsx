@@ -181,11 +181,27 @@ export default function OdevEkle() {
     const [durumFiltresi, setDurumFiltresi] = useState<'hepsi' | 'Yapıldı' | 'Yapılmadı' | 'Eksik' | 'Bekliyor'>('hepsi');
     const [tarihSiralamasi, setTarihSiralamasi] = useState<'azalan' | 'artan'>('azalan'); // azalan: yeniden eskiye, artan: eskiden yeniye
 
+    // Tarih Filtresi State'leri
+    const [filtreTarihAcik, setFiltreTarihAcik] = useState(false);
+    const [filtreBaslangic, setFiltreBaslangic] = useState<Date>(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
+    const [filtreBitis, setFiltreBitis] = useState<Date>(new Date());
+    const [showFiltreBaslangic, setShowFiltreBaslangic] = useState(false);
+    const [showFiltreBitis, setShowFiltreBitis] = useState(false);
+
     // Filtrelenmiş ve Sıralanmış Ödevler
     const filtrelenmisOdevler = odevler
         .filter(odev => {
-            if (durumFiltresi === 'hepsi') return true;
-            return odev.yapilmadurumu === durumFiltresi;
+            if (durumFiltresi !== 'hepsi' && odev.yapilmadurumu !== durumFiltresi) return false;
+            
+            if (filtreTarihAcik) {
+                const odevTarihi = new Date(odev.verilmetarihi).getTime();
+                const baslangicT = new Date(filtreBaslangic.getFullYear(), filtreBaslangic.getMonth(), filtreBaslangic.getDate()).getTime();
+                const bitisT = new Date(filtreBitis.getFullYear(), filtreBitis.getMonth(), filtreBitis.getDate(), 23, 59, 59, 999).getTime();
+                
+                if (odevTarihi < baslangicT || odevTarihi > bitisT) return false;
+            }
+            
+            return true;
         })
         .sort((a, b) => {
             const timeA = new Date(a.verilmetarihi).getTime();
@@ -1316,6 +1332,71 @@ export default function OdevEkle() {
 
 
                             </View>
+                        )}
+
+                        {/* Tarih Filtresi Kartı */}
+                        <View style={styles.filtreKart}>
+                            <TouchableOpacity 
+                                style={styles.filtreKartBaslik} 
+                                onPress={() => setFiltreTarihAcik(!filtreTarihAcik)}
+                            >
+                                <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                                    <MaterialIcons name="date-range" size={20} color="#333" />
+                                    <Text style={{marginLeft: 8, fontWeight: 'bold', color: '#333'}}>
+                                        Tarih Aralığı Filtresi {filtreTarihAcik ? '(Aktif)' : '(Tüm Tarihler)'}
+                                    </Text>
+                                </View>
+                                <MaterialIcons name={filtreTarihAcik ? "keyboard-arrow-up" : "keyboard-arrow-down"} size={24} color="#666" />
+                            </TouchableOpacity>
+
+                            {filtreTarihAcik && (
+                                <View style={{padding: 15, borderTopWidth: 1, borderTopColor: '#eee', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+                                    <View style={{flex: 1, marginRight: 10}}>
+                                        <Text style={{fontSize: 12, color: '#666', marginBottom: 5}}>Başlangıç</Text>
+                                        <TouchableOpacity 
+                                            style={styles.dateButton} 
+                                            onPress={() => setShowFiltreBaslangic(true)}
+                                        >
+                                            <MaterialIcons name="event" size={16} color="#666" />
+                                            <Text style={styles.dateText}>{formatTarih(filtreBaslangic.toISOString())}</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                    
+                                    <View style={{flex: 1}}>
+                                        <Text style={{fontSize: 12, color: '#666', marginBottom: 5}}>Bitiş</Text>
+                                        <TouchableOpacity 
+                                            style={styles.dateButton} 
+                                            onPress={() => setShowFiltreBitis(true)}
+                                        >
+                                            <MaterialIcons name="event" size={16} color="#666" />
+                                            <Text style={styles.dateText}>{formatTarih(filtreBitis.toISOString())}</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            )}
+                        </View>
+                        
+                        {showFiltreBaslangic && (
+                            <DateTimePicker
+                                value={filtreBaslangic}
+                                mode="date"
+                                display="default"
+                                onChange={(event, selectedDate) => {
+                                    setShowFiltreBaslangic(false);
+                                    if (selectedDate) setFiltreBaslangic(selectedDate);
+                                }}
+                            />
+                        )}
+                        {showFiltreBitis && (
+                            <DateTimePicker
+                                value={filtreBitis}
+                                mode="date"
+                                display="default"
+                                onChange={(event, selectedDate) => {
+                                    setShowFiltreBitis(false);
+                                    if (selectedDate) setFiltreBitis(selectedDate);
+                                }}
+                            />
                         )}
 
                         {/* Ödevler Listesi */}
@@ -2899,6 +2980,25 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 14,
         fontWeight: 'bold',
+    },
+    filtreKart: {
+        backgroundColor: '#fff',
+        marginHorizontal: 15,
+        marginBottom: 15,
+        borderRadius: 12,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        overflow: 'hidden',
+    },
+    filtreKartBaslik: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 15,
+        backgroundColor: '#f8f9fa',
     },
 });
 
