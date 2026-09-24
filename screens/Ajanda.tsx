@@ -106,6 +106,7 @@ export default function Ajanda() {
     const [showSevenDayPopup, setShowSevenDayPopup] = useState(false);
     const [sevenDayData, setSevenDayData] = useState<{ [key: string]: AjandaWithOgrenciType[] }>({});
     const [sevenDayDates, setSevenDayDates] = useState<string[]>([]);
+    const [showEventCounts, setShowEventCounts] = useState(true);
 
     // Kaydırma jestleri (Swipe) için PanResponder
     const panResponder = React.useMemo(() =>
@@ -486,7 +487,7 @@ export default function Ajanda() {
                 <Text style={[styles.dayText, !day.isCurrentMonth && styles.nonCurrentMonthText, day.isToday && styles.todayText, isSelected && styles.selectedDayText]}>
                     {dayNumber}
                 </Text>
-                {day.eventCount && day.eventCount > 0 ? (
+                {showEventCounts && day.eventCount && day.eventCount > 0 ? (
                     <View style={styles.eventCountBadge}>
                         <Text style={styles.eventCountText}>{day.eventCount}</Text>
                     </View>
@@ -592,18 +593,20 @@ export default function Ajanda() {
             {/* BUTONLAR - aşağı kaydırıldı (marginTop artırıldı) */}
             <View style={styles.butonlarContainer}>
                 <TouchableOpacity style={[styles.ortaButon, { backgroundColor: '#3498db' }]} onPress={() => navigation.navigate('AjandaKayitEkle', { selectedDate: selectedDate.toISOString() })}>
-                    <MaterialIcons name="add" size={14} color="white" />
+                    <MaterialIcons name="add" size={16} color="white" />
                     <Text style={styles.ortaButonText}>Yeni Kayıt</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={[styles.ortaButon, { backgroundColor: '#e74c3c' }]} onPress={() => setShowOgrenciList(true)}>
+                <TouchableOpacity style={[styles.iconButon, { backgroundColor: '#e74c3c' }]} onPress={() => setShowOgrenciList(true)}>
                     <FontAwesome5 name="user-graduate" size={16} color="white" />
-                    <Text style={styles.ortaButonText}>Öğrenciler</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={[styles.ortaButon, { backgroundColor: '#2ecc71' }]} onPress={() => navigation.navigate('AnaSayfa')}>
-                    <MaterialIcons name="home" size={18} color="white" />
-                    <Text style={styles.ortaButonText}>Ana Sayfa</Text>
+                <TouchableOpacity style={[styles.iconButon, { backgroundColor: '#9b59b6' }]} onPress={() => setShowEventCounts(!showEventCounts)}>
+                    <MaterialIcons name={showEventCounts ? "visibility" : "visibility-off"} size={20} color="white" />
+                </TouchableOpacity>
+
+                <TouchableOpacity style={[styles.iconButon, { backgroundColor: '#2ecc71' }]} onPress={() => navigation.navigate('AnaSayfa')}>
+                    <MaterialIcons name="home" size={22} color="white" />
                 </TouchableOpacity>
             </View>
 
@@ -940,10 +943,17 @@ const styles = StyleSheet.create({
     ortaButon: {
         alignItems: 'center',
         justifyContent: 'center',
-        width: 98,
+        paddingHorizontal: 16,
         height: 36,
         borderRadius: 18,
         flexDirection: 'row',
+    },
+    iconButon: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 36,
+        height: 36,
+        borderRadius: 18,
     },
     ortaButonText: {
         color: 'white',

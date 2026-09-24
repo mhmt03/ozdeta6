@@ -456,7 +456,7 @@ export default function AjandaKayitEkle() {
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>🔄 Tekrar Ayarları</Text>
 
-                    <View style={{flexDirection: 'row', justifyContent: 'space-between', gap: 10}}>
+                    <View style={{flexDirection: 'row', justifyContent: 'space-between', gap: 6}}>
                         {/* Tekrar Sayısı */}
                         <View style={styles.compactCounterContainer}>
                             <Text style={styles.compactCounterLabel}>Tekrar:</Text>
@@ -479,7 +479,7 @@ export default function AjandaKayitEkle() {
 
                         {/* Periyot (Gün Aralığı) */}
                         <View style={styles.compactCounterContainer}>
-                            <Text style={styles.compactCounterLabel}>Periyot(Gün):</Text>
+                            <Text style={styles.compactCounterLabel}>Periyot:</Text>
                             <View style={styles.counterControls}>
                                 <TouchableOpacity
                                     style={styles.compactCounterButton}
@@ -886,7 +886,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingVertical: 10,
+        paddingVertical: 4,
         borderBottomWidth: 1,
         borderBottomColor: '#ecf0f1',
     },
@@ -925,28 +925,28 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#ecf0f1',
         borderRadius: 8,
-        paddingVertical: 6,
-        paddingHorizontal: 8,
+        paddingVertical: 4,
+        paddingHorizontal: 4,
     },
     compactCounterLabel: {
-        fontSize: 13,
+        fontSize: 11,
         color: '#2c3e50',
-        fontWeight: '500',
+        fontWeight: '600',
     },
     compactCounterButton: {
-        width: 28,
-        height: 28,
-        borderRadius: 14,
+        width: 24,
+        height: 24,
+        borderRadius: 12,
         backgroundColor: '#ecf0f1',
         justifyContent: 'center',
         alignItems: 'center',
-        marginHorizontal: 4,
+        marginHorizontal: 2,
     },
     compactCounterValue: {
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: 'bold',
         color: '#2c3e50',
-        minWidth: 20,
+        minWidth: 18,
         textAlign: 'center',
     },
 
@@ -956,8 +956,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: '#fef9e7',
         borderRadius: 8,
-        padding: 10,
-        marginBottom: 12,
+        padding: 6,
+        marginBottom: 6,
         borderLeftWidth: 3,
         borderLeftColor: '#e67e22',
         gap: 8,
@@ -972,7 +972,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingVertical: 6,
+        paddingVertical: 2,
     },
     bildirimToggleLabelWrap: {
         flex: 1,
@@ -987,10 +987,10 @@ const styles = StyleSheet.create({
         color: '#bdc3c7',
     },
     bildirimDetayBox: {
-        marginTop: 10,
+        marginTop: 6,
         borderTopWidth: 1,
         borderTopColor: '#ecf0f1',
-        paddingTop: 10,
+        paddingTop: 6,
     },
     bildirimSesSecenekler: {
         flexDirection: 'row',
@@ -999,8 +999,8 @@ const styles = StyleSheet.create({
     bildirimSesButon: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 7,
-        paddingHorizontal: 14,
+        paddingVertical: 4,
+        paddingHorizontal: 10,
         borderRadius: 20,
         borderWidth: 1,
         borderColor: '#bdc3c7',
@@ -1046,46 +1046,47 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         paddingHorizontal: 15,
-        paddingVertical: 20,
-        gap: 15, // Butonlar arası boşluk
+        paddingVertical: 10,
+        gap: 10, // Butonlar arası boşluk
     },
     actionButton: {
         flex: 1, // Her buton eşit genişlik kaplar
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
-        paddingVertical: 12,
-        borderRadius: 25,
+        paddingVertical: 10,
+        borderRadius: 14,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-        elevation: 2,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
+        elevation: 4,
     },
 
     // 🚫 Vazgeç butonu stilleri
     cancelButton: {
-        backgroundColor: '#ffffff',
-        borderWidth: 2,
-        borderColor: '#e74c3c',
+        backgroundColor: '#fff0f0',
+        borderWidth: 1,
+        borderColor: '#ffcdd2',
     },
     cancelButtonText: {
-        color: '#e74c3c',
-        fontWeight: 'bold',
-        fontSize: 16,
-        marginLeft: 8,
+        color: '#e53935',
+        fontWeight: '700',
+        fontSize: 15,
+        marginLeft: 6,
     },
 
     // ✅ Kaydet butonu stilleri
     saveButton: {
-        backgroundColor: '#2ecc71',
-        marginBottom:10,
+        backgroundColor: '#27ae60',
+        shadowColor: '#27ae60',
+        shadowOpacity: 0.3,
     },
     saveButtonText: {
         color: 'white',
-        fontWeight: 'bold',
-        fontSize: 16,
-        marginLeft: 8,
+        fontWeight: '700',
+        fontSize: 15,
+        marginLeft: 6,
     },
 
     // 🪟 Modal genel stilleri
