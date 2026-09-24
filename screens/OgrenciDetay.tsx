@@ -626,7 +626,7 @@ export default function OgrenciDetay() {
                             >
                                 <MaterialIcons name="date-range" size={18} color="#2196F3" />
                                 <Text style={styles.tarihButonText}>
-                                    Başlangıç: {ajandaBaslangic.toLocaleDateString('tr-TR')}
+                                    {ajandaBaslangic.toLocaleDateString('tr-TR')}
                                 </Text>
                             </TouchableOpacity>
 
@@ -636,7 +636,7 @@ export default function OgrenciDetay() {
                             >
                                 <MaterialIcons name="date-range" size={18} color="#2196F3" />
                                 <Text style={styles.tarihButonText}>
-                                    Bitiş: {ajandaBitis.toLocaleDateString('tr-TR')}
+                                    {ajandaBitis.toLocaleDateString('tr-TR')}
                                 </Text>
                             </TouchableOpacity>
                         </View>
