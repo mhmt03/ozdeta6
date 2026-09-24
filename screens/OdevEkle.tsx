@@ -219,6 +219,32 @@ export default function OdevEkle() {
         setTarihSiralamasi(prev => prev === 'azalan' ? 'artan' : 'azalan');
     };
 
+    const hizliFiltreDegistir = () => {
+        setDurumFiltresi(prev => {
+            if (prev.Bekliyor && prev.Yapıldı && prev.Yapılmadı && prev.Eksik) {
+                return { Bekliyor: true, Yapıldı: false, Yapılmadı: false, Eksik: false };
+            } else if (prev.Bekliyor && !prev.Yapıldı && !prev.Yapılmadı && !prev.Eksik) {
+                return { Bekliyor: false, Yapıldı: false, Yapılmadı: true, Eksik: false };
+            } else if (!prev.Bekliyor && !prev.Yapıldı && prev.Yapılmadı && !prev.Eksik) {
+                return { Bekliyor: false, Yapıldı: false, Yapılmadı: false, Eksik: true };
+            } else if (!prev.Bekliyor && !prev.Yapıldı && !prev.Yapılmadı && prev.Eksik) {
+                return { Bekliyor: false, Yapıldı: true, Yapılmadı: false, Eksik: false };
+            } else {
+                return { Bekliyor: true, Yapıldı: true, Yapılmadı: true, Eksik: true };
+            }
+        });
+    };
+
+    const getHizliFiltreAdi = () => {
+        const p = durumFiltresi;
+        if (p.Bekliyor && p.Yapıldı && p.Yapılmadı && p.Eksik) return "Tümü";
+        if (p.Bekliyor && !p.Yapıldı && !p.Yapılmadı && !p.Eksik) return "Bekliyor";
+        if (!p.Bekliyor && !p.Yapıldı && p.Yapılmadı && !p.Eksik) return "Yapılmadı";
+        if (!p.Bekliyor && !p.Yapıldı && !p.Yapılmadı && p.Eksik) return "Eksik";
+        if (!p.Bekliyor && p.Yapıldı && !p.Yapılmadı && !p.Eksik) return "Yapıldı";
+        return "Tümü";
+    };
+
     const konuTiklandi = (kaynakAd: string, konu: KonuRaporItem) => {
         setSeciliKonuKaynakAd(kaynakAd);
         setSeciliKonu(konu);
@@ -1424,6 +1450,19 @@ export default function OdevEkle() {
                                 <View style={styles.filtreButonlariGrup}>
                                     <TouchableOpacity
                                         style={styles.filtreButon}
+                                        onPress={hizliFiltreDegistir}
+                                    >
+                                        <MaterialIcons
+                                            name="filter-list"
+                                            size={14}
+                                            color="#333"
+                                        />
+                                        <Text style={styles.filtreButonText}>
+                                            {getHizliFiltreAdi()}
+                                        </Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={styles.filtreButon}
                                         onPress={tarihSiralamasiDegistir}
                                     >
                                         <MaterialIcons
@@ -1478,7 +1517,7 @@ export default function OdevEkle() {
                             </TouchableOpacity>
                         </View>
 
-                        <Text style={{ marginTop: 10, marginBottom: 5, fontWeight: 'bold' }}>Tarih Aralığı Seçin</Text>
+                        {/* <Text style={{ marginTop: 10, marginBottom: 5, fontWeight: 'bold' }}>Tarih Aralığı Seçin</Text> */}
                         <View style={styles.dateRangeContainer}>
                             <TouchableOpacity style={styles.reportDateButton} onPress={() => setShowDurumBaslangic(true)}>
                                 {/* <MaterialIcons name="date-range" size={10} color="#666" /> */}
@@ -2988,7 +3027,7 @@ const styles = StyleSheet.create({
     filtreKart: {
         backgroundColor: '#fff',
         marginHorizontal: 15,
-        marginBottom: 15,
+        marginBottom: 5,
         borderRadius: 12,
         elevation: 2,
         shadowColor: '#000',

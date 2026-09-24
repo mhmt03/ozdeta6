@@ -1291,9 +1291,9 @@ const styles = StyleSheet.create({
     },
     switchContainer: {
         backgroundColor: 'white',
-        padding: 15,
+        padding: 5,
         borderRadius: 10,
-        marginBottom: 15,
+        marginBottom: 5,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
@@ -1306,7 +1306,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     switchLabel: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '600',
         color: '#34495e',
     },
@@ -1393,9 +1393,9 @@ const styles = StyleSheet.create({
     // Ajanda Kartı Stilleri
     ajandaCard: {
         backgroundColor: 'white',
-        padding: 15,
+        padding: 5,
         borderRadius: 10,
-        marginBottom: 15,
+        marginBottom: 5,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
@@ -1429,7 +1429,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#2196F3',
         padding: 12,
         borderRadius: 8,
-        marginBottom: 15,
+        marginBottom: 5,
     },
     listeleButonText: {
         color: '#fff',
@@ -1455,7 +1455,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
     },
     ajandaListContainer: {
-        marginTop: 5,
+        marginTop: 1,
     },
     ajandaListBaslik: {
         fontSize: 14,
@@ -1467,7 +1467,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingVertical: 12,
+        paddingVertical: 4,
         paddingHorizontal: 10,
         borderBottomWidth: 1,
         borderBottomColor: '#ecf0f1',
