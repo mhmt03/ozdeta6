@@ -2,7 +2,7 @@
   "expo": {
     "name": "ozdeta",
     "slug": "ozdeta6",
-    "version": "3.0.-1",
+    "version": "3.0.0",
     "orientation": "default",
     "icon": "./assets/derstakipicon.png",
     "userInterfaceStyle": "light",
@@ -14,7 +14,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.mhmt03.ozdeta",
-      "buildNumber": "25"
+      "buildNumber": "26"
     },
     "android": {
       "package": "com.mhmt03.ozdeta",
@@ -28,7 +28,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "versionCode": 25
+      "versionCode": 26
     },
     "web": {
       "favicon": "./assets/favicon.png"
