@@ -97,6 +97,7 @@ export default function Ajanda() {
     const [randevular, setRandevular] = useState<AjandaWithOgrenciType[]>([]);
     const [ogrenciler, setOgrenciler] = useState<OgrenciType[]>([]);
     const [showOgrenciList, setShowOgrenciList] = useState(false);
+    const [haftalikRandevular, setHaftalikRandevular] = useState<AjandaWithOgrenciType[]>([]);
 
     // yükleniyor göstergesi
     const [loading, setLoading] = useState(true);
@@ -251,6 +252,28 @@ export default function Ajanda() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const ogrenciListesiAc = async () => {
+        try {
+            const monday = getMonday(selectedDate);
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
+            
+            const startStr = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
+            const endStr = `${sunday.getFullYear()}-${String(sunday.getMonth() + 1).padStart(2, '0')}-${String(sunday.getDate()).padStart(2, '0')}`;
+            
+            const res = await tarihAraligiAjandaGetir(startStr, endStr);
+            if (res?.success) {
+                setHaftalikRandevular(res.data as AjandaWithOgrenciType[]);
+            } else {
+                setHaftalikRandevular([]);
+            }
+        } catch(e) {
+            console.error("Haftalik randevu hatasi", e);
+            setHaftalikRandevular([]);
+        }
+        setShowOgrenciList(true);
     };
 
     /* --------------------------- Takvim üretme fonksiyonları ------------------- */
@@ -597,7 +620,7 @@ export default function Ajanda() {
                     <Text style={styles.ortaButonText}>Yeni Kayıt</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={[styles.iconButon, { backgroundColor: '#e74c3c' }]} onPress={() => setShowOgrenciList(true)}>
+                <TouchableOpacity style={[styles.iconButon, { backgroundColor: '#e74c3c' }]} onPress={ogrenciListesiAc}>
                     <FontAwesome5 name="user-graduate" size={16} color="white" />
                 </TouchableOpacity>
 
@@ -632,11 +655,34 @@ export default function Ajanda() {
                             <View style={styles.modalContent}>
                                 <Text style={styles.modalTitle}>Öğrenci Listesi ({ogrenciler.length})</Text>
                                 {ogrenciler.length > 0 ? (
-                                    <FlatList data={ogrenciler} renderItem={({ item }: { item: OgrenciType }) => (
-                                        <TouchableOpacity style={styles.ogrenciItem} onPress={() => { setShowOgrenciList(false); navigation.navigate('ogrenciDetay', { ogrenci: item }); }}>
-                                            <Text style={styles.ogrenciText}>{item.ogrenciAd} {item.ogrenciSoyad}</Text>
-                                        </TouchableOpacity>
-                                    )} keyExtractor={(item) => item.ogrenciId?.toString() || Math.random().toString()} />
+                                    <FlatList data={ogrenciler} renderItem={({ item, index }: { item: OgrenciType, index: number }) => {
+                                        const ogrenciRandevulari = haftalikRandevular.filter(r => r.ogrenciId === item.ogrenciId && r.iptal !== 1);
+                                        let baloncukRengi = null;
+                                        if (ogrenciRandevulari.length > 0) {
+                                            const seciliTarihSifirlanmis = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate()).getTime();
+                                            const hasFutureOrToday = ogrenciRandevulari.some(r => {
+                                                if (!r.tarih) return false;
+                                                const rDate = new Date(r.tarih);
+                                                const rDateSifirlanmis = new Date(rDate.getFullYear(), rDate.getMonth(), rDate.getDate()).getTime();
+                                                return rDateSifirlanmis >= seciliTarihSifirlanmis;
+                                            });
+                                            baloncukRengi = hasFutureOrToday ? '#2ecc71' : '#f1c40f'; // yeşil (sonra/bugün) veya sarı (önce)
+                                        }
+
+                                        return (
+                                            <TouchableOpacity 
+                                                style={[styles.ogrenciItem, { backgroundColor: index % 2 === 0 ? '#f8f9fa' : '#ffffff', paddingHorizontal: 12, borderRadius: 6 }]} 
+                                                onPress={() => { setShowOgrenciList(false); navigation.navigate('ogrenciDetay', { ogrenci: item }); }}
+                                            >
+                                                <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
+                                                    <Text style={styles.ogrenciText}>{item.ogrenciAd} {item.ogrenciSoyad}</Text>
+                                                    {baloncukRengi && (
+                                                        <View style={{width: 10, height: 10, borderRadius: 5, backgroundColor: baloncukRengi, marginLeft: 8}} />
+                                                    )}
+                                                </View>
+                                            </TouchableOpacity>
+                                        );
+                                    }} keyExtractor={(item) => item.ogrenciId?.toString() || Math.random().toString()} />
                                 ) : (
                                     <Text style={styles.bosOgrenciText}>Kayıtlı öğrenci bulunamadı</Text>
                                 )}
